@@ -1,3 +1,4 @@
 /build
 *.keystore
 *.jks
+lynk_release.keystore

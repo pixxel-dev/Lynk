@@ -17,3 +17,4 @@ build/
 .cxx
 *.keystore
 *.jks
+lynk_release.keystore

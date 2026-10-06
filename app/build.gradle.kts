@@ -23,10 +23,16 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("lynk_release.keystore")
-            storePassword = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "lynk123pass"
-            keyAlias = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "my_key_alias"
-            keyPassword = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "lynk123pass"
+            val keystoreFile = file("lynk_release.keystore")
+            if (keystoreFile.exists()) {
+                storeFile = keystoreFile
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "lynk123pass"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "my_key_alias"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "lynk123pass"
+            } else {
+                // Фолбэк на дебаг-ключ для локальной разработки, если файла ключа нет
+                initWith(getByName("debug"))
+            }
         }
     }
 

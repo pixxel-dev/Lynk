@@ -43,6 +43,7 @@ The project is developed and maintained by a collaborative multi-agent AI system
 
 ### 6. App Signing
 - **Single Keystore Requirement:** All builds (both Release and Debug) MUST be signed with the unified `lynk_release.keystore` to ensure seamless updates and avoid "App not installed" errors for the end user when transitioning between development and production versions.
+- **Keystore Security:** Committing secret `.keystore` or `.jks` files to the Git repository is strictly forbidden. Keystore files must be listed in `.gitignore` and provided securely via environment variables or local environment.
 
 ### 7. Localization Protocol & Rules
 - **Automatic String Synchronization:** Upon adding any new UI text or modifying existing strings, agents are required to automatically generate and update keys in both `res/values/strings.xml` (EN) and `res/values-ru/strings.xml` (RU).
@@ -96,6 +97,7 @@ The project is developed and maintained by a collaborative multi-agent AI system
 
 ### 6. Подпись приложения
 - **Единый ключ подписи (Keystore):** Все сборки (как Release, так и Debug) ДОЛЖНЫ подписываться единым ключом `lynk_release.keystore`, чтобы гарантировать бесшовные обновления и избежать ошибки «Приложение не установлено» у конечного пользователя при переходе между тестовыми и рабочими версиями.
+- **Безопасность ключей:** Запрещен коммит секретных `.keystore` и `.jks` файлов в Git-репозиторий. Файлы ключей должны содержаться в `.gitignore` и передаваться через переменные окружения или локальное окружение.
 
 ### 7. Регламент и правила локализации
 - **Автоматическая синхронизация строк:** При любом добавлении нового текста или изменении UI агенты обязаны автоматически генерировать и обновлять ключи в `res/values/strings.xml` (EN) и `res/values-ru/strings.xml` (RU).
