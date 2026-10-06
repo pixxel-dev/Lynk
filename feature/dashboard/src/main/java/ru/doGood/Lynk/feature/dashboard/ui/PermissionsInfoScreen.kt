@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,6 +31,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import ru.doGood.Lynk.feature.dashboard.DashboardViewModel
+import ru.doGood.Lynk.feature.dashboard.R
 
 data class PermissionItemInfo(
     val id: String,
@@ -51,6 +53,15 @@ fun PermissionsInfoTab(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    val overlayTitle = stringResource(R.string.perm_overlay_title)
+    val overlayDesc = stringResource(R.string.perm_overlay_desc_long)
+    val usageTitle = stringResource(R.string.perm_usage_title)
+    val usageDesc = stringResource(R.string.perm_usage_desc_long)
+    val storageTitle = stringResource(R.string.perm_storage_title)
+    val storageDesc = stringResource(R.string.perm_storage_desc_long)
+    val installTitle = stringResource(R.string.perm_install_title)
+    val installDesc = stringResource(R.string.perm_install_desc_long)
 
     var permissionsList by remember { mutableStateOf(emptyList<PermissionItemInfo>()) }
 
@@ -80,8 +91,8 @@ fun PermissionsInfoTab(
         permissionsList = listOf(
             PermissionItemInfo(
                 id = "overlay",
-                title = "Оверлей (Отображение поверх окон)",
-                description = "Требуется для отображения плавающих кнопок и элементов управления поверх других приложений.",
+                title = overlayTitle,
+                description = overlayDesc,
                 icon = Icons.Rounded.Layers,
                 isGranted = isOverlayGranted,
                 openSettingsIntent = {
@@ -93,8 +104,8 @@ fun PermissionsInfoTab(
             ),
             PermissionItemInfo(
                 id = "usage_stats",
-                title = "Доступ к статистике использования",
-                description = "Необходимо для определения активного полноэкранного приложения и настройки авто-разворота.",
+                title = usageTitle,
+                description = usageDesc,
                 icon = Icons.Rounded.QueryStats,
                 isGranted = isUsageStatsGranted,
                 openSettingsIntent = {
@@ -103,8 +114,8 @@ fun PermissionsInfoTab(
             ),
             PermissionItemInfo(
                 id = "storage",
-                title = "Доступ к памяти (Файловый менеджер)",
-                description = "Разрешает просмотр, копирование, перемещение и управление файлами и APK-пакетами на устройстве.",
+                title = storageTitle,
+                description = storageDesc,
                 icon = Icons.Rounded.FolderSpecial,
                 isGranted = isStorageGranted,
                 openSettingsIntent = {
@@ -117,8 +128,8 @@ fun PermissionsInfoTab(
             ),
             PermissionItemInfo(
                 id = "install_packages",
-                title = "Установка неизвестных приложений",
-                description = "Позволяет выполнять прямую и каскадную (Waterfall) установку APK-файлов с накопителя.",
+                title = installTitle,
+                description = installDesc,
                 icon = Icons.Rounded.InstallMobile,
                 isGranted = isInstallGranted,
                 openSettingsIntent = {
@@ -162,7 +173,7 @@ fun PermissionsInfoTab(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = androidx.compose.ui.res.stringResource(ru.doGood.Lynk.feature.dashboard.R.string.permissions_title),
+                text = stringResource(R.string.permissions_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -271,9 +282,9 @@ fun PermissionCard(
                     ) {
                         Text(
                             text = if (permission.isGranted) {
-                                androidx.compose.ui.res.stringResource(ru.doGood.Lynk.feature.dashboard.R.string.granted)
+                                stringResource(R.string.granted)
                             } else {
-                                androidx.compose.ui.res.stringResource(ru.doGood.Lynk.feature.dashboard.R.string.not_granted)
+                                stringResource(R.string.not_granted)
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (permission.isGranted) {
@@ -317,9 +328,9 @@ fun PermissionCard(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = if (permission.isGranted) {
-                        androidx.compose.ui.res.stringResource(ru.doGood.Lynk.feature.dashboard.R.string.permission_settings)
+                        stringResource(R.string.permission_settings)
                     } else {
-                        androidx.compose.ui.res.stringResource(ru.doGood.Lynk.feature.dashboard.R.string.grant_access)
+                        stringResource(R.string.grant_access)
                     },
                     style = MaterialTheme.typography.labelMedium
                 )

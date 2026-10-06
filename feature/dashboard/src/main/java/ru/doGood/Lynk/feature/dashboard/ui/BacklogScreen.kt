@@ -12,10 +12,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.audit.AuditResult
 import com.example.lynk.core.domain.backlog.BacklogItem
+import ru.doGood.Lynk.feature.dashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,7 +44,7 @@ fun BacklogScreen(
         ) {
             Icon(Icons.Rounded.Assessment, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Run Architectural Audit Rules")
+            Text(stringResource(R.string.run_architectural_audit))
         }
 
         LazyColumn(
@@ -62,7 +64,7 @@ fun BacklogScreen(
     if (showAuditDialog) {
         AlertDialog(
             onDismissRequest = { showAuditDialog = false },
-            title = { Text("Audit Results") },
+            title = { Text(stringResource(R.string.audit_results_title)) },
             text = {
                 LazyColumn {
                     items(auditResults) { result ->
@@ -80,11 +82,11 @@ fun BacklogScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
                                 Text(
-                                    text = "Rule: ${result.ruleName}",
+                                    text = stringResource(R.string.audit_rule_format, result.ruleName),
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(text = "Passed: ${result.isPassed}")
-                                Text(text = "Message: ${result.message}")
+                                Text(text = stringResource(R.string.audit_passed_format, result.isPassed))
+                                Text(text = stringResource(R.string.audit_message_format, result.message))
                             }
                         }
                     }
@@ -92,7 +94,7 @@ fun BacklogScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showAuditDialog = false }) {
-                    Text("OK")
+                    Text(stringResource(R.string.btn_ok))
                 }
             }
         )
@@ -136,7 +138,7 @@ fun BacklogItemCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Priority: ${item.priority}",
+                    text = stringResource(R.string.priority_format, item.priority),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )

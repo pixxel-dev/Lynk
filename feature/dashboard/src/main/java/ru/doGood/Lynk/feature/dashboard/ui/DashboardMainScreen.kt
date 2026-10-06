@@ -356,21 +356,21 @@ fun DashboardMainScreen(
     filePropertiesToShow?.let { file ->
         AlertDialog(
             onDismissRequest = { filePropertiesToShow = null },
-            title = { Text("File Properties") },
+            title = { Text(stringResource(R.string.file_properties_title)) },
             text = {
                 Column {
-                    Text("Name: ${file.name}", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.file_prop_name, file.name), style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Path: ${file.path}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.file_prop_path, file.path), style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Size: ${formatFileSize(file.size)}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.file_prop_size, formatFileSize(file.size)), style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Type: ${if (file.isDirectory) "Folder" else "File"}", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.file_prop_type, if (file.isDirectory) stringResource(R.string.file_type_folder) else stringResource(R.string.file_type_file)), style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {
                 TextButton(onClick = { filePropertiesToShow = null }) {
-                    Text("Close")
+                    Text(stringResource(R.string.btn_close))
                 }
             }
         )

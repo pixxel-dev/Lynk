@@ -13,9 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.update.UpdateInfo
+import ru.doGood.Lynk.feature.dashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -140,13 +142,13 @@ private fun CurrentVersionCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Lynk Application",
+                        text = stringResource(R.string.app_full_name),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = "Текущая версия: v$currentVersion",
+                        text = stringResource(R.string.current_version_format, currentVersion),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
@@ -162,10 +164,10 @@ private fun CurrentVersionCard(
             ) {
                 Text(
                     text = when {
-                        isChecking -> "Проверка обновлений..."
-                        updateInfo == null -> "Статус версии не проверен"
-                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> "Доступна новая версия v${updateInfo.latestVersion}!"
-                        else -> "Установлена актуальная версия"
+                        isChecking -> stringResource(R.string.checking_updates)
+                        updateInfo == null -> stringResource(R.string.version_status_unchecked)
+                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.new_version_available_format, updateInfo.latestVersion)
+                        else -> stringResource(R.string.latest_version_installed)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -182,11 +184,11 @@ private fun CurrentVersionCard(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Проверка...")
+                        Text(stringResource(R.string.btn_checking))
                     } else {
                         Icon(Icons.Rounded.Search, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Проверить")
+                        Text(stringResource(R.string.btn_check))
                     }
                 }
             }
@@ -221,12 +223,12 @@ private fun LatestVersionCard(
             ) {
                 Column {
                     Text(
-                        text = "Свежий релиз: v${updateInfo.latestVersion}",
+                        text = stringResource(R.string.latest_release_format, updateInfo.latestVersion),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Доступно обновление",
+                        text = stringResource(R.string.update_available_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -239,7 +241,7 @@ private fun LatestVersionCard(
                     ) {
                         Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isDownloading) "Скачивание..." else "Скачать и установить")
+                        Text(if (isDownloading) stringResource(R.string.btn_downloading) else stringResource(R.string.btn_download_install))
                     }
                 }
             }
@@ -255,7 +257,7 @@ private fun LatestVersionCard(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Прогресс: ${(downloadProgress * 100).toInt()}%",
+                            text = stringResource(R.string.download_progress_format, (downloadProgress * 100).toInt()),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -297,7 +299,7 @@ private fun ChangelogCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Журнал изменений (Changelog)",
+                    text = stringResource(R.string.changelog_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -305,8 +307,9 @@ private fun ChangelogCard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
+            val placeholderChangelog = stringResource(R.string.changelog_placeholder)
             val changelog = updateInfo?.changelog?.split("\n")?.filter { it.isNotBlank() } ?: listOf(
-                "• Нажмите 'Проверить обновления', чтобы загрузить актуальный список изменений."
+                placeholderChangelog
             )
 
             LazyColumn(

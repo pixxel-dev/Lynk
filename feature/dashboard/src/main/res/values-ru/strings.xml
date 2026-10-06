@@ -62,4 +62,117 @@
     <string name="action_back_navigator_desc">Возврат назад</string>
     <string name="action_refresh_navigator">Обновить / Refresh</string>
     <string name="action_refresh_navigator_desc">Перезапуск интерфейса или обновление</string>
+
+    <!-- FileManagerScreen -->
+    <string name="file_up_dir">На уровень выше</string>
+    <string name="file_sort_files">Сортировка файлов</string>
+    <string name="sort_by_name">По имени</string>
+    <string name="sort_by_size">По размеру</string>
+    <string name="sort_by_date">По дате</string>
+    <string name="sort_by_type">По типу</string>
+    <string name="sort_ascending">По возрастанию ↑</string>
+    <string name="sort_descending">По убыванию ↓</string>
+    <string name="file_paste">Вставить</string>
+    <string name="storage_title">Хранилище</string>
+    <string name="storage_free_total">Свободно %1$s / Всего %2$s</string>
+    <string name="search_files_hint">Поиск файлов...</string>
+    <string name="clear_search">Очистить поиск</string>
+    <string name="selected_count">Выбрано (%1$d)</string>
+    <string name="btn_copy">Копировать</string>
+    <string name="btn_cut">Вырезать</string>
+    <string name="btn_delete">Удалить</string>
+    <string name="btn_deselect">Снять выделение</string>
+    <string name="install_apk">Установить APK</string>
+    <string name="file_properties">Свойства</string>
+    <string name="btn_cancel">Отмена</string>
+    <string name="file_folder">Папка</string>
+    <string name="more_options">Ещё опции</string>
+
+    <!-- FloatingButtonsScreen -->
+    <string name="add_quick_launch_title">Добавить в Быстрый Запуск</string>
+    <string name="add_fullscreen_app_title">Добавить приложение для разворота</string>
+    <string name="quick_launch_btn_title">Кнопка быстрого запуска</string>
+    <string name="quick_launch_btn_subtitle">Быстрое меню со списком избранных приложений</string>
+    <string name="quick_launch_apps_label">Приложения меню (%1$d):</string>
+    <string name="add_application">Добавить приложение</string>
+    <string name="no_apps_added">Приложения не добавлены. Нажмите &apos;+&apos;, чтобы добавить.</string>
+    <string name="btn_remove">Удалить</string>
+    <string name="fullscreen_overlay_title">Авто-оверлей (На весь экран)</string>
+    <string name="fullscreen_overlay_subtitle">Кнопка разворота на экран поверх выбранных ПО</string>
+    <string name="target_apps_label">Целевые приложения (%1$d):</string>
+    <string name="no_target_apps">Приложения не добавлены. Нажмите &apos;+&apos;, чтобы выбрать.</string>
+    <string name="home_navigator_title">Навигатор "Домой"</string>
+    <string name="home_navigator_subtitle">Плавающая кнопка быстрого возврата на рабочий стол</string>
+    <string name="back_navigator_title">Навигатор "Назад"</string>
+    <string name="back_navigator_subtitle">Плавающая кнопка имитации системной клавиши Назад</string>
+    <string name="refresh_button_title">Кнопка "Обновить"</string>
+    <string name="refresh_button_subtitle">Плавающая кнопка принудительного обновления оверлеев</string>
+    <string name="service_running">Служба оверлея запущена</string>
+    <string name="service_stopped">Служба оверлея остановлена</string>
+    <string name="service_running_desc">Плавающие кнопки отображаются поверх окон</string>
+    <string name="service_stopped_desc">Включите службу для активации кнопок</string>
+    <string name="btn_stop_service">Остановить</string>
+    <string name="btn_start_service">Запустить</string>
+    <string name="system_permissions_required">Требуются разрешения системного уровня:</string>
+    <string name="perm_overlay_display">• Отображение поверх других окон</string>
+    <string name="btn_allow">Разрешить</string>
+    <string name="perm_usage_history">• Доступ к истории использования</string>
+    <string name="overlay_display_mode">Режим оверлея и дисплей</string>
+    <string name="button_size_format">Размер кнопки: %1$d dp</string>
+    <string name="button_opacity_format">Прозрачность кнопки: %1$d%%</string>
+    <string name="sep_buttons_title">Разделять плавающие кнопки</string>
+    <string name="sep_buttons_subtitle">Управлять кнопками независимо либо единым блоком</string>
+    <string name="combined_button_size_format">Размер кнопок в совмещенном блоке: %1$d dp</string>
+    <string name="combined_opacity_format">Непрозрачность совмещенного блока: %1$d%%</string>
+    <string name="mirroring_title">Зеркалирование на Display 1003</string>
+    <string name="mirroring_subtitle">Дублировать оверлей на экран пассажира ГУ</string>
+    <string name="package_name_hint">Имя пакета (например, com.example.app)</string>
+    <string name="btn_add_custom">Добавить введенный</string>
+    <string name="select_from_installed">Или выберите из установленных ПО:</string>
+
+    <!-- PermissionsInfoScreen -->
+    <string name="perm_overlay_title">Оверлей (Отображение поверх окон)</string>
+    <string name="perm_overlay_desc_long">Требуется для отображения плавающих кнопок и элементов управления поверх других приложений.</string>
+    <string name="perm_usage_title">Доступ к статистике использования</string>
+    <string name="perm_usage_desc_long">Необходимо для определения активного полноэкранного приложения и настройки авто-разворота.</string>
+    <string name="perm_storage_title">Доступ к памяти (Файловый менеджер)</string>
+    <string name="perm_storage_desc_long">Разрешает просмотр, копирование, перемещение и управление файлами и APK-пакетами на устройстве.</string>
+    <string name="perm_install_title">Установка неизвестных приложений</string>
+    <string name="perm_install_desc_long">Позволяет выполнять прямую и каскадную (Waterfall) установку APK-файлов с накопителя.</string>
+
+    <!-- AppUpdateScreen -->
+    <string name="app_full_name">Приложение Lynk</string>
+    <string name="current_version_format">Текущая версия: v%1$s</string>
+    <string name="checking_updates">Проверка обновлений...</string>
+    <string name="version_status_unchecked">Статус версии не проверен</string>
+    <string name="new_version_available_format">Доступна новая версия v%1$s!</string>
+    <string name="latest_version_installed">Установлена актуальная версия</string>
+    <string name="btn_checking">Проверка...</string>
+    <string name="btn_check">Проверить</string>
+    <string name="latest_release_format">Свежий релиз: v%1$s</string>
+    <string name="update_available_subtitle">Доступно обновление</string>
+    <string name="btn_downloading">Скачивание...</string>
+    <string name="btn_download_install">Скачать и установить</string>
+    <string name="download_progress_format">Прогресс: %1$d%%</string>
+    <string name="changelog_title">Журнал изменений (Changelog)</string>
+    <string name="changelog_placeholder">• Нажмите &apos;Проверить&apos;, чтобы загрузить актуальный список изменений.</string>
+
+    <!-- DashboardMainScreen / File Properties Dialog -->
+    <string name="file_properties_title">Свойства файла</string>
+    <string name="file_prop_name">Имя: %1$s</string>
+    <string name="file_prop_path">Путь: %1$s</string>
+    <string name="file_prop_size">Размер: %1$s</string>
+    <string name="file_prop_type">Тип: %1$s</string>
+    <string name="file_type_folder">Папка</string>
+    <string name="file_type_file">Файл</string>
+    <string name="btn_close">Закрыть</string>
+
+    <!-- BacklogScreen -->
+    <string name="run_architectural_audit">Запустить правила архитектурного аудита</string>
+    <string name="audit_results_title">Результаты аудита</string>
+    <string name="audit_rule_format">Правило: %1$s</string>
+    <string name="audit_passed_format">Пройдено: %1$s</string>
+    <string name="audit_message_format">Сообщение: %1$s</string>
+    <string name="priority_format">Приоритет: %1$s</string>
+    <string name="btn_ok">OK</string>
 </resources>

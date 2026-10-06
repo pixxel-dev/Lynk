@@ -62,4 +62,117 @@
     <string name="action_back_navigator_desc">Trigger back action</string>
     <string name="action_refresh_navigator">Refresh / Обновить</string>
     <string name="action_refresh_navigator_desc">Refresh interface or trigger update</string>
+
+    <!-- FileManagerScreen -->
+    <string name="file_up_dir">Up directory</string>
+    <string name="file_sort_files">Sort files</string>
+    <string name="sort_by_name">Sort by Name</string>
+    <string name="sort_by_size">Sort by Size</string>
+    <string name="sort_by_date">Sort by Date</string>
+    <string name="sort_by_type">Sort by Type</string>
+    <string name="sort_ascending">Ascending ↑</string>
+    <string name="sort_descending">Descending ↓</string>
+    <string name="file_paste">Paste</string>
+    <string name="storage_title">Storage</string>
+    <string name="storage_free_total">Free %1$s / Total %2$s</string>
+    <string name="search_files_hint">Search files...</string>
+    <string name="clear_search">Clear search</string>
+    <string name="selected_count">Selected (%1$d)</string>
+    <string name="btn_copy">Copy</string>
+    <string name="btn_cut">Cut</string>
+    <string name="btn_delete">Delete</string>
+    <string name="btn_deselect">Deselect</string>
+    <string name="install_apk">Install APK</string>
+    <string name="file_properties">Properties</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="file_folder">Folder</string>
+    <string name="more_options">More options</string>
+
+    <!-- FloatingButtonsScreen -->
+    <string name="add_quick_launch_title">Add to Quick Launch</string>
+    <string name="add_fullscreen_app_title">Add App for Fullscreen</string>
+    <string name="quick_launch_btn_title">Quick Launch Button</string>
+    <string name="quick_launch_btn_subtitle">Quick menu with favorite apps list</string>
+    <string name="quick_launch_apps_label">Menu apps (%1$d):</string>
+    <string name="add_application">Add application</string>
+    <string name="no_apps_added">No apps added. Tap \'+\' to add.</string>
+    <string name="btn_remove">Remove</string>
+    <string name="fullscreen_overlay_title">Auto-Fullscreen Overlay</string>
+    <string name="fullscreen_overlay_subtitle">Fullscreen overlay button over selected apps</string>
+    <string name="target_apps_label">Target apps (%1$d):</string>
+    <string name="no_target_apps">No apps added. Tap \'+\' to select.</string>
+    <string name="home_navigator_title">Home Navigator</string>
+    <string name="home_navigator_subtitle">Floating button for quick return to home screen</string>
+    <string name="back_navigator_title">Back Navigator</string>
+    <string name="back_navigator_subtitle">Floating button simulating Back system key</string>
+    <string name="refresh_button_title">Refresh Button</string>
+    <string name="refresh_button_subtitle">Floating button for forced overlay refresh</string>
+    <string name="service_running">Overlay service running</string>
+    <string name="service_stopped">Overlay service stopped</string>
+    <string name="service_running_desc">Floating buttons are displayed over windows</string>
+    <string name="service_stopped_desc">Enable service to activate buttons</string>
+    <string name="btn_stop_service">Stop</string>
+    <string name="btn_start_service">Start</string>
+    <string name="system_permissions_required">System-level permissions required:</string>
+    <string name="perm_overlay_display">• Display over other apps</string>
+    <string name="btn_allow">Allow</string>
+    <string name="perm_usage_history">• Usage stats access</string>
+    <string name="overlay_display_mode">Overlay Mode &amp; Display</string>
+    <string name="button_size_format">Button size: %1$d dp</string>
+    <string name="button_opacity_format">Button opacity: %1$d%%</string>
+    <string name="sep_buttons_title">Separate floating buttons</string>
+    <string name="sep_buttons_subtitle">Manage buttons independently or as a single block</string>
+    <string name="combined_button_size_format">Size of buttons in combined block: %1$d dp</string>
+    <string name="combined_opacity_format">Opacity of combined block: %1$d%%</string>
+    <string name="mirroring_title">Mirroring on Display 1003</string>
+    <string name="mirroring_subtitle">Duplicate overlay to passenger HU screen</string>
+    <string name="package_name_hint">Package name (e.g. com.example.app)</string>
+    <string name="btn_add_custom">Add entered</string>
+    <string name="select_from_installed">Or choose from installed apps:</string>
+
+    <!-- PermissionsInfoScreen -->
+    <string name="perm_overlay_title">Overlay (Display over other apps)</string>
+    <string name="perm_overlay_desc_long">Required to display floating buttons and controls over other applications.</string>
+    <string name="perm_usage_title">Usage Stats Access</string>
+    <string name="perm_usage_desc_long">Necessary to determine active fullscreen app and configure auto-fullscreen.</string>
+    <string name="perm_storage_title">Storage Access (File Manager)</string>
+    <string name="perm_storage_desc_long">Allows viewing, copying, moving, and managing files and APK packages on the device.</string>
+    <string name="perm_install_title">Install Unknown Apps</string>
+    <string name="perm_install_desc_long">Allows direct and Waterfall installation of APK files from storage.</string>
+
+    <!-- AppUpdateScreen -->
+    <string name="app_full_name">Lynk Application</string>
+    <string name="current_version_format">Current version: v%1$s</string>
+    <string name="checking_updates">Checking for updates...</string>
+    <string name="version_status_unchecked">Version status unchecked</string>
+    <string name="new_version_available_format">New version v%1$s available!</string>
+    <string name="latest_version_installed">Latest version installed</string>
+    <string name="btn_checking">Checking...</string>
+    <string name="btn_check">Check</string>
+    <string name="latest_release_format">Latest release: v%1$s</string>
+    <string name="update_available_subtitle">Update available</string>
+    <string name="btn_downloading">Downloading...</string>
+    <string name="btn_download_install">Download &amp; Install</string>
+    <string name="download_progress_format">Progress: %1$d%%</string>
+    <string name="changelog_title">Changelog</string>
+    <string name="changelog_placeholder">• Tap \'Check\' to load the latest changelog.</string>
+
+    <!-- DashboardMainScreen / File Properties Dialog -->
+    <string name="file_properties_title">File Properties</string>
+    <string name="file_prop_name">Name: %1$s</string>
+    <string name="file_prop_path">Path: %1$s</string>
+    <string name="file_prop_size">Size: %1$s</string>
+    <string name="file_prop_type">Type: %1$s</string>
+    <string name="file_type_folder">Folder</string>
+    <string name="file_type_file">File</string>
+    <string name="btn_close">Close</string>
+
+    <!-- BacklogScreen -->
+    <string name="run_architectural_audit">Run Architectural Audit Rules</string>
+    <string name="audit_results_title">Audit Results</string>
+    <string name="audit_rule_format">Rule: %1$s</string>
+    <string name="audit_passed_format">Passed: %1$s</string>
+    <string name="audit_message_format">Message: %1$s</string>
+    <string name="priority_format">Priority: %1$s</string>
+    <string name="btn_ok">OK</string>
 </resources>

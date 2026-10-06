@@ -26,12 +26,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.floating.FloatingButtonConfig
 import ru.doGood.Lynk.feature.dashboard.FloatingButtonsState
+import ru.doGood.Lynk.feature.dashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -251,7 +253,7 @@ fun FloatingButtonsScreen(
     // Add App to Quick Launch Dialog
     if (showAddQuickLaunchDialog) {
         SelectAppDialog(
-            title = "Добавить в Быстрый Запуск",
+            title = stringResource(R.string.add_quick_launch_title),
             availableApps = state.availableApps,
             existingApps = state.config.quickLaunchApps,
             onDismiss = { showAddQuickLaunchDialog = false },
@@ -265,7 +267,7 @@ fun FloatingButtonsScreen(
     // Add App to Fullscreen Targets Dialog
     if (showAddFullscreenDialog) {
         SelectAppDialog(
-            title = "Добавить приложение для разворота",
+            title = stringResource(R.string.add_fullscreen_app_title),
             availableApps = state.availableApps,
             existingApps = state.config.fullscreenApps,
             onDismiss = { showAddFullscreenDialog = false },
@@ -288,8 +290,8 @@ private fun QuickLaunchCard(
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Menu,
-        title = "Кнопка быстрого запуска",
-        subtitle = "Быстрое меню со списком избранных приложений",
+        title = stringResource(R.string.quick_launch_btn_title),
+        subtitle = stringResource(R.string.quick_launch_btn_subtitle),
         enabled = state.config.isQuickLaunchEnabled,
         onToggleEnabled = onToggleQuickLaunch,
         isSeparateButtons = state.config.isSeparateButtonsEnabled,
@@ -304,17 +306,17 @@ private fun QuickLaunchCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Приложения меню (${state.config.quickLaunchApps.size}):",
+                stringResource(R.string.quick_launch_apps_label, state.config.quickLaunchApps.size),
                 style = MaterialTheme.typography.titleSmall
             )
             IconButton(onClick = onShowAddDialog) {
-                Icon(Icons.Rounded.Add, contentDescription = "Добавить приложение")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_application))
             }
         }
 
         if (state.config.quickLaunchApps.isEmpty()) {
             Text(
-                text = "Приложения не добавлены. Нажмите '+', чтобы добавить.",
+                text = stringResource(R.string.no_apps_added),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -331,7 +333,7 @@ private fun QuickLaunchCard(
                         trailingIcon = {
                             Icon(
                                 Icons.Rounded.Close,
-                                contentDescription = "Удалить",
+                                contentDescription = stringResource(R.string.btn_remove),
                                 modifier = Modifier
                                     .size(16.dp)
                                     .clickable { onRemoveQuickLaunchApp(pkg) }
@@ -355,8 +357,8 @@ private fun FullscreenOverlayCard(
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Fullscreen,
-        title = "Авто-оверлей (На весь экран)",
-        subtitle = "Кнопка разворота на экран 1003 поверх выбранных ПО",
+        title = stringResource(R.string.fullscreen_overlay_title),
+        subtitle = stringResource(R.string.fullscreen_overlay_subtitle),
         enabled = state.config.isFullscreenOverlayEnabled,
         onToggleEnabled = onToggleFullscreenOverlay,
         isSeparateButtons = state.config.isSeparateButtonsEnabled,
@@ -371,17 +373,17 @@ private fun FullscreenOverlayCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Целевые приложения (${state.config.fullscreenApps.size}):",
+                stringResource(R.string.target_apps_label, state.config.fullscreenApps.size),
                 style = MaterialTheme.typography.titleSmall
             )
             IconButton(onClick = onShowAddDialog) {
-                Icon(Icons.Rounded.Add, contentDescription = "Добавить приложение")
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.add_application))
             }
         }
 
         if (state.config.fullscreenApps.isEmpty()) {
             Text(
-                text = "Приложения не добавлены. Нажмите '+', чтобы выбрать.",
+                text = stringResource(R.string.no_target_apps),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -398,7 +400,7 @@ private fun FullscreenOverlayCard(
                         trailingIcon = {
                             Icon(
                                 Icons.Rounded.Close,
-                                contentDescription = "Удалить",
+                                contentDescription = stringResource(R.string.btn_remove),
                                 modifier = Modifier
                                     .size(16.dp)
                                     .clickable { onRemoveFullscreenApp(pkg) }
@@ -420,8 +422,8 @@ private fun HomeNavigatorCard(
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Home,
-        title = "Навигатор \"Домой\"",
-        subtitle = "Плавающая кнопка быстрого возврата на рабочий стол",
+        title = stringResource(R.string.home_navigator_title),
+        subtitle = stringResource(R.string.home_navigator_subtitle),
         enabled = state.config.isHomeNavigatorEnabled,
         onToggleEnabled = onToggleHomeNavigator,
         isSeparateButtons = state.config.isSeparateButtonsEnabled,
@@ -441,8 +443,8 @@ private fun BackNavigatorCard(
 ) {
     FloatingButtonCard(
         icon = Icons.AutoMirrored.Rounded.ArrowBack,
-        title = "Навигатор \"Назад\"",
-        subtitle = "Плавающая кнопка имитации системной клавиши Назад",
+        title = stringResource(R.string.back_navigator_title),
+        subtitle = stringResource(R.string.back_navigator_subtitle),
         enabled = state.config.isBackNavigatorEnabled,
         onToggleEnabled = onToggleBackNavigator,
         isSeparateButtons = state.config.isSeparateButtonsEnabled,
@@ -462,8 +464,8 @@ private fun RefreshButtonCard(
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Refresh,
-        title = "Кнопка \"Обновить\"",
-        subtitle = "Плавающая кнопка принудительного обновления оверлеев",
+        title = stringResource(R.string.refresh_button_title),
+        subtitle = stringResource(R.string.refresh_button_subtitle),
         enabled = state.config.isRefreshNavigatorEnabled,
         onToggleEnabled = onToggleRefreshNavigator,
         isSeparateButtons = state.config.isSeparateButtonsEnabled,
@@ -508,14 +510,14 @@ private fun ServiceStatusCard(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (state.isServiceRunning) "Служба оверлея запущена" else "Служба оверлея остановлена",
+                            text = if (state.isServiceRunning) stringResource(R.string.service_running) else stringResource(R.string.service_stopped),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (state.isServiceRunning) "Плавающие кнопки отображаются поверх окон" else "Включите службу для активации кнопок",
+                            text = if (state.isServiceRunning) stringResource(R.string.service_running_desc) else stringResource(R.string.service_stopped_desc),
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
@@ -524,14 +526,14 @@ private fun ServiceStatusCard(
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = onToggleService) {
-                    Text(if (state.isServiceRunning) "Остановить" else "Запустить")
+                    Text(if (state.isServiceRunning) stringResource(R.string.btn_stop_service) else stringResource(R.string.btn_start_service))
                 }
             }
 
             if (!state.isOverlayPermissionGranted || !state.isUsageStatsPermissionGranted) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
                 Text(
-                    text = "Требуются разрешения системного уровня:",
+                    text = stringResource(R.string.system_permissions_required),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.error,
                     fontWeight = FontWeight.SemiBold
@@ -544,9 +546,9 @@ private fun ServiceStatusCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "• Отображение поверх других окон", style = MaterialTheme.typography.bodySmall)
+                        Text(text = stringResource(R.string.perm_overlay_display), style = MaterialTheme.typography.bodySmall)
                         TextButton(onClick = onOpenOverlaySettings) {
-                            Text("Разрешить")
+                            Text(stringResource(R.string.btn_allow))
                         }
                     }
                 }
@@ -557,9 +559,9 @@ private fun ServiceStatusCard(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "• Доступ к истории использования", style = MaterialTheme.typography.bodySmall)
+                        Text(text = stringResource(R.string.perm_usage_history), style = MaterialTheme.typography.bodySmall)
                         TextButton(onClick = onOpenUsageStatsSettings) {
-                            Text("Разрешить")
+                            Text(stringResource(R.string.btn_allow))
                         }
                     }
                 }
@@ -646,7 +648,7 @@ private fun FloatingButtonCard(
                             }
 
                             Text(
-                                text = "Размер кнопки: $sizeDp dp",
+                                text = stringResource(R.string.button_size_format, sizeDp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
@@ -659,7 +661,7 @@ private fun FloatingButtonCard(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = "Прозрачность кнопки: $opacityPercent%",
+                                text = stringResource(R.string.button_opacity_format, opacityPercent),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium
                             )
@@ -703,7 +705,7 @@ private fun ButtonLayoutCard(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = "Режим оверлея и дисплей",
+                    text = stringResource(R.string.overlay_display_mode),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -718,12 +720,12 @@ private fun ButtonLayoutCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Разделять плавающие кнопки",
+                        text = stringResource(R.string.sep_buttons_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Управлять кнопками независимо либо единым блоком",
+                        text = stringResource(R.string.sep_buttons_subtitle),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -739,7 +741,7 @@ private fun ButtonLayoutCard(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                     Text(
-                        text = "Размер кнопок в совмещенном блоке: ${config.combinedButtonSize} dp",
+                        text = stringResource(R.string.combined_button_size_format, config.combinedButtonSize),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -752,7 +754,7 @@ private fun ButtonLayoutCard(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     Text(
-                        text = "Непрозрачность совмещенного блока: ${config.opacityPercent}%",
+                        text = stringResource(R.string.combined_opacity_format, config.opacityPercent),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium
                     )
@@ -773,12 +775,12 @@ private fun ButtonLayoutCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Зеркалирование на Display 1003",
+                        text = stringResource(R.string.mirroring_title),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Дублировать оверлей на экран пассажира ГУ",
+                        text = stringResource(R.string.mirroring_subtitle),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -810,7 +812,7 @@ private fun SelectAppDialog(
                 OutlinedTextField(
                     value = customPackageInput,
                     onValueChange = { customPackageInput = it },
-                    label = { Text("Имя пакета (например, com.example.app)") },
+                    label = { Text(stringResource(R.string.package_name_hint)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (customPackageInput.isNotBlank()) {
@@ -820,12 +822,12 @@ private fun SelectAppDialog(
                             .padding(top = 8.dp)
                             .align(Alignment.End)
                     ) {
-                        Text("Добавить введенный")
+                        Text(stringResource(R.string.btn_add_custom))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Или выберите из установленных ПО:", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.select_from_installed), style = MaterialTheme.typography.labelMedium)
 
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
@@ -852,7 +854,7 @@ private fun SelectAppDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Закрыть")
+                Text(stringResource(R.string.btn_close))
             }
         }
     )

@@ -15,10 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.file.FileItem
+import ru.doGood.Lynk.feature.dashboard.R
 import ru.doGood.Lynk.feature.dashboard.SortType
 import java.text.SimpleDateFormat
 import java.util.*
@@ -78,7 +80,7 @@ fun FileManagerScreen(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = "Up directory"
+                        contentDescription = stringResource(R.string.file_up_dir)
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
@@ -96,35 +98,35 @@ fun FileManagerScreen(
                         onClick = { showSortMenu = true },
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Icon(Icons.Rounded.Sort, contentDescription = "Sort files")
+                        Icon(Icons.Rounded.Sort, contentDescription = stringResource(R.string.file_sort_files))
                     }
                     DropdownMenu(
                         expanded = showSortMenu,
                         onDismissRequest = { showSortMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Sort by Name") },
+                            text = { Text(stringResource(R.string.sort_by_name)) },
                             onClick = { onSortTypeChange(SortType.NAME); showSortMenu = false },
                             leadingIcon = {
                                 if (sortType == SortType.NAME) Icon(Icons.Rounded.Check, null)
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Sort by Size") },
+                            text = { Text(stringResource(R.string.sort_by_size)) },
                             onClick = { onSortTypeChange(SortType.SIZE); showSortMenu = false },
                             leadingIcon = {
                                 if (sortType == SortType.SIZE) Icon(Icons.Rounded.Check, null)
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Sort by Date") },
+                            text = { Text(stringResource(R.string.sort_by_date)) },
                             onClick = { onSortTypeChange(SortType.DATE); showSortMenu = false },
                             leadingIcon = {
                                 if (sortType == SortType.DATE) Icon(Icons.Rounded.Check, null)
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Sort by Type") },
+                            text = { Text(stringResource(R.string.sort_by_type)) },
                             onClick = { onSortTypeChange(SortType.TYPE); showSortMenu = false },
                             leadingIcon = {
                                 if (sortType == SortType.TYPE) Icon(Icons.Rounded.Check, null)
@@ -132,7 +134,7 @@ fun FileManagerScreen(
                         )
                         HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text(if (sortAscending) "Ascending ↑" else "Descending ↓") },
+                            text = { Text(if (sortAscending) stringResource(R.string.sort_ascending) else stringResource(R.string.sort_descending)) },
                             onClick = { onToggleSortDirection(); showSortMenu = false },
                             leadingIcon = { Icon(Icons.Rounded.SwapVert, null) }
                         )
@@ -149,7 +151,7 @@ fun FileManagerScreen(
                         ) {
                             Text("$clipboardCount")
                         }
-                        Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
+                        Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.file_paste))
                     }
                 }
             }
@@ -178,12 +180,12 @@ fun FileManagerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Storage",
+                                    text = stringResource(R.string.storage_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Free $freeSpaceFormatted / $totalSpaceFormatted",
+                                    text = stringResource(R.string.storage_free_total, freeSpaceFormatted, totalSpaceFormatted),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -205,12 +207,12 @@ fun FileManagerScreen(
                         value = searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Search files...") },
+                        placeholder = { Text(stringResource(R.string.search_files_hint)) },
                         leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { onSearchQueryChange("") }) {
-                                    Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
                                 }
                             }
                         },
@@ -244,13 +246,13 @@ fun FileManagerScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Storage",
+                                    text = stringResource(R.string.storage_title),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                             Text(
-                                text = "Free $freeSpaceFormatted / Total $totalSpaceFormatted",
+                                text = stringResource(R.string.storage_free_total, freeSpaceFormatted, totalSpaceFormatted),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -274,12 +276,12 @@ fun FileManagerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    placeholder = { Text("Search files...") },
+                    placeholder = { Text(stringResource(R.string.search_files_hint)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { onSearchQueryChange("") }) {
-                                Icon(Icons.Rounded.Close, contentDescription = "Clear search")
+                                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
                             }
                         }
                     },
@@ -305,27 +307,27 @@ fun FileManagerScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Selected (${selectedFiles.size})",
+                            text = stringResource(R.string.selected_count, selectedFiles.size),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                         Row {
                             IconButton(onClick = onCopySelected) {
-                                Icon(Icons.Rounded.ContentCopy, "Copy")
+                                Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy))
                             }
                             IconButton(onClick = onCutSelected) {
-                                Icon(Icons.Rounded.ContentCut, "Cut")
+                                Icon(Icons.Rounded.ContentCut, stringResource(R.string.btn_cut))
                             }
                             IconButton(onClick = onDeleteSelected) {
                                 Icon(
                                     Icons.Rounded.Delete,
-                                    "Delete",
+                                    stringResource(R.string.btn_delete),
                                     tint = MaterialTheme.colorScheme.error
                                 )
                             }
                             IconButton(onClick = onClearSelection) {
-                                Icon(Icons.Rounded.Close, "Deselect")
+                                Icon(Icons.Rounded.Close, stringResource(R.string.btn_deselect))
                             }
                         }
                     }
@@ -365,7 +367,7 @@ fun FileManagerScreen(
                         Column {
                             if (isApk) {
                                 ListItem(
-                                    headlineContent = { Text("Install APK") },
+                                    headlineContent = { Text(stringResource(R.string.install_apk)) },
                                     leadingContent = { Icon(Icons.Rounded.Android, null) },
                                     modifier = Modifier.combinedClickable {
                                         selectedItemForMenu = null
@@ -374,7 +376,7 @@ fun FileManagerScreen(
                                 )
                             }
                             ListItem(
-                                headlineContent = { Text("Properties") },
+                                headlineContent = { Text(stringResource(R.string.file_properties)) },
                                 leadingContent = { Icon(Icons.Rounded.Info, null) },
                                 modifier = Modifier.combinedClickable {
                                     selectedItemForMenu = null
@@ -385,7 +387,7 @@ fun FileManagerScreen(
                     },
                     confirmButton = {
                         TextButton(onClick = { selectedItemForMenu = null }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.btn_cancel))
                         }
                     }
                 )
@@ -469,7 +471,7 @@ fun FileItemRow(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = if (item.isDirectory) "Folder" else formatFileSize(item.size),
+                            text = if (item.isDirectory) stringResource(R.string.file_folder) else formatFileSize(item.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -488,7 +490,7 @@ fun FileItemRow(
                 IconButton(onClick = onMoreClick) {
                     Icon(
                         Icons.Rounded.MoreVert,
-                        contentDescription = "More options",
+                        contentDescription = stringResource(R.string.more_options),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
