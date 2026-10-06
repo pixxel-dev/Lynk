@@ -49,6 +49,11 @@ The project is developed and maintained by a collaborative multi-agent AI system
 - **100% Key Parity:** All string resources must maintain 100% key parity between Russian and English languages. Missing translations in either language are strictly prohibited. Parity can be audited at any time via `./gradlew :checkLocalization`.
 - **No Hardcoded Compose Strings:** Using hardcoded text literals directly in Compose UI components (e.g., `Text("Hardcoded Text")`) is forbidden. All user-facing text must be referenced via `stringResource(R.string...)`.
 
+### 8. Token Consumption Efficiency / Эффективность расхода токенов
+- **Concise Responses:** Agent responses must be concise, precise, and free of redundant, lengthy introductory or concluding phrases.
+- **No Code Duplication:** Duplicating identical code snippets multiple times is strictly prohibited; respond briefly and to the point.
+- **Batch Tool Invocation:** Tools must be invoked in batches (parallel calls) without unnecessary intermediate requests.
+
 ---
 
 ## 🇷🇺 Русский
@@ -96,3 +101,8 @@ The project is developed and maintained by a collaborative multi-agent AI system
 - **Автоматическая синхронизация строк:** При любом добавлении нового текста или изменении UI агенты обязаны автоматически генерировать и обновлять ключи в `res/values/strings.xml` (EN) и `res/values-ru/strings.xml` (RU).
 - **100% паритет ключей:** Все строковые ресурсы должны иметь 100% паритет ключей между русский и английским языками. Отсутствие ключа в любом из языков строго запрещено. Аудит паритета выполняется командой `./gradlew :checkLocalization`.
 - **Запрет хардкода строк в Compose:** Запрещено использовать хардкод строк в Compose-файлах (`Text("Хардкод")`). Все отображаемые пользователю строки должны вызываться исключительно через `stringResource(R.string...)`.
+
+### 8. Эффективность расхода токенов / Token Consumption Efficiency
+- **Лаконичность ответов:** Ответы агентов должны быть лаконичными, точными и без избыточных длинных вступительных/заключительных фраз.
+- **Запрет дублирования кода:** Запрещено дублировать одни и те же фрагменты кода многократно; отвечать коротко и по существу.
+- **Пакетный вызов инструментов:** Инструменты вызываются пакетно (батчами) без лишних промежуточных запросов.
