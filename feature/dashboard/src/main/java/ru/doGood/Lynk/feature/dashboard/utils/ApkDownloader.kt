@@ -9,11 +9,23 @@ import android.net.Uri
 import android.os.Environment
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.File
 
 class ApkDownloader(private val context: Context) {
 
-    fun downloadFile(url: String, fileName: String, onComplete: ((File) -> Unit)? = null): Long {
+    fun downloadFile(
+        url: String,
+        fileName: String,
+        scope: CoroutineScope? = null,
+        onProgress: ((Float) -> Unit)? = null,
+        onComplete: ((File) -> Unit)? = null
+    ): Long {
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val uri = Uri.parse(url)
 
@@ -31,6 +43,8 @@ class ApkDownloader(private val context: Context) {
 
         val downloadId = downloadManager.enqueue(request)
 
+        var pollingJob: Job? = null
+
         val onDownloadCompleteReceiver = object : BroadcastReceiver() {
             override fun onReceive(recvContext: Context?, intent: Intent?) {
                 val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L) ?: -1L
@@ -39,8 +53,11 @@ class ApkDownloader(private val context: Context) {
                         context.unregisterReceiver(this)
                     } catch (_: Exception) {}
 
+                    pollingJob?.cancel()
+
                     val downloadedFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
                     if (downloadedFile.exists() && downloadedFile.length() > 0) {
+                        onProgress?.invoke(1.0f)
                         installApk(downloadedFile)
                         onComplete?.invoke(downloadedFile)
                     }
@@ -51,7 +68,62 @@ class ApkDownloader(private val context: Context) {
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
         ContextCompat.registerReceiver(context, onDownloadCompleteReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
 
+        if (scope != null && onProgress != null) {
+            pollingJob = scope.launch(Dispatchers.IO) {
+                var downloading = true
+                while (downloading && isActive) {
+                    val query = DownloadManager.Query().setFilterById(downloadId)
+                    val cursor = downloadManager.query(query)
+                    if (cursor != null) {
+                        cursor.use { c ->
+                            if (c.moveToFirst()) {
+                                val bytesDownloadedIdx = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                                val bytesTotalIdx = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                                val statusIdx = c.getColumnIndex(DownloadManager.COLUMN_STATUS)
+
+                                if (bytesDownloadedIdx != -1 && bytesTotalIdx != -1) {
+                                    val downloadedBytes = c.getLong(bytesDownloadedIdx)
+                                    val totalBytes = c.getLong(bytesTotalIdx)
+                                    if (totalBytes > 0) {
+                                        val progress = (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                                        onProgress(progress)
+                                    }
+                                }
+
+                                if (statusIdx != -1) {
+                                    val status = c.getInt(statusIdx)
+                                    if (status == DownloadManager.STATUS_SUCCESSFUL || status == DownloadManager.STATUS_FAILED) {
+                                        downloading = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    delay(400)
+                }
+            }
+        }
+
         return downloadId
+    }
+
+    fun queryDownloadProgress(downloadId: Long): Float? {
+        val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as? DownloadManager ?: return null
+        val query = DownloadManager.Query().setFilterById(downloadId)
+        val cursor = downloadManager.query(query) ?: return null
+        return cursor.use { c ->
+            if (c.moveToFirst()) {
+                val bytesDownloadedIdx = c.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                val bytesTotalIdx = c.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                if (bytesDownloadedIdx != -1 && bytesTotalIdx != -1) {
+                    val downloadedBytes = c.getLong(bytesDownloadedIdx)
+                    val totalBytes = c.getLong(bytesTotalIdx)
+                    if (totalBytes > 0) {
+                        (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+                } else null
+            } else null
+        }
     }
 
     fun installApk(file: File) {

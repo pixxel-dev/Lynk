@@ -309,25 +309,34 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val app = getApplication<Application>()
             val downloader = ru.doGood.Lynk.feature.dashboard.utils.ApkDownloader(app)
-            downloader.downloadFile(url, "Lynk-update.apk") { _ ->
-                _state.update {
-                    it.copy(
-                        updateState = it.updateState.copy(
-                            isDownloading = false,
-                            isDownloaded = true,
-                            statusMessage = "Загрузка завершена. Запуск установки..."
+            downloader.downloadFile(
+                url = url,
+                fileName = "Lynk-update.apk",
+                scope = viewModelScope,
+                onProgress = { progress ->
+                    val percentage = (progress * 100).toInt()
+                    _state.update { state ->
+                        state.copy(
+                            updateState = state.updateState.copy(
+                                downloadProgress = progress,
+                                statusMessage = "Скачивание... $percentage%"
+                            )
                         )
-                    )
+                    }
+                },
+                onComplete = { _ ->
+                    _state.update { state ->
+                        state.copy(
+                            updateState = state.updateState.copy(
+                                isDownloading = false,
+                                isDownloaded = true,
+                                downloadProgress = 1f,
+                                statusMessage = "Загрузка завершена. Запуск установки..."
+                            )
+                        )
+                    }
                 }
-            }
-            
-            _state.update {
-                it.copy(
-                    updateState = it.updateState.copy(
-                        statusMessage = "Выполняется скачивание пакета..."
-                    )
-                )
-            }
+            )
         }
     }
 

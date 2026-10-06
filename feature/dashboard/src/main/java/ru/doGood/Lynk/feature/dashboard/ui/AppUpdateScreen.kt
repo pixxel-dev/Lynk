@@ -278,7 +278,7 @@ private fun LatestVersionCard(
                 Column(modifier = Modifier.padding(top = 12.dp)) {
                     if (isDownloading) {
                         LinearProgressIndicator(
-                            progress = { downloadProgress },
+                            progress = downloadProgress,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp),
