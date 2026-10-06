@@ -13,6 +13,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ### In Progress
 
 ### Done
+- [x] Integration of Localization Agent & :checkLocalization Audit Tool: Promoted `Localization Agent` to active status in `ARCHITECTURE_RULES.md`, established mandatory localization rules (100% RU/EN key parity, no hardcoded Compose strings), created the Python audit script `scripts/check_localization.py` and Gradle task `:checkLocalization`.
 - [x] GitHub Actions CI Keystore Auto-Generation Step: Added `Generate Release Keystore for CI` step to `.github/workflows/release.yml` before `assembleRelease`, fixing `:app:validateSigningRelease` failure on GitHub Actions runners without requiring manual secret configuration.
 - [x] Agent Ecosystem & Roles Documentation (Task 10): Updated `ARCHITECTURE_RULES.md` (RU/EN) with section 5 "AI Agent Roles & Ecosystem", detailing 4 active agents (Engineering Manager, Product Design, Coder, Critic) and proposing 2 new conceptual agents (Code Review & Security Auditor, Localization Agent).
 - [x] Agent Team Architecture & Roles: Executed Task 10. Added "AI Agent Roles & Ecosystem" section to `ARCHITECTURE_RULES.md` defining active agents (Engineering Manager, Product Design, Coder, Critic) and proposing future automation agents (Code Review & Security Auditor, Localization).
@@ -57,6 +58,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ### В работе (In Progress)
 
 ### Готово (Done)
+- [x] Интеграция Агента локализации и утилиты :checkLocalization: Статус `Localization Agent` в `ARCHITECTURE_RULES.md` переведен в активно действующие стандарты команды; добавлены правила обязательной локализации (100% паритет ключей RU/EN, запрет хардкода в Compose); созданы скрипт проверки `scripts/check_localization.py` и Gradle-таска `:checkLocalization`.
 - [x] Авто-генерация Keystore в GitHub Actions CI: Добавлен шаг генерации ключа `lynk_release.keystore` в `.github/workflows/release.yml` перед сборкой `assembleRelease`, исправляющий ошибку `:app:validateSigningRelease` на виртуальной машине GitHub Runner без необходимости ручной настройки GitHub Secrets.
 - [x] Документирование ролей ИИ-агентов и экосистемы (Задача 10): Обновлен `ARCHITECTURE_RULES.md` (RU/EN) разделом 5 "Экосистема и роли ИИ-агентов", детально описывающим 4 активных агента (Engineering Manager, Product Design, Coder, Critic) и предлагающим 2 новых концептуальных агента (Code Review & Security Auditor, Localization Agent).
 - [x] Роли ИИ-Агентов и Экосистема: Выполнена Задача 10. В `ARCHITECTURE_RULES.md` добавлен раздел "AI Agent Roles & Ecosystem", описывающий активных агентов (Engineering Manager, Product Design, Coder, Critic) и предлагающий будущих агентов для автоматизации (Агент код-ревью и безопасности, Агент локализации).
