@@ -208,4 +208,13 @@
     <string name="file_type_file">File</string>
     <string name="btn_close">Close</string>
 
+    <!-- Freeform Window Container -->
+    <string name="action_freeform_window">Freeform Window</string>
+    <string name="action_freeform_window_desc">Launch app in freeform resizable window container</string>
+    <string name="freeform_window_title">Freeform Window</string>
+    <string name="freeform_window_subtitle">Floating button to open resizable freeform window container</string>
+    <string name="freeform_launch_app">Launch in window</string>
+    <string name="freeform_close_window">Close window</string>
+    <string name="freeform_select_app">Select Application</string>
+
 </resources>

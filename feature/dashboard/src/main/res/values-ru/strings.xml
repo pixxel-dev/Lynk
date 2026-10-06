@@ -208,4 +208,13 @@
     <string name="file_type_file">Файл</string>
     <string name="btn_close">Закрыть</string>
 
+    <!-- Freeform Window Container -->
+    <string name="action_freeform_window">Плавающее окно</string>
+    <string name="action_freeform_window_desc">Запуск приложения в плавающем изменяемом окне</string>
+    <string name="freeform_window_title">Плавающее окно</string>
+    <string name="freeform_window_subtitle">Плавающая кнопка открытия изменяемого контейнера</string>
+    <string name="freeform_launch_app">Запустить в окне</string>
+    <string name="freeform_close_window">Закрыть окно</string>
+    <string name="freeform_select_app">Выберите приложение</string>
+
 </resources>

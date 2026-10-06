@@ -11,6 +11,7 @@ public class FloatingButtonConfig {
     private boolean homeNavigatorEnabled;
     private boolean backNavigatorEnabled;
     private boolean refreshNavigatorEnabled;
+    private boolean freeformWindowEnabled;
     private boolean separateButtonsEnabled;
 
     private List<String> quickLaunchApps;
@@ -21,6 +22,7 @@ public class FloatingButtonConfig {
     private int homeButtonSize;
     private int backButtonSize;
     private int refreshButtonSize;
+    private int freeformButtonSize;
     private int combinedButtonSize;
 
     private int quickLaunchX;
@@ -33,6 +35,8 @@ public class FloatingButtonConfig {
     private int backY;
     private int refreshX;
     private int refreshY;
+    private int freeformX;
+    private int freeformY;
     private int combinedX;
     private int combinedY;
 
@@ -42,6 +46,7 @@ public class FloatingButtonConfig {
     private int homeOpacityPercent;
     private int backOpacityPercent;
     private int refreshOpacityPercent;
+    private int freeformOpacityPercent;
 
     private String buttonColor;
     private String shape;
@@ -56,6 +61,8 @@ public class FloatingButtonConfig {
     private String backShape;
     private String refreshColorHex;
     private String refreshShape;
+    private String freeformColorHex;
+    private String freeformShape;
 
     private boolean secondaryDisplayMirroring;
 
@@ -67,6 +74,7 @@ public class FloatingButtonConfig {
         this.homeNavigatorEnabled = false;
         this.backNavigatorEnabled = false;
         this.refreshNavigatorEnabled = false;
+        this.freeformWindowEnabled = false;
         this.separateButtonsEnabled = false;
 
         this.quickLaunchApps = new ArrayList<>();
@@ -77,6 +85,7 @@ public class FloatingButtonConfig {
         this.homeButtonSize = 48;
         this.backButtonSize = 48;
         this.refreshButtonSize = 48;
+        this.freeformButtonSize = 48;
         this.combinedButtonSize = 48;
 
         this.quickLaunchX = 0;
@@ -89,6 +98,8 @@ public class FloatingButtonConfig {
         this.backY = 400;
         this.refreshX = 0;
         this.refreshY = 500;
+        this.freeformX = 0;
+        this.freeformY = 600;
         this.combinedX = 0;
         this.combinedY = 200;
 
@@ -98,6 +109,7 @@ public class FloatingButtonConfig {
         this.homeOpacityPercent = 85;
         this.backOpacityPercent = 85;
         this.refreshOpacityPercent = 85;
+        this.freeformOpacityPercent = 85;
 
         this.buttonColor = "#7C4DFF";
         this.shape = "CIRCLE";
@@ -112,6 +124,8 @@ public class FloatingButtonConfig {
         this.backShape = "CIRCLE";
         this.refreshColorHex = "#FFA000";
         this.refreshShape = "CIRCLE";
+        this.freeformColorHex = "#00897B";
+        this.freeformShape = "CIRCLE";
 
         this.secondaryDisplayMirroring = true;
 
@@ -126,6 +140,7 @@ public class FloatingButtonConfig {
             this.homeNavigatorEnabled = other.homeNavigatorEnabled;
             this.backNavigatorEnabled = other.backNavigatorEnabled;
             this.refreshNavigatorEnabled = other.refreshNavigatorEnabled;
+            this.freeformWindowEnabled = other.freeformWindowEnabled;
             this.separateButtonsEnabled = other.separateButtonsEnabled;
             this.quickLaunchApps = other.quickLaunchApps != null ? new ArrayList<>(other.quickLaunchApps) : new ArrayList<>();
             this.fullscreenApps = other.fullscreenApps != null ? new ArrayList<>(other.fullscreenApps) : new ArrayList<>();
@@ -134,6 +149,7 @@ public class FloatingButtonConfig {
             this.homeButtonSize = other.homeButtonSize;
             this.backButtonSize = other.backButtonSize;
             this.refreshButtonSize = other.refreshButtonSize;
+            this.freeformButtonSize = other.freeformButtonSize;
             this.combinedButtonSize = other.combinedButtonSize;
 
             this.quickLaunchX = other.quickLaunchX;
@@ -146,6 +162,8 @@ public class FloatingButtonConfig {
             this.backY = other.backY;
             this.refreshX = other.refreshX;
             this.refreshY = other.refreshY;
+            this.freeformX = other.freeformX;
+            this.freeformY = other.freeformY;
             this.combinedX = other.combinedX;
             this.combinedY = other.combinedY;
 
@@ -155,6 +173,7 @@ public class FloatingButtonConfig {
             this.homeOpacityPercent = other.homeOpacityPercent;
             this.backOpacityPercent = other.backOpacityPercent;
             this.refreshOpacityPercent = other.refreshOpacityPercent;
+            this.freeformOpacityPercent = other.freeformOpacityPercent;
 
             this.buttonColor = other.buttonColor != null ? other.buttonColor : "#7C4DFF";
             this.shape = other.shape != null ? other.shape : "CIRCLE";
@@ -169,6 +188,8 @@ public class FloatingButtonConfig {
             this.backShape = other.backShape != null ? other.backShape : "CIRCLE";
             this.refreshColorHex = other.refreshColorHex != null ? other.refreshColorHex : "#FFA000";
             this.refreshShape = other.refreshShape != null ? other.refreshShape : "CIRCLE";
+            this.freeformColorHex = other.freeformColorHex != null ? other.freeformColorHex : "#00897B";
+            this.freeformShape = other.freeformShape != null ? other.freeformShape : "CIRCLE";
 
             this.secondaryDisplayMirroring = other.secondaryDisplayMirroring;
             this.actions = new ArrayList<>();
@@ -189,7 +210,6 @@ public class FloatingButtonConfig {
             this.buttonColor = "#7C4DFF";
             this.shape = "CIRCLE";
             this.actions = new ArrayList<>();
-            this.actions = new ArrayList<>();
             initDefaultActions();
         }
     }
@@ -204,11 +224,12 @@ public class FloatingButtonConfig {
         this.actions.add(new FloatingButtonAction("nav_home", "Навигатор \"Домой\"", FloatingButtonAction.ActionType.HOME, new ArrayList<>(), homeNavigatorEnabled));
         this.actions.add(new FloatingButtonAction("nav_back", "Навигатор \"Назад\"", FloatingButtonAction.ActionType.BACK, new ArrayList<>(), backNavigatorEnabled));
         this.actions.add(new FloatingButtonAction("nav_refresh", "Обновить / Refresh", FloatingButtonAction.ActionType.REFRESH, new ArrayList<>(), refreshNavigatorEnabled));
+        this.actions.add(new FloatingButtonAction("freeform_win", "Плавающее окно / Freeform Window", FloatingButtonAction.ActionType.FREEFORM_WINDOW, new ArrayList<>(), freeformWindowEnabled));
     }
 
     // Business logic methods
     public boolean isAnyOverlayActive() {
-        return quickLaunchEnabled || fullscreenOverlayEnabled || homeNavigatorEnabled || backNavigatorEnabled || refreshNavigatorEnabled;
+        return quickLaunchEnabled || fullscreenOverlayEnabled || homeNavigatorEnabled || backNavigatorEnabled || refreshNavigatorEnabled || freeformWindowEnabled;
     }
 
     public boolean shouldShowFullscreenForApp(String packageName) {
@@ -264,6 +285,8 @@ public class FloatingButtonConfig {
                 action.setEnabled(backNavigatorEnabled);
             } else if (action.getActionType() == FloatingButtonAction.ActionType.REFRESH) {
                 action.setEnabled(refreshNavigatorEnabled);
+            } else if (action.getActionType() == FloatingButtonAction.ActionType.FREEFORM_WINDOW) {
+                action.setEnabled(freeformWindowEnabled);
             }
         }
     }
@@ -635,6 +658,63 @@ public class FloatingButtonConfig {
 
     public void setRefreshShape(String refreshShape) {
         this.refreshShape = refreshShape != null ? refreshShape : "CIRCLE";
+    }
+
+    public boolean isFreeformWindowEnabled() {
+        return freeformWindowEnabled;
+    }
+
+    public void setFreeformWindowEnabled(boolean freeformWindowEnabled) {
+        this.freeformWindowEnabled = freeformWindowEnabled;
+        syncActionsWithApps();
+    }
+
+    public int getFreeformButtonSize() {
+        return freeformButtonSize;
+    }
+
+    public void setFreeformButtonSize(int freeformButtonSize) {
+        this.freeformButtonSize = Math.max(30, Math.min(150, freeformButtonSize));
+    }
+
+    public int getFreeformOpacityPercent() {
+        return freeformOpacityPercent;
+    }
+
+    public void setFreeformOpacityPercent(int freeformOpacityPercent) {
+        this.freeformOpacityPercent = Math.max(10, Math.min(100, freeformOpacityPercent));
+    }
+
+    public int getFreeformX() {
+        return freeformX;
+    }
+
+    public void setFreeformX(int freeformX) {
+        this.freeformX = freeformX;
+    }
+
+    public int getFreeformY() {
+        return freeformY;
+    }
+
+    public void setFreeformY(int freeformY) {
+        this.freeformY = freeformY;
+    }
+
+    public String getFreeformColorHex() {
+        return freeformColorHex != null ? freeformColorHex : "#00897B";
+    }
+
+    public void setFreeformColorHex(String freeformColorHex) {
+        this.freeformColorHex = freeformColorHex != null ? freeformColorHex : "#00897B";
+    }
+
+    public String getFreeformShape() {
+        return freeformShape != null ? freeformShape : "CIRCLE";
+    }
+
+    public void setFreeformShape(String freeformShape) {
+        this.freeformShape = freeformShape != null ? freeformShape : "CIRCLE";
     }
 
     public List<FloatingButtonAction> getActions() {

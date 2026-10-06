@@ -65,6 +65,11 @@ fun FloatingButtonsScreen(
     onSetRefreshOpacity: (Int) -> Unit,
     onSetRefreshColor: (String) -> Unit = {},
     onSetRefreshShape: (String) -> Unit = {},
+    onToggleFreeformWindow: (Boolean) -> Unit = {},
+    onSetFreeformSize: (Int) -> Unit = {},
+    onSetFreeformOpacity: (Int) -> Unit = {},
+    onSetFreeformColor: (String) -> Unit = {},
+    onSetFreeformShape: (String) -> Unit = {},
     onToggleSeparateButtons: (Boolean) -> Unit,
     onSetCombinedSize: (Int) -> Unit,
     onSetCombinedOpacity: (Int) -> Unit,
@@ -216,15 +221,23 @@ fun FloatingButtonsScreen(
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
-                                ButtonLayoutCard(
-                                    config = state.config,
-                                    onToggleSeparateButtons = onToggleSeparateButtons,
-                                    onSetCombinedSize = onSetCombinedSize,
-                                    onSetCombinedOpacity = onSetCombinedOpacity,
-                                    onToggleSecondaryMirroring = onToggleSecondaryMirroring
+                                FreeformWindowCard(
+                                    state = state,
+                                    onToggleFreeformWindow = onToggleFreeformWindow,
+                                    onSetFreeformSize = onSetFreeformSize,
+                                    onSetFreeformOpacity = onSetFreeformOpacity,
+                                    onSetFreeformColor = onSetFreeformColor,
+                                    onSetFreeformShape = onSetFreeformShape
                                 )
                             }
                         }
+                        ButtonLayoutCard(
+                            config = state.config,
+                            onToggleSeparateButtons = onToggleSeparateButtons,
+                            onSetCombinedSize = onSetCombinedSize,
+                            onSetCombinedOpacity = onSetCombinedOpacity,
+                            onToggleSecondaryMirroring = onToggleSecondaryMirroring
+                        )
                     } else {
                         QuickLaunchCard(
                             state = state,
@@ -269,6 +282,14 @@ fun FloatingButtonsScreen(
                             onSetRefreshOpacity = onSetRefreshOpacity,
                             onSetRefreshColor = onSetRefreshColor,
                             onSetRefreshShape = onSetRefreshShape
+                        )
+                        FreeformWindowCard(
+                            state = state,
+                            onToggleFreeformWindow = onToggleFreeformWindow,
+                            onSetFreeformSize = onSetFreeformSize,
+                            onSetFreeformOpacity = onSetFreeformOpacity,
+                            onSetFreeformColor = onSetFreeformColor,
+                            onSetFreeformShape = onSetFreeformShape
                         )
                         ButtonLayoutCard(
                             config = state.config,
@@ -544,6 +565,33 @@ private fun RefreshButtonCard(
         onSetColorHex = onSetRefreshColor,
         selectedShape = state.config.refreshShape,
         onSetShape = onSetRefreshShape
+    )
+}
+
+@Composable
+private fun FreeformWindowCard(
+    state: FloatingButtonsState,
+    onToggleFreeformWindow: (Boolean) -> Unit,
+    onSetFreeformSize: (Int) -> Unit,
+    onSetFreeformOpacity: (Int) -> Unit,
+    onSetFreeformColor: (String) -> Unit,
+    onSetFreeformShape: (String) -> Unit
+) {
+    FloatingButtonCard(
+        icon = Icons.Rounded.PictureInPicture,
+        title = stringResource(R.string.freeform_window_title),
+        subtitle = stringResource(R.string.freeform_window_subtitle),
+        enabled = state.config.isFreeformWindowEnabled,
+        onToggleEnabled = onToggleFreeformWindow,
+        isSeparateButtons = state.config.isSeparateButtonsEnabled,
+        sizeDp = state.config.freeformButtonSize,
+        onSetSize = onSetFreeformSize,
+        opacityPercent = state.config.freeformOpacityPercent,
+        onSetOpacity = onSetFreeformOpacity,
+        selectedColorHex = state.config.freeformColorHex,
+        onSetColorHex = onSetFreeformColor,
+        selectedShape = state.config.freeformShape,
+        onSetShape = onSetFreeformShape
     )
 }
 

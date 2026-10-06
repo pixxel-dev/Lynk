@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Lynk</string>
     <string name="github_repo_path">pixxel-dev/Lynk</string>
+    <string name="btn_cancel">Отмена</string>
+    <string name="freeform_window_title">Плавающее окно</string>
+    <string name="freeform_launch_app">Запустить в окне</string>
+    <string name="freeform_close_window">Закрыть окно</string>
+    <string name="freeform_select_app">Выберите приложение</string>
 </resources>

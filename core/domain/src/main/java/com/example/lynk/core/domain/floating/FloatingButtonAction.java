@@ -13,6 +13,7 @@ public class FloatingButtonAction {
         HOME("Навигатор \"Домой\"", "Navigate to home screen"),
         BACK("Навигатор \"Назад\"", "Trigger back action"),
         REFRESH("Обновить / Refresh", "Refresh interface or trigger update"),
+        FREEFORM_WINDOW("Плавающее окно / Freeform Window", "Resizable freeform window container"),
         CUSTOM("Custom Action", "Custom action button");
 
         private final String displayName;

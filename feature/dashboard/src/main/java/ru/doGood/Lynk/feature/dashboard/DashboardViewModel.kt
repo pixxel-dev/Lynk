@@ -891,6 +891,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         config.refreshButtonSize = prefs.getInt("refresh_button_size", 48)
         config.refreshOpacityPercent = prefs.getInt("refresh_opacity_percent", 85)
 
+        config.isFreeformWindowEnabled = prefs.getBoolean("freeform_window_enabled", false)
+        config.freeformButtonSize = prefs.getInt("freeform_button_size", 48)
+        config.freeformOpacityPercent = prefs.getInt("freeform_opacity_percent", 85)
+
         config.isSeparateButtonsEnabled = prefs.getBoolean("separate_buttons_enabled", false)
         config.combinedButtonSize = prefs.getInt("combined_button_size", 48)
         config.isSecondaryDisplayMirroring = prefs.getBoolean("secondary_display_mirroring", true)
@@ -913,6 +917,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         config.refreshColorHex = prefs.getString("refresh_color_hex", "#FFA000") ?: "#FFA000"
         config.refreshShape = prefs.getString("refresh_shape", "CIRCLE") ?: "CIRCLE"
+
+        config.freeformColorHex = prefs.getString("freeform_color_hex", "#00897B") ?: "#00897B"
+        config.freeformShape = prefs.getString("freeform_shape", "CIRCLE") ?: "CIRCLE"
 
         config.syncActionsWithApps()
 
@@ -958,6 +965,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             .putInt("refresh_button_size", newConfig.refreshButtonSize)
             .putInt("refresh_opacity_percent", newConfig.refreshOpacityPercent)
 
+            .putBoolean("freeform_window_enabled", newConfig.isFreeformWindowEnabled)
+            .putInt("freeform_button_size", newConfig.freeformButtonSize)
+            .putInt("freeform_opacity_percent", newConfig.freeformOpacityPercent)
+
             .putBoolean("separate_buttons_enabled", newConfig.isSeparateButtonsEnabled)
             .putInt("combined_button_size", newConfig.combinedButtonSize)
             .putBoolean("secondary_display_mirroring", newConfig.isSecondaryDisplayMirroring)
@@ -975,6 +986,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             .putString("back_shape", newConfig.backShape)
             .putString("refresh_color_hex", newConfig.refreshColorHex)
             .putString("refresh_shape", newConfig.refreshShape)
+            .putString("freeform_color_hex", newConfig.freeformColorHex)
+            .putString("freeform_shape", newConfig.freeformShape)
             .apply()
 
         val configCopy = newConfig.copy()
@@ -1080,6 +1093,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         saveAndApplyFloatingConfig(config)
     }
 
+    fun toggleFreeformWindowEnabled(enabled: Boolean) {
+        val config = getLatestFloatingConfig()
+        config.isFreeformWindowEnabled = enabled
+        saveAndApplyFloatingConfig(config)
+    }
+
     fun toggleSeparateButtonsEnabled(enabled: Boolean) {
         val config = getLatestFloatingConfig()
         config.isSeparateButtonsEnabled = enabled
@@ -1146,6 +1165,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         saveAndApplyFloatingConfig(config)
     }
 
+    fun setFreeformSize(size: Int) {
+        val config = getLatestFloatingConfig()
+        config.freeformButtonSize = size
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFreeformOpacityPercent(percent: Int) {
+        val config = getLatestFloatingConfig()
+        config.freeformOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
+    }
+
     fun setQuickLaunchColorHex(colorHex: String) {
         val config = getLatestFloatingConfig()
         config.quickLaunchColorHex = colorHex
@@ -1203,6 +1234,18 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setRefreshShape(shape: String) {
         val config = getLatestFloatingConfig()
         config.refreshShape = shape
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFreeformColorHex(colorHex: String) {
+        val config = getLatestFloatingConfig()
+        config.freeformColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFreeformShape(shape: String) {
+        val config = getLatestFloatingConfig()
+        config.freeformShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
@@ -1271,6 +1314,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 FloatingButtonAction.ActionType.HOME -> config.isHomeNavigatorEnabled = action.isEnabled
                 FloatingButtonAction.ActionType.BACK -> config.isBackNavigatorEnabled = action.isEnabled
                 FloatingButtonAction.ActionType.REFRESH -> config.isRefreshNavigatorEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.FREEFORM_WINDOW -> config.isFreeformWindowEnabled = action.isEnabled
                 else -> {}
             }
         }
