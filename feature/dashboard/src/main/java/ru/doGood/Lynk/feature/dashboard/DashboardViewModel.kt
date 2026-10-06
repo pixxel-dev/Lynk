@@ -280,19 +280,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             // Parent folder navigation ".." removed because TopAppBar handles it
 
-            val childFiles = dir.listFiles()
-            if (childFiles != null) {
-                for (file in childFiles) {
-                    filesList.add(
-                        FileItem(
-                            file.name,
-                            file.absolutePath,
-                            file.length(),
-                            file.lastModified(),
-                            file.isDirectory
-                        )
+            val childFiles = dir.listFiles() ?: emptyArray()
+            for (file in childFiles) {
+                filesList.add(
+                    FileItem(
+                        file.name,
+                        file.absolutePath,
+                        file.length(),
+                        file.lastModified(),
+                        file.isDirectory
                     )
-                }
+                )
             }
 
             var freeBytes = 0L
@@ -321,7 +319,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun navigateUp() {
         val currentPath = _state.value.fileManagerState.currentPath
-        val rootPath = Environment.getExternalStorageDirectory()?.absolutePath ?: "/"
+        val rootPath = Environment.getExternalStorageDirectory().absolutePath
         if (currentPath == rootPath) return
         
         val parent = File(currentPath).parentFile

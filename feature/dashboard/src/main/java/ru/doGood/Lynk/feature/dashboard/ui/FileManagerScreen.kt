@@ -62,7 +62,16 @@ fun FileManagerScreen(
     var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val isAtRoot = currentPath == (Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
+    val rootPath = Environment.getExternalStorageDirectory().absolutePath
+    val isAtRoot = currentPath == rootPath
+
+    val displayPath = if (currentPath == rootPath) {
+        stringResource(R.string.internal_storage)
+    } else if (currentPath.startsWith(rootPath)) {
+        stringResource(R.string.internal_storage) + currentPath.removePrefix(rootPath)
+    } else {
+        currentPath
+    }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -93,7 +102,7 @@ fun FileManagerScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Text(
-                    text = currentPath,
+                    text = displayPath,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,

@@ -73,6 +73,7 @@
     <string name="sort_ascending">Ascending ↑</string>
     <string name="sort_descending">Descending ↓</string>
     <string name="file_paste">Paste</string>
+    <string name="internal_storage">Internal Storage</string>
     <string name="storage_title">Storage</string>
     <string name="storage_free_total">Free %1$s / Total %2$s</string>
     <string name="search_files_hint">Search files...</string>

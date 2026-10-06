@@ -73,6 +73,7 @@
     <string name="sort_ascending">По возрастанию ↑</string>
     <string name="sort_descending">По убыванию ↓</string>
     <string name="file_paste">Вставить</string>
+    <string name="internal_storage">Внутренняя память</string>
     <string name="storage_title">Хранилище</string>
     <string name="storage_free_total">Свободно %1$s / Всего %2$s</string>
     <string name="search_files_hint">Поиск файлов...</string>
