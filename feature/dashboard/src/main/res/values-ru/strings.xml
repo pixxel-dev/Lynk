@@ -156,6 +156,7 @@
     <string name="update_available_subtitle">Доступно обновление</string>
     <string name="btn_downloading">Скачивание...</string>
     <string name="btn_download_install">Скачать и установить</string>
+    <string name="btn_install_update">Установить обновление</string>
     <string name="download_progress_format">Прогресс: %1$d%%</string>
     <string name="changelog_title">Журнал изменений (Changelog)</string>
     <string name="changelog_placeholder">• Нажмите "Проверить", чтобы загрузить актуальный список изменений.</string>

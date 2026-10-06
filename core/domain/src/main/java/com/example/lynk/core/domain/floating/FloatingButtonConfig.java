@@ -43,6 +43,9 @@ public class FloatingButtonConfig {
     private int backOpacityPercent;
     private int refreshOpacityPercent;
 
+    private String buttonColor;
+    private String shape;
+
     private boolean secondaryDisplayMirroring;
 
     private List<FloatingButtonAction> actions;
@@ -84,6 +87,9 @@ public class FloatingButtonConfig {
         this.homeOpacityPercent = 85;
         this.backOpacityPercent = 85;
         this.refreshOpacityPercent = 85;
+
+        this.buttonColor = "#7C4DFF";
+        this.shape = "CIRCLE";
 
         this.secondaryDisplayMirroring = true;
 
@@ -128,6 +134,9 @@ public class FloatingButtonConfig {
             this.backOpacityPercent = other.backOpacityPercent;
             this.refreshOpacityPercent = other.refreshOpacityPercent;
 
+            this.buttonColor = other.buttonColor != null ? other.buttonColor : "#7C4DFF";
+            this.shape = other.shape != null ? other.shape : "CIRCLE";
+
             this.secondaryDisplayMirroring = other.secondaryDisplayMirroring;
             this.actions = new ArrayList<>();
             if (other.actions != null) {
@@ -144,6 +153,9 @@ public class FloatingButtonConfig {
         } else {
             this.quickLaunchApps = new ArrayList<>();
             this.fullscreenApps = new ArrayList<>();
+            this.buttonColor = "#7C4DFF";
+            this.shape = "CIRCLE";
+            this.actions = new ArrayList<>();
             this.actions = new ArrayList<>();
             initDefaultActions();
         }
@@ -494,6 +506,22 @@ public class FloatingButtonConfig {
 
     public void setSecondaryDisplayMirroring(boolean secondaryDisplayMirroring) {
         this.secondaryDisplayMirroring = secondaryDisplayMirroring;
+    }
+
+    public String getButtonColor() {
+        return buttonColor;
+    }
+
+    public void setButtonColor(String buttonColor) {
+        this.buttonColor = buttonColor != null ? buttonColor : "#7C4DFF";
+    }
+
+    public String getShape() {
+        return shape;
+    }
+
+    public void setShape(String shape) {
+        this.shape = shape != null ? shape : "CIRCLE";
     }
 
     public List<FloatingButtonAction> getActions() {

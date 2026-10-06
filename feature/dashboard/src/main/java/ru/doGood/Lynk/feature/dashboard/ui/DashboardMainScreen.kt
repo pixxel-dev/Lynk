@@ -283,7 +283,8 @@ fun DashboardMainScreen(
                             onRefreshPermissions = { viewModel.refreshPermissions() },
                             updateState = state.updateState,
                             onCheckForUpdates = { viewModel.checkForUpdates() },
-                            onStartDownload = { viewModel.startDownloadUpdate() }
+                            onStartDownload = { viewModel.startDownloadUpdate() },
+                            onInstallUpdate = { viewModel.installDownloadedUpdate() }
                         )
 
                         3 -> FloatingButtonsScreen(

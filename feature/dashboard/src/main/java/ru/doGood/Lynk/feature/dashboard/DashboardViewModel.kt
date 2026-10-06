@@ -85,6 +85,7 @@ data class AppUpdateUiState(
     val updateInfo: com.example.lynk.core.domain.update.UpdateInfo? = null,
     val isChecking: Boolean = false,
     val isDownloading: Boolean = false,
+    val isDownloaded: Boolean = false,
     val downloadProgress: Float = 0f,
     val statusMessage: String? = null
 )
@@ -211,6 +212,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 it.copy(
                     updateState = it.updateState.copy(
                         isDownloading = true,
+                        isDownloaded = false,
                         downloadProgress = 0f,
                         statusMessage = "Загрузка пакета v${info.latestVersion}..."
                     )
@@ -219,13 +221,37 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val app = getApplication<Application>()
             val downloader = ru.doGood.Lynk.feature.dashboard.utils.ApkDownloader(app)
-            downloader.downloadFile(url, "Lynk-update.apk")
+            downloader.downloadFile(url, "Lynk-update.apk") { _ ->
+                _state.update {
+                    it.copy(
+                        updateState = it.updateState.copy(
+                            isDownloading = false,
+                            isDownloaded = true,
+                            statusMessage = "Загрузка завершена. Запуск установки..."
+                        )
+                    )
+                }
+            }
             
             _state.update {
                 it.copy(
                     updateState = it.updateState.copy(
-                        isDownloading = false,
-                        statusMessage = "Загрузка началась. Проверьте уведомления."
+                        statusMessage = "Выполняется скачивание пакета..."
+                    )
+                )
+            }
+        }
+    }
+
+    fun installDownloadedUpdate() {
+        val app = getApplication<Application>()
+        val downloader = ru.doGood.Lynk.feature.dashboard.utils.ApkDownloader(app)
+        val success = downloader.installDownloadedApk("Lynk-update.apk")
+        if (!success) {
+            _state.update {
+                it.copy(
+                    updateState = it.updateState.copy(
+                        statusMessage = "Файл обновления не найден. Запустите загрузку повторно."
                     )
                 )
             }
@@ -746,6 +772,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         config.isSecondaryDisplayMirroring = prefs.getBoolean("secondary_display_mirroring", true)
         config.opacityPercent = prefs.getInt("opacity_percent", 85)
 
+        config.buttonColor = prefs.getString("button_color", "#7C4DFF") ?: "#7C4DFF"
+        config.shape = prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE"
+
         _state.update {
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
@@ -787,6 +816,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             .putInt("combined_button_size", newConfig.combinedButtonSize)
             .putBoolean("secondary_display_mirroring", newConfig.isSecondaryDisplayMirroring)
             .putInt("opacity_percent", newConfig.opacityPercent)
+            .putString("button_color", newConfig.buttonColor)
+            .putString("button_shape", newConfig.shape)
             .apply()
 
         val configCopy = newConfig.copy()

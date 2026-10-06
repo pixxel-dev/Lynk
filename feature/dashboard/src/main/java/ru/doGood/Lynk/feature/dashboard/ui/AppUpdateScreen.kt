@@ -26,10 +26,12 @@ fun AppUpdateScreen(
     updateInfo: UpdateInfo?,
     isChecking: Boolean,
     isDownloading: Boolean,
+    isDownloaded: Boolean = false,
     downloadProgress: Float,
     statusMessage: String?,
     onCheckForUpdates: () -> Unit,
     onStartDownload: () -> Unit,
+    onInstallUpdate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -60,9 +62,11 @@ fun AppUpdateScreen(
                     LatestVersionCard(
                         updateInfo = info,
                         isDownloading = isDownloading,
+                        isDownloaded = isDownloaded,
                         downloadProgress = downloadProgress,
                         statusMessage = statusMessage,
-                        onStartDownload = onStartDownload
+                        onStartDownload = onStartDownload,
+                        onInstallUpdate = onInstallUpdate
                     )
                 }
             }
@@ -100,9 +104,11 @@ fun AppUpdateScreen(
                     LatestVersionCard(
                         updateInfo = info,
                         isDownloading = isDownloading,
+                        isDownloaded = isDownloaded,
                         downloadProgress = downloadProgress,
                         statusMessage = statusMessage,
-                        onStartDownload = onStartDownload
+                        onStartDownload = onStartDownload,
+                        onInstallUpdate = onInstallUpdate
                     )
                 }
 
@@ -200,14 +206,16 @@ private fun CurrentVersionCard(
 private fun LatestVersionCard(
     updateInfo: UpdateInfo,
     isDownloading: Boolean,
+    isDownloaded: Boolean,
     downloadProgress: Float,
     statusMessage: String?,
-    onStartDownload: () -> Unit
+    onStartDownload: () -> Unit,
+    onInstallUpdate: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
+            containerColor = if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE || isDownloaded) {
                 MaterialTheme.colorScheme.secondaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
@@ -233,7 +241,19 @@ private fun LatestVersionCard(
                     )
                 }
 
-                if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
+                if (isDownloaded || updateInfo.state == UpdateInfo.UpdateState.DOWNLOADED) {
+                    Button(
+                        onClick = onInstallUpdate,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        )
+                    ) {
+                        Icon(Icons.Rounded.Android, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.btn_install_update))
+                    }
+                } else if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                     Button(
                         onClick = onStartDownload,
                         enabled = !isDownloading,

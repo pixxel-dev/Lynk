@@ -14,7 +14,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Handler
@@ -22,14 +24,18 @@ import android.os.IBinder
 import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import ru.doGood.Lynk.R
@@ -372,6 +378,46 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
     }
 
+    private var activeSettingsDialogView: View? = null
+
+    private fun applyButtonStyling(imageView: ImageView) {
+        val colorHex = prefs.getString("button_color", "#7C4DFF") ?: "#7C4DFF"
+        val shapeStr = prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE"
+
+        val colorInt = try {
+            Color.parseColor(colorHex)
+        } catch (_: Exception) {
+            Color.parseColor("#7C4DFF")
+        }
+
+        val drawable = GradientDrawable().apply {
+            when (shapeStr) {
+                "SQUARE" -> {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP, 2f, resources.displayMetrics
+                    )
+                }
+                "ROUNDED_SQUARE" -> {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = TypedValue.applyDimension(
+                        TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics
+                    )
+                }
+                else -> { // "CIRCLE"
+                    shape = GradientDrawable.OVAL
+                }
+            }
+            setColor(colorInt)
+            setStroke(
+                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.5f, resources.displayMetrics).toInt(),
+                Color.parseColor("#80FFFFFF")
+            )
+        }
+
+        imageView.background = drawable
+    }
+
     private fun createCombinedLinearLayout(
         context: Context,
         showQuickLaunch: Boolean,
@@ -395,6 +441,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_menu)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -407,6 +454,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -419,6 +467,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_home)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -431,6 +480,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_back)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -443,6 +493,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_refresh)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -494,6 +545,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             qv.alpha = alphaFloat
             val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_menu)
+            applyButtonStyling(iv)
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx, layoutFlag,
@@ -517,6 +569,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(qv, params)
@@ -530,6 +583,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 qvSec.alpha = alphaFloat
                 val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_menu)
+                applyButtonStyling(ivSec)
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -556,6 +610,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
+                applyButtonStyling(ivSec)
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(qvSec, paramsSec)
@@ -594,6 +649,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(fv, params)
@@ -602,6 +658,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             fv.alpha = alphaFloat
             val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
+            applyButtonStyling(iv)
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx, layoutFlag,
@@ -631,6 +688,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
+                applyButtonStyling(ivSec)
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(fvSec, paramsSec)
@@ -639,6 +697,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 fvSec.alpha = alphaFloat
                 val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
+                applyButtonStyling(ivSec)
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -704,6 +763,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             hv.alpha = alphaFloat
             val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_home)
+            applyButtonStyling(iv)
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx, layoutFlag,
@@ -727,6 +787,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(hv, params)
@@ -740,6 +801,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 hvSec.alpha = alphaFloat
                 val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_home)
+                applyButtonStyling(ivSec)
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -766,6 +828,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
+                applyButtonStyling(ivSec)
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(hvSec, paramsSec)
@@ -809,6 +872,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             bv.alpha = alphaFloat
             val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_back)
+            applyButtonStyling(iv)
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx, layoutFlag,
@@ -832,6 +896,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(bv, params)
@@ -845,6 +910,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 bvSec.alpha = alphaFloat
                 val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_back)
+                applyButtonStyling(ivSec)
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -871,6 +937,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
+                applyButtonStyling(ivSec)
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(bvSec, paramsSec)
@@ -914,6 +981,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             rv.alpha = alphaFloat
             val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_refresh)
+            applyButtonStyling(iv)
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx, layoutFlag,
@@ -937,6 +1005,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
+            applyButtonStyling(iv)
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(rv, params)
@@ -950,6 +1019,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 rvSec.alpha = alphaFloat
                 val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_refresh)
+                applyButtonStyling(ivSec)
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -976,6 +1046,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
+                applyButtonStyling(ivSec)
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(rvSec, paramsSec)
@@ -1114,12 +1185,16 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         onClick: Runnable?,
         prefPrefix: String
     ) {
+        val longPressHandler = Handler(Looper.getMainLooper())
+        var longPressRunnable: Runnable? = null
+
         touchView.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
             private var initialTouchY = 0f
             private var isClick = false
+            private var isLongPress = false
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
@@ -1129,6 +1204,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isClick = true
+                        isLongPress = false
+
+                        val runnable = Runnable {
+                            if (isClick && !isLongPress) {
+                                isLongPress = true
+                                isClick = false
+                                v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                                showQuickSettingsDialog(prefPrefix)
+                            }
+                        }
+                        longPressRunnable = runnable
+                        longPressHandler.postDelayed(
+                            runnable,
+                            ViewConfiguration.getLongPressTimeout().toLong()
+                        )
                         return true
                     }
                     MotionEvent.ACTION_MOVE -> {
@@ -1137,8 +1227,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         val touchSlop = ViewConfiguration.get(this@ForegroundOverlayService).scaledTouchSlop
                         if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
                             isClick = false
+                            longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         }
-                        if (!isClick) {
+                        if (!isClick && !isLongPress) {
                             params.x = initialX + deltaX
                             params.y = initialY + deltaY
                             defaultWindowManager.updateViewLayout(dragView, params)
@@ -1154,7 +1245,10 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         return true
                     }
                     MotionEvent.ACTION_UP -> {
-                        if (isClick) {
+                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        if (isLongPress) {
+                            // Long press handled by quick settings dialog
+                        } else if (isClick) {
                             onClick?.run()
                         } else {
                             val screenWidth = resources.displayMetrics.widthPixels
@@ -1203,10 +1297,274 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         }
                         return true
                     }
+                    MotionEvent.ACTION_CANCEL -> {
+                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+                        return true
+                    }
                 }
                 return false
             }
         })
+    }
+
+    private fun showQuickSettingsDialog(prefPrefix: String) {
+        activeSettingsDialogView?.let {
+            try {
+                defaultWindowManager.removeView(it)
+            } catch (_: Exception) {}
+            activeSettingsDialogView = null
+        }
+
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dpToPx(dp: Int): Int = (dp * density).toInt()
+
+        val sizeKey = if (prefPrefix == "combined") "combined_button_size" else "${prefPrefix}_button_size"
+        val opacityKey = if (prefPrefix == "combined") "opacity_percent" else "${prefPrefix}_opacity_percent"
+        val colorKey = "button_color"
+        val shapeKey = "button_shape"
+
+        val currentSize = prefs.getInt(sizeKey, if (prefPrefix == "combined") 48 else prefs.getInt("combined_button_size", 48))
+        val currentOpacity = prefs.getInt(opacityKey, prefs.getInt("opacity_percent", 85))
+        val currentShape = prefs.getString(shapeKey, "CIRCLE") ?: "CIRCLE"
+
+        val containerLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(16).toFloat()
+                setColor(Color.parseColor("#1E1E2C"))
+                setStroke(dpToPx(1), Color.parseColor("#3A3A50"))
+            }
+        }
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleTv = TextView(context).apply {
+            text = "Настройки плавающей кнопки"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val closeBtn = TextView(context).apply {
+            text = "✕"
+            setTextColor(Color.parseColor("#AAAAAA"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
+            setOnClickListener {
+                activeSettingsDialogView?.let {
+                    try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
+                    activeSettingsDialogView = null
+                }
+            }
+        }
+        headerRow.addView(titleTv)
+        headerRow.addView(closeBtn)
+        containerLayout.addView(headerRow)
+
+        fun addSpacer(heightDp: Int) {
+            containerLayout.addView(View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(heightDp))
+            })
+        }
+
+        addSpacer(12)
+
+        // 1. Size Slider
+        val sizeLabel = TextView(context).apply {
+            text = "Размер: ${currentSize} dp"
+            setTextColor(Color.parseColor("#DDDDDD"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        }
+        containerLayout.addView(sizeLabel)
+
+        val sizeSeekBar = SeekBar(context).apply {
+            max = 96 - 24
+            progress = (currentSize - 24).coerceIn(0, max)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        val valDp = progress + 24
+                        sizeLabel.text = "Размер: ${valDp} dp"
+                        prefs.edit().putInt(sizeKey, valDp).apply()
+                        updateOverlayButtons()
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        containerLayout.addView(sizeSeekBar)
+
+        addSpacer(8)
+
+        // 2. Opacity Slider
+        val opacityLabel = TextView(context).apply {
+            text = "Прозрачность: ${currentOpacity}%"
+            setTextColor(Color.parseColor("#DDDDDD"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        }
+        containerLayout.addView(opacityLabel)
+
+        val opacitySeekBar = SeekBar(context).apply {
+            max = 100 - 10
+            progress = (currentOpacity - 10).coerceIn(0, max)
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        val valPercent = progress + 10
+                        opacityLabel.text = "Прозрачность: ${valPercent}%"
+                        prefs.edit().putInt(opacityKey, valPercent).apply()
+                        updateOverlayButtons()
+                    }
+                }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
+        }
+        containerLayout.addView(opacitySeekBar)
+
+        addSpacer(8)
+
+        // 3. Shape Selection
+        val shapeLabel = TextView(context).apply {
+            text = "Форма"
+            setTextColor(Color.parseColor("#DDDDDD"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        }
+        containerLayout.addView(shapeLabel)
+
+        addSpacer(4)
+
+        val shapeRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val shapes = listOf("CIRCLE" to "Круг", "ROUNDED_SQUARE" to "Скругленный", "SQUARE" to "Квадрат")
+        val shapeButtons = mutableListOf<TextView>()
+
+        fun updateShapeUi(selected: String) {
+            for (btn in shapeButtons) {
+                val tag = btn.tag as String
+                if (tag == selected) {
+                    btn.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dpToPx(8).toFloat()
+                        setColor(Color.parseColor("#7C4DFF"))
+                    }
+                    btn.setTextColor(Color.WHITE)
+                } else {
+                    btn.background = GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dpToPx(8).toFloat()
+                        setColor(Color.parseColor("#2A2A3C"))
+                        setStroke(dpToPx(1), Color.parseColor("#444466"))
+                    }
+                    btn.setTextColor(Color.parseColor("#AAAAAA"))
+                }
+            }
+        }
+
+        for ((shapeValue, shapeName) in shapes) {
+            val shapeBtn = TextView(context).apply {
+                text = shapeName
+                tag = shapeValue
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6))
+                gravity = Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(dpToPx(2), 0, dpToPx(2), 0)
+                }
+                setOnClickListener {
+                    prefs.edit().putString(shapeKey, shapeValue).apply()
+                    updateShapeUi(shapeValue)
+                    updateOverlayButtons()
+                }
+            }
+            shapeButtons.add(shapeBtn)
+            shapeRow.addView(shapeBtn)
+        }
+        updateShapeUi(currentShape)
+        containerLayout.addView(shapeRow)
+
+        addSpacer(12)
+
+        // 4. Color Palette Presets
+        val colorLabel = TextView(context).apply {
+            text = "Цвет"
+            setTextColor(Color.parseColor("#DDDDDD"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        }
+        containerLayout.addView(colorLabel)
+
+        addSpacer(6)
+
+        val colorRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val colorPresets = listOf("#7C4DFF", "#2196F3", "#4CAF50", "#FF9800", "#E91E63", "#00BCD4", "#FFFFFF", "#000000")
+
+        for (colorHex in colorPresets) {
+            val colorCircle = View(context).apply {
+                val sizePx = dpToPx(28)
+                layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
+                    setMargins(dpToPx(3), 0, dpToPx(3), 0)
+                }
+                val cInt = try { Color.parseColor(colorHex) } catch (_: Exception) { Color.MAGENTA }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(cInt)
+                    setStroke(dpToPx(2), Color.parseColor("#80FFFFFF"))
+                }
+                setOnClickListener {
+                    prefs.edit().putString(colorKey, colorHex).apply()
+                    updateOverlayButtons()
+                }
+            }
+            colorRow.addView(colorCircle)
+        }
+        containerLayout.addView(colorRow)
+
+        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        val dialogWidth = (resources.displayMetrics.widthPixels * 0.85).toInt().coerceAtMost(dpToPx(340))
+
+        val params = WindowManager.LayoutParams(
+            dialogWidth,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            layoutFlag,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+
+        containerLayout.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_OUTSIDE) {
+                activeSettingsDialogView?.let {
+                    try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
+                    activeSettingsDialogView = null
+                }
+                true
+            } else {
+                false
+            }
+        }
+
+        activeSettingsDialogView = containerLayout
+        defaultWindowManager.addView(containerLayout, params)
     }
 
     private fun createNotificationChannel() {

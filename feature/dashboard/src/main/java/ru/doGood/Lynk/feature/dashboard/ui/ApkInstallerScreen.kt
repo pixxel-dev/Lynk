@@ -215,19 +215,28 @@ private fun TargetApkCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                OutlinedButton(onClick = onSelectApkClick) {
-                    Icon(Icons.Rounded.FolderOpen, contentDescription = null)
+                OutlinedButton(
+                    onClick = onSelectApkClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Browse APK")
+                    Text(
+                        text = "Browse APK",
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = onStartWaterfallInstall,
-                    enabled = selectedApkPath != null && !isInstalling
+                    enabled = selectedApkPath != null && !isInstalling,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     if (isInstalling) {
                         CircularProgressIndicator(
@@ -235,12 +244,20 @@ private fun TargetApkCard(
                             color = MaterialTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Installing...")
-                    } else {
-                        Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Waterfall Install")
+                        Text(
+                            text = "Installing...",
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1
+                        )
+                    } else {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Waterfall Install",
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1
+                        )
                     }
                 }
             }

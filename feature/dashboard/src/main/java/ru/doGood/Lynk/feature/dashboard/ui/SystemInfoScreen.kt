@@ -37,6 +37,7 @@ fun SystemInfoScreen(
     updateState: ru.doGood.Lynk.feature.dashboard.AppUpdateUiState? = null,
     onCheckForUpdates: () -> Unit = {},
     onStartDownload: () -> Unit = {},
+    onInstallUpdate: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
@@ -115,10 +116,12 @@ fun SystemInfoScreen(
                         updateInfo = updateState.updateInfo,
                         isChecking = updateState.isChecking,
                         isDownloading = updateState.isDownloading,
+                        isDownloaded = updateState.isDownloaded,
                         downloadProgress = updateState.downloadProgress,
                         statusMessage = updateState.statusMessage,
                         onCheckForUpdates = onCheckForUpdates,
                         onStartDownload = onStartDownload,
+                        onInstallUpdate = onInstallUpdate,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -350,7 +353,10 @@ fun SystemLogsTab(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (isRecording) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
@@ -361,7 +367,9 @@ fun SystemLogsTab(
                         Text(
                             text = stringResource(R.string.recording_logs),
                             color = MaterialTheme.colorScheme.error,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     } else {
                         Icon(
@@ -370,31 +378,54 @@ fun SystemLogsTab(
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.logcat_idle))
+                        Text(
+                            text = stringResource(R.string.logcat_idle),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
 
-                Row {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     if (isRecording) {
                         Button(
                             onClick = onStopRecording,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
-                            )
+                            ),
+                            modifier = Modifier.defaultMinSize(minWidth = 72.dp, minHeight = 36.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Rounded.Stop, contentDescription = null)
+                            Icon(Icons.Rounded.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.btn_stop))
+                            Text(
+                                text = stringResource(R.string.btn_stop),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip
+                            )
                         }
                     } else {
-                        Button(onClick = onStartRecording) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                        Button(
+                            onClick = onStartRecording,
+                            modifier = Modifier.defaultMinSize(minWidth = 72.dp, minHeight = 36.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.btn_start))
+                            Text(
+                                text = stringResource(R.string.btn_start),
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Clip
+                            )
                         }
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(onClick = onCopyLogs) {
                         Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy_logs))
