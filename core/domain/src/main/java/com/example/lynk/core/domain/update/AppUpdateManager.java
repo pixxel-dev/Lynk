@@ -1,27 +1,21 @@
 package com.example.lynk.core.domain.update;
 
-import java.util.Arrays;
-import java.util.List;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
 public class AppUpdateManager {
 
-    public enum UpdateStatus {
-        IDLE,
-        CHECKING,
-        UPDATE_AVAILABLE,
-        NO_UPDATE,
-        DOWNLOADING,
-        READY_TO_INSTALL,
-        ERROR
-    }
-
     private String currentVersion = "1.0.0";
+    private String repoPath = "pixxel-dev/Lynk";
 
     public AppUpdateManager() {
     }
 
-    public AppUpdateManager(String currentVersion) {
+    public AppUpdateManager(String currentVersion, String repoPath) {
         this.currentVersion = currentVersion;
+        this.repoPath = repoPath;
     }
 
     public String getCurrentVersion() {
@@ -32,38 +26,103 @@ public class AppUpdateManager {
         this.currentVersion = currentVersion;
     }
 
+    public String getRepoPath() {
+        return repoPath;
+    }
+
+    public void setRepoPath(String repoPath) {
+        this.repoPath = repoPath;
+    }
+
     public UpdateInfo checkForUpdates() {
-        String latestVersion = "1.1.0";
-        int versionCode = 101;
-        String updateUrl = "https://github.com/lynk/releases/download/v1.1.0/lynk-v1.1.0.apk";
-        String releaseDate = "2025-02-28";
-        long fileSize = 15_400_000L;
+        try {
+            URL url = new URL("https://api.github.com/repos/" + repoPath + "/releases/latest");
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("GET");
+            connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            connection.setConnectTimeout(5000);
+            connection.setReadTimeout(5000);
 
-        List<String> changelog = Arrays.asList(
-            "• Переключение на темную и светлую тему (ThemeMode: SYSTEM, LIGHT, DARK)",
-            "• Новый экран состояния прав доступа (Permissions Info) с быстрым переходом в настройки",
-            "• Раздел обновления приложения (App Update) с чекером версий и журналом изменений",
-            "• Адаптация интерфейса под альбомный режим (Landscape) и устранение обрезки текста"
-        );
+            if (connection.getResponseCode() == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                connection.disconnect();
 
-        boolean hasUpdate = isVersionNewer(latestVersion, currentVersion);
+                String json = content.toString();
 
-        return new UpdateInfo(
-            currentVersion,
-            latestVersion,
-            versionCode,
-            updateUrl,
-            changelog,
-            hasUpdate,
-            releaseDate,
-            fileSize
-        );
+                String tagName = extractJsonField(json, "tag_name");
+                String body = extractJsonField(json, "body");
+                if (body != null) {
+                    body = body.replace("\\r\\n", "\n").replace("\\n", "\n").replace("\\\"", "\"");
+                }
+                
+                String downloadUrl = extractBrowserDownloadUrl(json);
+
+                if (tagName != null && isVersionNewer(tagName, currentVersion)) {
+                    return new UpdateInfo(tagName, body, downloadUrl, UpdateInfo.UpdateState.UPDATE_AVAILABLE);
+                } else {
+                    return new UpdateInfo(currentVersion, "No changes", null, UpdateInfo.UpdateState.UP_TO_DATE);
+                }
+            } else {
+                return new UpdateInfo(currentVersion, "Error checking updates", null, UpdateInfo.UpdateState.ERROR);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new UpdateInfo(currentVersion, "Exception checking updates: " + e.getMessage(), null, UpdateInfo.UpdateState.ERROR);
+        }
+    }
+
+    private String extractJsonField(String json, String field) {
+        String pattern = "\"" + field + "\":\"";
+        int start = json.indexOf(pattern);
+        if (start == -1) return null;
+        start += pattern.length();
+        int end = json.indexOf("\"", start);
+        if (end == -1) return null;
+        return json.substring(start, end);
+    }
+
+    private String extractBrowserDownloadUrl(String json) {
+        String pattern = "\"browser_download_url\":\"";
+        int start = json.indexOf(pattern);
+        if (start == -1) return null;
+        start += pattern.length();
+        int end = json.indexOf("\"", start);
+        if (end == -1) return null;
+        String url = json.substring(start, end);
+        if (url.endsWith(".apk")) {
+            return url;
+        }
+        
+        // Find next if not apk
+        int nextStart = json.indexOf(pattern, end);
+        while (nextStart != -1) {
+            nextStart += pattern.length();
+            int nextEnd = json.indexOf("\"", nextStart);
+            if (nextEnd == -1) return null;
+            String nextUrl = json.substring(nextStart, nextEnd);
+            if (nextUrl.endsWith(".apk")) {
+                return nextUrl;
+            }
+            nextStart = json.indexOf(pattern, nextEnd);
+        }
+        
+        return null;
     }
 
     public boolean isVersionNewer(String latest, String current) {
         if (latest == null || current == null) return false;
-        String[] latestParts = latest.split("\\.");
-        String[] currentParts = current.split("\\.");
+        
+        String cleanLatest = latest.toLowerCase().replace("v", "");
+        String cleanCurrent = current.toLowerCase().replace("v", "");
+
+        String[] latestParts = cleanLatest.split("\\.");
+        String[] currentParts = cleanCurrent.split("\\.");
 
         int length = Math.max(latestParts.length, currentParts.length);
         for (int i = 0; i < length; i++) {

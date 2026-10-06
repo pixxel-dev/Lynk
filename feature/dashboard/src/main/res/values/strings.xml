@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Lynk</string>
+    <string name="github_repo_path">pixxel-dev/Lynk</string>
     <string name="tab_backlog">Backlog</string>
     <string name="tab_files">Files</string>
     <string name="tab_installer">Installer</string>

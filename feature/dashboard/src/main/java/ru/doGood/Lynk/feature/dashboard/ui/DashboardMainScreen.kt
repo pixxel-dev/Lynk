@@ -94,7 +94,7 @@ fun DashboardMainScreen(
                 actions = {
                     // Quick App Update Shortcut
                     IconButton(onClick = { viewModel.setSelectedTab(5) }) {
-                        if (state.updateState.updateInfo?.isHasUpdate == true) {
+                        if (state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                             Badge(containerColor = MaterialTheme.colorScheme.error) {
                                 Text("!")
                             }
@@ -149,7 +149,7 @@ fun DashboardMainScreen(
                                 selected = state.selectedTab == tabIndex,
                                 onClick = { viewModel.setSelectedTab(tabIndex) },
                                 icon = {
-                                    if (tabIndex == 5 && state.updateState.updateInfo?.isHasUpdate == true) {
+                                    if (tabIndex == 5 && state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                                         BadgedBox(
                                             badge = { Badge { Text("!") } }
                                         ) {

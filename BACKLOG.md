@@ -13,6 +13,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ### In Progress
 
 ### Done
+- [x] OTA Domain & Download Mechanisms: Updated `UpdateInfo.java` with detailed version/state modeling, implemented GitHub releases checker in `AppUpdateManager.java` using pure Java `HttpURLConnection`, created `ApkDownloader.kt` utilizing Android `DownloadManager` for external files download, and configured `FileProvider` XML and permissions for app installation.
 - [x] GitHub Actions CI/CD & Fixed Keystore: Configured automated release workflow (`.github/workflows/release.yml`) for `main` branch, generating versioned releases with APK. Added fixed `lynk_release.keystore` for reproducible signing across all builds (debug & release) to avoid uninstalling the app during updates. Added Keystore rule to `ARCHITECTURE_RULES.md`.
 - [x] Conditional Floating Button Menus Visibility: Wrapped all floating button configuration cards (Quick Launch, Fullscreen Overlay, Home Navigator, Back Navigator, Refresh Button, Appearance and behavior) in `FloatingButtonsScreen.kt` with `AnimatedVisibility(visible = isServiceRunning && hasOverlayPermission)`. When the overlay service is OFF or permission is not granted, only the main service status card is shown, smoothly expanding configuration cards when enabled.
 - [x] Toast/Notification Removal on Overlay Updates: Removed all `Toast.makeText(...)` popups from `ForegroundOverlayService.kt` and ensure settings/overlay updates execute silently in background without intrusive message dialogs.

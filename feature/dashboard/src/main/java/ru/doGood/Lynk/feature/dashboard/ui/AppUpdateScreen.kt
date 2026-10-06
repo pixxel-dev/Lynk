@@ -164,7 +164,7 @@ private fun CurrentVersionCard(
                     text = when {
                         isChecking -> "Проверка обновлений..."
                         updateInfo == null -> "Статус версии не проверен"
-                        updateInfo.isHasUpdate -> "Доступна новая версия v${updateInfo.latestVersion}!"
+                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> "Доступна новая версия v${updateInfo.latestVersion}!"
                         else -> "Установлена актуальная версия"
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -205,7 +205,7 @@ private fun LatestVersionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (updateInfo.isHasUpdate) {
+            containerColor = if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                 MaterialTheme.colorScheme.secondaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
@@ -226,13 +226,13 @@ private fun LatestVersionCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Дата релиза: ${updateInfo.releaseDate} • Размер: ${formatFileSize(updateInfo.fileSize)}",
+                        text = "Доступно обновление",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                if (updateInfo.isHasUpdate) {
+                if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                     Button(
                         onClick = onStartDownload,
                         enabled = !isDownloading
@@ -244,7 +244,7 @@ private fun LatestVersionCard(
                 }
             }
 
-            AnimatedVisibility(visible = isDownloading || (statusMessage != null && statusMessage.isNotEmpty())) {
+            AnimatedVisibility(visible = isDownloading || !statusMessage.isNullOrEmpty()) {
                 Column(modifier = Modifier.padding(top = 12.dp)) {
                     if (isDownloading) {
                         LinearProgressIndicator(
@@ -305,7 +305,7 @@ private fun ChangelogCard(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
-            val changelog = updateInfo?.changelog ?: listOf(
+            val changelog = updateInfo?.changelog?.split("\n")?.filter { it.isNotBlank() } ?: listOf(
                 "• Нажмите 'Проверить обновления', чтобы загрузить актуальный список изменений."
             )
 

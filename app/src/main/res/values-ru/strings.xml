@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Lynk</string>
+    <string name="github_repo_path">pixxel-dev/Lynk</string>
 </resources>

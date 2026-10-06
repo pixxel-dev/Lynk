@@ -113,3 +113,19 @@
   - app does not crash
 - **Duration:** 10m 54s
 
+### Task_8_OTA_Domain_And_Download_Mechanisms: Configurability & Domain Logic: Add repo path to strings.xml, implement Java HTTP client in :core:domain for GitHub API, and update UpdateInfo model. Download & Install: Implement DownloadManager service and configure FileProvider in AndroidManifest.xml.
+- **Status:** IN_PROGRESS
+- **Acceptance Criteria:**
+  - Repo path configurable in strings.xml
+  - Pure Java HTTP client implemented in :core:domain
+  - DownloadManager and FileProvider setup correctly
+- **StartTime:** 2026-10-06 09:11:55 MSK
+
+### Task_9_OTA_UI_Integration_And_Verify: UI Integration: Update AppUpdateScreen.kt and DashboardViewModel.kt for OTA flow (Check -> Download -> Install). Run and Verify: Instruct critic_agent to verify application stability (no crashes), confirm alignment with OTA requirements, and report critical UI issues.
+- **Status:** PENDING
+- **Acceptance Criteria:**
+  - OTA flow UI integrated with ViewModel
+  - make sure all existing tests pass
+  - build pass
+  - app does not crash
+

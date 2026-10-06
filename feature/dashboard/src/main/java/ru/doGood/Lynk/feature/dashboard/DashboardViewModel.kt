@@ -55,7 +55,7 @@ data class FileManagerState(
     val isCutOperation: Boolean = false,
     val freeSpaceBytes: Long = 0L,
     val totalSpaceBytes: Long = 0L,
-    val message: String? = null
+    val message: String? = null,
 )
 
 data class ApkInstallerState(
@@ -107,7 +107,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val backlogManager = BacklogManager()
     private val approvalManager = ApprovalManager()
-    private val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager("1.0.0")
+    // private val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager("1.0.0")
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
@@ -176,18 +176,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     // --- App Updates ---
     fun checkForUpdates() {
+        _state.update { it.copy(updateState = it.updateState.copy(isChecking = true, statusMessage = "Проверка обновлений...")) }
         viewModelScope.launch {
-            _state.update { it.copy(updateState = it.updateState.copy(isChecking = true, statusMessage = "Проверка обновлений...")) }
-            kotlinx.coroutines.delay(800)
             val info = withContext(Dispatchers.IO) {
-                appUpdateManager.checkForUpdates()
+                try {
+                    val app = getApplication<Application>()
+                    val pInfo = app.packageManager.getPackageInfo(app.packageName, 0)
+                    val currentVersion = pInfo.versionName
+                    val repoPath = app.getString(R.string.github_repo_path)
+                    val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager(currentVersion, repoPath)
+                    appUpdateManager.checkForUpdates()
+                } catch(e: Exception) {
+                    com.example.lynk.core.domain.update.UpdateInfo("1.0.0", "", "", com.example.lynk.core.domain.update.UpdateInfo.UpdateState.ERROR)
+                }
             }
             _state.update {
                 it.copy(
                     updateState = it.updateState.copy(
                         updateInfo = info,
                         isChecking = false,
-                        statusMessage = if (info.isHasUpdate) "Доступна новая версия v${info.latestVersion}!" else "У вас установлена актуальная версия."
+                        statusMessage = if (info.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) "Доступна новая версия v${info.latestVersion}!" else "У вас установлена актуальная версия."
                     )
                 )
             }
@@ -196,6 +204,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun startDownloadUpdate() {
         val info = _state.value.updateState.updateInfo ?: return
+        val url = info.downloadUrl ?: return
+        
         viewModelScope.launch {
             _state.update {
                 it.copy(
@@ -207,23 +217,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
 
-            for (p in 1..100) {
-                kotlinx.coroutines.delay(25)
-                _state.update {
-                    it.copy(
-                        updateState = it.updateState.copy(
-                            downloadProgress = p / 100f
-                        )
-                    )
-                }
-            }
-
+            val app = getApplication<Application>()
+            val downloader = ru.doGood.Lynk.feature.dashboard.utils.ApkDownloader(app)
+            downloader.downloadFile(url, "Lynk-update.apk")
+            
             _state.update {
                 it.copy(
                     updateState = it.updateState.copy(
                         isDownloading = false,
-                        downloadProgress = 1f,
-                        statusMessage = "Пакет v${info.latestVersion} загружен. Готово к установке."
+                        statusMessage = "Загрузка началась. Проверьте уведомления."
                     )
                 )
             }
@@ -323,7 +325,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun navigateUp() {
         val currentPath = _state.value.fileManagerState.currentPath
         val parent = File(currentPath).parentFile
-        if (parent != null && parent.exists()) {
+        if (parent?.exists() == true) {
             loadDirectory(parent.absolutePath)
         }
     }
@@ -775,12 +777,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun refreshPermissions(context: Context? = null) {
-        val ctx = context ?: getApplication<Application>()
+        val ctx = context ?: getApplication()
         checkFloatingPermissions(ctx)
     }
 
     fun checkFloatingPermissions(context: Context) {
-        val hasOverlay = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) Settings.canDrawOverlays(context) else true
+        val hasOverlay = Settings.canDrawOverlays(context)
         val hasUsageStats = checkUsageStatsPermission(context)
         val isServiceRunning = isServiceRunning(context, "ru.doGood.Lynk.service.ForegroundOverlayService")
 
