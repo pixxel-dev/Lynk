@@ -94,25 +94,33 @@ fun FloatingButtonsScreen(
                         val intent = Intent(
                             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                             Uri.parse("package:${context.packageName}")
-                        )
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         context.startActivity(intent)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
                         val fallback = Intent(
                             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             Uri.parse("package:${context.packageName}")
-                        )
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         context.startActivity(fallback)
                     }
                 },
                 onOpenUsageStatsSettings = {
                     try {
-                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         context.startActivity(intent)
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
                         val fallback = Intent(
                             Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                             Uri.parse("package:${context.packageName}")
-                        )
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
                         context.startActivity(fallback)
                     }
                 }

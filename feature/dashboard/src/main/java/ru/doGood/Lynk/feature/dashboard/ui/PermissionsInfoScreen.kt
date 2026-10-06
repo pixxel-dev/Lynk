@@ -181,12 +181,17 @@ fun PermissionsInfoTab(
                     permission = permission,
                     onOpenSettings = {
                         try {
-                            context.startActivity(permission.openSettingsIntent())
-                        } catch (_: Exception) {
+                            val intent = permission.openSettingsIntent().apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
                             val fallback = Intent(
                                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                                 Uri.parse("package:${context.packageName}")
-                            )
+                            ).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
                             context.startActivity(fallback)
                         }
                     }
