@@ -1,0 +1,64 @@
+<resources>
+    <string name="app_name">Lynk</string>
+    <string name="tab_backlog">Бэклог</string>
+    <string name="tab_files">Файлы</string>
+    <string name="tab_installer">Установщик</string>
+    <string name="tab_system">Система</string>
+    <string name="tab_buttons">Кнопки</string>
+    <string name="tab_update">Обновление</string>
+
+    <string name="subtab_specs">Характеристики</string>
+    <string name="subtab_logs">Логи системы</string>
+    <string name="subtab_rights">Права доступа</string>
+
+    <string name="title_backlog">• Бэклог и аудит</string>
+    <string name="title_files">• Файловый менеджер</string>
+    <string name="title_installer">• Установка APK</string>
+    <string name="title_system">• Диагностика системы</string>
+    <string name="title_buttons">• Плавающие кнопки</string>
+    <string name="title_update">• Обновление ПО</string>
+
+    <string name="system_info_title">Информация о системе и диагностика</string>
+
+    <string name="lang_card_title">Язык интерфейса / Interface Language</string>
+    <string name="lang_card_desc">Выберите язык отображения меню и кнопок приложения</string>
+    <string name="lang_ru">Русский (Russian)</string>
+    <string name="lang_en">English (Английский)</string>
+
+    <string name="hardware_os_title">Аппаратная часть и ОС</string>
+    <string name="manufacturer">Производитель</string>
+    <string name="brand">Бренд</string>
+    <string name="model">Модель</string>
+    <string name="device_code">Код устройства</string>
+    <string name="android_version">Версия Android</string>
+    <string name="sdk_level">Уровень SDK</string>
+
+    <string name="car_props_title">Системные свойства авто</string>
+    <string name="no_car_props">Системные свойства автомобиля не обнаружены.</string>
+
+    <string name="recording_logs">Запись логов...</string>
+    <string name="logcat_idle">Служба Logcat неактивна</string>
+    <string name="btn_start">Старт</string>
+    <string name="btn_stop">Стоп</string>
+    <string name="btn_copy_logs">Копировать логи</string>
+    <string name="btn_clear_logs">Очистить логи</string>
+    <string name="no_logs">Записи логов пока нет. Нажмите \'Старт\' для начала захвата logcat.</string>
+
+    <string name="permissions_title">Права доступа / Permissions Info</string>
+    <string name="refresh_status">Обновить статус</string>
+    <string name="granted">Предоставлено</string>
+    <string name="not_granted">Не предоставлено</string>
+    <string name="permission_settings">Настройки разрешения</string>
+    <string name="grant_access">Предоставить доступ</string>
+
+    <string name="theme_system">Системная тема</string>
+    <string name="theme_light">Светлая тема</string>
+    <string name="theme_dark">Темная тема</string>
+
+    <string name="action_home_navigator">Навигатор "Домой"</string>
+    <string name="action_home_navigator_desc">Возврат на главный экран</string>
+    <string name="action_back_navigator">Навигатор "Назад"</string>
+    <string name="action_back_navigator_desc">Возврат назад</string>
+    <string name="action_refresh_navigator">Обновить / Refresh</string>
+    <string name="action_refresh_navigator_desc">Перезапуск интерфейса или обновление</string>
+</resources>
