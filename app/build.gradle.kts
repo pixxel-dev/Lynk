@@ -23,14 +23,14 @@ android {
 
     signingConfigs {
         create("release") {
-            val keystoreFile = file("lynk_release.keystore")
-            if (keystoreFile.exists()) {
-                storeFile = keystoreFile
+            val releaseKeystore = file("lynk_release.keystore")
+            if (releaseKeystore.exists()) {
+                storeFile = releaseKeystore
                 storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "lynk123pass"
                 keyAlias = System.getenv("KEY_ALIAS") ?: "my_key_alias"
                 keyPassword = System.getenv("KEY_PASSWORD") ?: "lynk123pass"
             } else {
-                // Фолбэк на дебаг-ключ для локальной разработки, если файла ключа нет
+                // Идиоматичный фолбэк Gradle для релизного конфига на дебаг-подпись
                 initWith(getByName("debug"))
             }
         }
