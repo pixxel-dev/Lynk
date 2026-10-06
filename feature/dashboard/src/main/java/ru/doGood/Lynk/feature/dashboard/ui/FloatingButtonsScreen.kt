@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -31,9 +32,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.floating.FloatingButtonConfig
 import ru.doGood.Lynk.feature.dashboard.FloatingButtonsState
@@ -845,34 +850,57 @@ private fun FloatingButtonCard(
                         )
                     }
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
+                            .padding(vertical = 4.dp)
                     ) {
                         shapes.forEach { (shapeKey, iconAndRes) ->
                             val (symbol, stringRes) = iconAndRes
                             val isSelected = selectedShape == shapeKey
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { onSetShape(shapeKey) },
-                                label = {
-                                    Text(
-                                        text = "$symbol ${stringResource(stringRes)}",
-                                        style = MaterialTheme.typography.bodySmall
+                            val labelDescription = stringResource(stringRes)
+
+                            val backgroundColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            }
+                            val contentColor = if (isSelected) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                            val borderColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                            }
+
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(backgroundColor)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 1.dp,
+                                        color = borderColor,
+                                        shape = RoundedCornerShape(12.dp)
                                     )
-                                },
-                                leadingIcon = if (isSelected) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Rounded.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                    .clickable { onSetShape(shapeKey) }
+                                    .semantics {
+                                        contentDescription = labelDescription
                                     }
-                                } else null
-                            )
+                            ) {
+                                Text(
+                                    text = symbol,
+                                    fontSize = 26.sp,
+                                    color = contentColor,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     }
 

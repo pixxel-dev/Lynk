@@ -2059,12 +2059,12 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val shapes = listOf(
-            "CIRCLE" to "● Круг",
-            "ROUNDED_SQUARE" to "▢ Скругленный",
-            "SQUARE" to "■ Квадрат",
-            "STAR" to "★ Звезда",
-            "OCTAGON" to "🛑 Восьмиугольник",
-            "HEART" to "♥ Сердечко"
+            "CIRCLE" to "●",
+            "ROUNDED_SQUARE" to "▢",
+            "SQUARE" to "■",
+            "STAR" to "★",
+            "OCTAGON" to "🛑",
+            "HEART" to "♥"
         )
         val shapeButtons = mutableListOf<TextView>()
 
@@ -2074,14 +2074,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 if (tag == selected) {
                     btn.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(8).toFloat()
+                        cornerRadius = dpToPx(10).toFloat()
                         setColor(Color.parseColor("#7C4DFF"))
+                        setStroke(dpToPx(2), Color.parseColor("#B388FF"))
                     }
                     btn.setTextColor(Color.WHITE)
                 } else {
                     btn.background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(8).toFloat()
+                        cornerRadius = dpToPx(10).toFloat()
                         setColor(Color.parseColor("#2A2A3C"))
                         setStroke(dpToPx(1), Color.parseColor("#444466"))
                     }
@@ -2095,15 +2096,16 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             addView(shapeRow)
         }
 
-        for ((shapeValue, shapeName) in shapes) {
+        val chipSize = dpToPx(44)
+        for ((shapeValue, shapeIcon) in shapes) {
             val shapeBtn = TextView(context).apply {
-                text = shapeName
+                text = shapeIcon
                 tag = shapeValue
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6))
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+                includeFontPadding = false
                 gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(dpToPx(2), 0, dpToPx(2), 0)
+                layoutParams = LinearLayout.LayoutParams(chipSize, chipSize).apply {
+                    setMargins(dpToPx(3), 0, dpToPx(3), 0)
                 }
                 setOnClickListener {
                     prefs.edit().putString(shapeKey, shapeValue).apply()
