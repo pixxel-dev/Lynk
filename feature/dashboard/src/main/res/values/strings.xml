@@ -266,5 +266,14 @@
     <string name="overlay_name_label">Overlay Name</string>
     <string name="delete_overlay_confirm_title">Delete Overlay?</string>
     <string name="delete_overlay_confirm_msg">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="button_settings">⚙️ Button Settings</string>
+    <string name="hide_button_settings">⚙️ Hide Settings</string>
+    <string name="chip_quick_launch">🚀 Quick Launch</string>
+    <string name="chip_fullscreen">📺 Overlay</string>
+    <string name="chip_home">🏠 Home</string>
+    <string name="chip_back">↩️ Back</string>
+    <string name="chip_refresh">🔄 Refresh</string>
+    <string name="chip_freeform">🪟 Freeform</string>
+    <string name="chip_no_active_buttons">⚠️ No active buttons</string>
 
 </resources>

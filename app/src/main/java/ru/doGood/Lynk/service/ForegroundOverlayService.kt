@@ -10,8 +10,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Outline
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.hardware.display.DisplayManager
 import android.os.Build
@@ -24,6 +31,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -1141,6 +1149,137 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
     }
 
+    // --- Custom Path Drawable & Outline Helper Classes ---
+
+    private class PathDrawable(
+        private val pathBuilder: (Float, Float) -> Path,
+        private var color: Int
+    ) : Drawable() {
+        private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            this.color = this@PathDrawable.color
+        }
+        private val path = Path()
+
+        override fun onBoundsChange(bounds: Rect) {
+            super.onBoundsChange(bounds)
+            path.reset()
+            val w = bounds.width().toFloat()
+            val h = bounds.height().toFloat()
+            if (w > 0 && h > 0) {
+                path.set(pathBuilder(w, h))
+            }
+        }
+
+        override fun draw(canvas: Canvas) {
+            canvas.drawPath(path, paint)
+        }
+
+        override fun setAlpha(alpha: Int) {
+            paint.alpha = alpha
+            invalidateSelf()
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            paint.colorFilter = colorFilter
+            invalidateSelf()
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+    }
+
+    private fun createStarPath(w: Float, h: Float): Path {
+        val path = Path()
+        val cx = w / 2f
+        val cy = h / 2f
+        val outerRadius = min(w, h) / 2f * 0.95f
+        val innerRadius = outerRadius * 0.42f
+        val points = 5
+        val angleStep = Math.PI / points
+
+        for (i in 0 until (points * 2)) {
+            val r = if (i % 2 == 0) outerRadius else innerRadius
+            val angle = -Math.PI / 2 + i * angleStep
+            val x = (cx + r * kotlin.math.cos(angle)).toFloat()
+            val y = (cy + r * kotlin.math.sin(angle)).toFloat()
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        return path
+    }
+
+    private fun createOctagonPath(w: Float, h: Float): Path {
+        val path = Path()
+        val corner = min(w, h) * 0.28f
+        path.moveTo(corner, 0f)
+        path.lineTo(w - corner, 0f)
+        path.lineTo(w, corner)
+        path.lineTo(w, h - corner)
+        path.lineTo(w - corner, h)
+        path.lineTo(corner, h)
+        path.lineTo(0f, h - corner)
+        path.lineTo(0f, corner)
+        path.close()
+        return path
+    }
+
+    private fun createHeartPath(w: Float, h: Float): Path {
+        val path = Path()
+        val cx = w / 2f
+        val topY = h * 0.25f
+        val bottomY = h * 0.88f
+
+        path.moveTo(cx, bottomY)
+        path.cubicTo(
+            cx - w * 0.55f, h * 0.55f,
+            cx - w * 0.55f, h * 0.08f,
+            cx - w * 0.26f, h * 0.08f
+        )
+        path.cubicTo(
+            cx - w * 0.08f, h * 0.08f,
+            cx, topY,
+            cx, topY
+        )
+        path.cubicTo(
+            cx, topY,
+            cx + w * 0.08f, h * 0.08f,
+            cx + w * 0.26f, h * 0.08f
+        )
+        path.cubicTo(
+            cx + w * 0.55f, h * 0.08f,
+            cx + w * 0.55f, h * 0.55f,
+            cx, bottomY
+        )
+        path.close()
+        return path
+    }
+
+    private fun applyCustomPathOutline(view: View, pathBuilder: (Float, Float) -> Path) {
+        view.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                val w = view.width.toFloat().takeIf { it > 0 } ?: dpToPx(48).toFloat()
+                val h = view.height.toFloat().takeIf { it > 0 } ?: dpToPx(48).toFloat()
+                val path = pathBuilder(w, h)
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        outline.setPath(path)
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        @Suppress("DEPRECATION")
+                        if (path.isConvex) {
+                            outline.setConvexPath(path)
+                        } else {
+                            outline.setPath(path)
+                        }
+                    }
+                } catch (_: Exception) {
+                    outline.setRect(0, 0, view.width, view.height)
+                }
+            }
+        }
+        view.clipToOutline = true
+    }
+
     // --- Button Creation & Visual Helpers ---
 
     private fun createSingleOverlayButton(
@@ -1151,18 +1290,16 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         sizePx: Int
     ): FrameLayout {
         val frame = FrameLayout(context)
+        val iconSize = (sizePx * 0.55f).toInt()
         val img = ImageView(context).apply {
             setImageResource(iconRes)
             setColorFilter(Color.WHITE)
-            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            scaleType = ImageView.ScaleType.FIT_CENTER
         }
-        val paddingPx = sizePx / 4
-        img.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
-
-        frame.addView(img, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
+        val lp = FrameLayout.LayoutParams(iconSize, iconSize).apply {
+            gravity = Gravity.CENTER
+        }
+        frame.addView(img, lp)
         applyButtonBackground(frame, colorHex, shapeStr)
         return frame
     }
@@ -1178,8 +1315,12 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val img = frame.getChildAt(0) as? ImageView
             img?.let {
                 it.setImageResource(iconRes)
-                val paddingPx = sizePx / 4
-                it.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
+                val iconSize = (sizePx * 0.55f).toInt()
+                val lp = it.layoutParams as? FrameLayout.LayoutParams ?: FrameLayout.LayoutParams(iconSize, iconSize)
+                lp.width = iconSize
+                lp.height = iconSize
+                lp.gravity = Gravity.CENTER
+                it.layoutParams = lp
             }
         }
         applyButtonBackground(frame, colorHex, shapeStr)
@@ -1192,27 +1333,49 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             Color.parseColor("#7C4DFF")
         }
 
-        val bg = GradientDrawable()
-        bg.setColor(parsedColor)
-
         when (shapeStr.uppercase()) {
+            "STAR" -> {
+                view.background = PathDrawable(::createStarPath, parsedColor)
+                applyCustomPathOutline(view, ::createStarPath)
+            }
+            "OCTAGON" -> {
+                view.background = PathDrawable(::createOctagonPath, parsedColor)
+                applyCustomPathOutline(view, ::createOctagonPath)
+            }
+            "HEART" -> {
+                view.background = PathDrawable(::createHeartPath, parsedColor)
+                applyCustomPathOutline(view, ::createHeartPath)
+            }
             "ROUNDED_SQUARE" -> {
-                bg.shape = GradientDrawable.RECTANGLE
-                bg.cornerRadius = dpToPx(12).toFloat()
+                val bg = GradientDrawable().apply {
+                    setColor(parsedColor)
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(12).toFloat()
+                }
+                view.background = bg
+                view.outlineProvider = ViewOutlineProvider.BACKGROUND
+                view.clipToOutline = true
             }
             "SQUARE" -> {
-                bg.shape = GradientDrawable.RECTANGLE
-                bg.cornerRadius = 0f
-            }
-            "STAR", "OCTAGON", "HEART" -> {
-                bg.shape = GradientDrawable.RECTANGLE
-                bg.cornerRadius = dpToPx(16).toFloat()
+                val bg = GradientDrawable().apply {
+                    setColor(parsedColor)
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 0f
+                }
+                view.background = bg
+                view.outlineProvider = ViewOutlineProvider.BACKGROUND
+                view.clipToOutline = true
             }
             else -> { // CIRCLE
-                bg.shape = GradientDrawable.OVAL
+                val bg = GradientDrawable().apply {
+                    setColor(parsedColor)
+                    shape = GradientDrawable.OVAL
+                }
+                view.background = bg
+                view.outlineProvider = ViewOutlineProvider.BACKGROUND
+                view.clipToOutline = true
             }
         }
-        view.background = bg
     }
 
     // --- Button Actions ---

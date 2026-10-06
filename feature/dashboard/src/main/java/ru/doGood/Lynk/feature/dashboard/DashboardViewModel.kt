@@ -1321,8 +1321,11 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         editor.apply()
 
         _state.update {
-            val updatedProfiles = it.floatingButtonsState.profiles.map { p ->
-                if (p.id == profileId) profile else p
+            val existing = it.floatingButtonsState.profiles
+            val updatedProfiles = if (existing.none { p -> p.id == profileId }) {
+                ArrayList(existing + profile)
+            } else {
+                ArrayList(existing.map { p -> if (p.id == profileId) profile else p })
             }
             saveProfilesListToPrefs(prefs, updatedProfiles)
             val activeProfile = updatedProfiles.find { p -> p.id == it.floatingButtonsState.selectedProfileId } ?: profile
@@ -1369,7 +1372,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val newProfile = OverlayProfile(nextId, profileName, true, false, FloatingButtonConfig())
 
         currentProfiles.add(newProfile)
-        saveProfilesListToPrefs(prefs, currentProfiles)
+        val newList = ArrayList(currentProfiles)
+        saveProfilesListToPrefs(prefs, newList)
+
+        _state.update { state ->
+            state.copy(
+                floatingButtonsState = state.floatingButtonsState.copy(
+                    profiles = newList,
+                    selectedProfileId = nextId,
+                    config = newProfile.config.copy()
+                )
+            )
+        }
+
         saveAndApplyProfileConfig(nextId, newProfile)
         selectOverlayProfile(nextId)
     }

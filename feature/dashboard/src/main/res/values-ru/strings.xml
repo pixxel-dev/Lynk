@@ -266,5 +266,14 @@
     <string name="overlay_name_label">Название оверлея</string>
     <string name="delete_overlay_confirm_title">Удалить оверлей?</string>
     <string name="delete_overlay_confirm_msg">Вы уверены, что хотите удалить «%1$s»?</string>
+    <string name="button_settings">⚙️ Настройки кнопок</string>
+    <string name="hide_button_settings">⚙️ Скрыть настройки</string>
+    <string name="chip_quick_launch">🚀 Быстрый запуск</string>
+    <string name="chip_fullscreen">📺 Оверлей</string>
+    <string name="chip_home">🏠 Домой</string>
+    <string name="chip_back">↩️ Назад</string>
+    <string name="chip_refresh">🔄 Обновить</string>
+    <string name="chip_freeform">🪟 Freeform</string>
+    <string name="chip_no_active_buttons">⚠️ Нет активных кнопок</string>
 
 </resources>

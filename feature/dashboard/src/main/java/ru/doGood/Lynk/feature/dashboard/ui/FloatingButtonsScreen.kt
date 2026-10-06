@@ -24,6 +24,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -119,6 +122,8 @@ fun FloatingButtonsScreen(
 
     var showDeleteOverlayDialog by remember { mutableStateOf(false) }
     var profileToDelete by remember { mutableStateOf<OverlayProfile?>(null) }
+
+    var isSettingsExpanded by remember(state.selectedProfileId) { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         onCheckPermissions(context)
@@ -283,10 +288,12 @@ fun FloatingButtonsScreen(
                         onDeleteClick = {
                             profileToDelete = state.activeProfile
                             showDeleteOverlayDialog = true
-                        }
+                        },
+                        isSettingsExpanded = isSettingsExpanded,
+                        onToggleSettingsExpanded = { isSettingsExpanded = !isSettingsExpanded }
                     )
 
-                    AnimatedVisibility(visible = state.activeProfile.isEnabled) {
+                    AnimatedVisibility(visible = state.activeProfile.isEnabled && isSettingsExpanded) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (isLandscape) {
                         Row(
@@ -1514,13 +1521,16 @@ private fun SelectAppDialog(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProfileStatusCard(
     profile: OverlayProfile,
     canDelete: Boolean,
     onToggleProfileEnabled: (Boolean) -> Unit,
     onRenameClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    isSettingsExpanded: Boolean,
+    onToggleSettingsExpanded: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -1532,17 +1542,21 @@ private fun ProfileStatusCard(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = profile.name,
@@ -1573,22 +1587,87 @@ private fun ProfileStatusCard(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = stringResource(R.string.enable_overlay_profile),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = stringResource(R.string.overlay_profile_status_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Switch(
+                    checked = profile.isEnabled,
+                    onCheckedChange = onToggleProfileEnabled
                 )
             }
-            Switch(
-                checked = profile.isEnabled,
-                onCheckedChange = onToggleProfileEnabled
-            )
+
+            val config = profile.config
+            val activeChips = remember(config) {
+                listOfNotNull(
+                    if (config.isQuickLaunchEnabled) R.string.chip_quick_launch else null,
+                    if (config.isFullscreenOverlayEnabled) R.string.chip_fullscreen else null,
+                    if (config.isHomeNavigatorEnabled) R.string.chip_home else null,
+                    if (config.isBackNavigatorEnabled) R.string.chip_back else null,
+                    if (config.isRefreshNavigatorEnabled) R.string.chip_refresh else null,
+                    if (config.isFreeformWindowEnabled) R.string.chip_freeform else null
+                )
+            }
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (activeChips.isNotEmpty()) {
+                    activeChips.forEach { resId ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ) {
+                            Text(
+                                text = stringResource(resId),
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    ) {
+                        Text(
+                            text = stringResource(R.string.chip_no_active_buttons),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                FilledTonalButton(
+                    onClick = onToggleSettingsExpanded,
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.button_settings),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (isSettingsExpanded) stringResource(R.string.hide_button_settings) else stringResource(R.string.button_settings),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = if (isSettingsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
