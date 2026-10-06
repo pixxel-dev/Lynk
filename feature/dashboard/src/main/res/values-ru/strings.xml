@@ -131,7 +131,10 @@
     <string name="mirroring_subtitle">Дублировать оверлей на экран пассажира ГУ</string>
     <string name="package_name_hint">Имя пакета (например, com.example.app)</string>
     <string name="btn_add_custom">Добавить введенный</string>
-    <string name="select_from_installed">Или выберите из установленных ПО:</string>
+    <string name="select_from_installed">Выберите из установленных ПО:</string>
+    <string name="search_apps_hint">Поиск по названию или пакету...</string>
+    <string name="btn_save_apps">Готово</string>
+    <string name="selected_apps_count">Выбрано: %1$d</string>
 
     <!-- PermissionsInfoScreen -->
     <string name="perm_overlay_title">Оверлей (Отображение поверх окон)</string>

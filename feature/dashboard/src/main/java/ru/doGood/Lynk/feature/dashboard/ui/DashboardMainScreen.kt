@@ -310,8 +310,10 @@ fun DashboardMainScreen(
                             onToggleSecondaryMirroring = { viewModel.toggleSecondaryMirroring(it) },
                             onAddQuickLaunchApp = { viewModel.addQuickLaunchApp(it) },
                             onRemoveQuickLaunchApp = { viewModel.removeQuickLaunchApp(it) },
+                            onSetQuickLaunchApps = { viewModel.setQuickLaunchApps(it) },
                             onAddFullscreenApp = { viewModel.addFullscreenApp(it) },
                             onRemoveFullscreenApp = { viewModel.removeFullscreenApp(it) },
+                            onSetFullscreenApps = { viewModel.setFullscreenApps(it) },
                             onCheckPermissions = { context -> viewModel.checkFloatingPermissions(context) },
                             onToggleOverlayService = { context -> viewModel.toggleOverlayService(context) }
                         )

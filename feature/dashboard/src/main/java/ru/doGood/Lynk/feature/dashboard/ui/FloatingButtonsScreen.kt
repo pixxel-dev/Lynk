@@ -60,8 +60,10 @@ fun FloatingButtonsScreen(
     onToggleSecondaryMirroring: (Boolean) -> Unit,
     onAddQuickLaunchApp: (String) -> Unit,
     onRemoveQuickLaunchApp: (String) -> Unit,
+    onSetQuickLaunchApps: (List<String>) -> Unit = {},
     onAddFullscreenApp: (String) -> Unit,
     onRemoveFullscreenApp: (String) -> Unit,
+    onSetFullscreenApps: (List<String>) -> Unit = {},
     onCheckPermissions: (Context) -> Unit,
     onToggleOverlayService: (Context) -> Unit
 ) {
@@ -257,8 +259,8 @@ fun FloatingButtonsScreen(
             availableApps = state.availableApps,
             existingApps = state.config.quickLaunchApps,
             onDismiss = { showAddQuickLaunchDialog = false },
-            onSelectApp = { pkg ->
-                onAddQuickLaunchApp(pkg)
+            onConfirm = { selectedApps ->
+                onSetQuickLaunchApps(selectedApps)
                 showAddQuickLaunchDialog = false
             }
         )
@@ -271,8 +273,8 @@ fun FloatingButtonsScreen(
             availableApps = state.availableApps,
             existingApps = state.config.fullscreenApps,
             onDismiss = { showAddFullscreenDialog = false },
-            onSelectApp = { pkg ->
-                onAddFullscreenApp(pkg)
+            onConfirm = { selectedApps ->
+                onSetFullscreenApps(selectedApps)
                 showAddFullscreenDialog = false
             }
         )
@@ -288,6 +290,7 @@ private fun QuickLaunchCard(
     onRemoveQuickLaunchApp: (String) -> Unit,
     onShowAddDialog: () -> Unit
 ) {
+    val context = LocalContext.current
     FloatingButtonCard(
         icon = Icons.Rounded.Menu,
         title = stringResource(R.string.quick_launch_btn_title),
@@ -326,10 +329,13 @@ private fun QuickLaunchCard(
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 items(state.config.quickLaunchApps) { pkg ->
+                    val appLabel = remember(pkg, state.availableApps) {
+                        getAppLabel(context, pkg, state.availableApps)
+                    }
                     InputChip(
                         selected = true,
                         onClick = { },
-                        label = { Text(pkg.substringAfterLast('.')) },
+                        label = { Text(appLabel) },
                         trailingIcon = {
                             Icon(
                                 Icons.Rounded.Close,
@@ -355,6 +361,7 @@ private fun FullscreenOverlayCard(
     onRemoveFullscreenApp: (String) -> Unit,
     onShowAddDialog: () -> Unit
 ) {
+    val context = LocalContext.current
     FloatingButtonCard(
         icon = Icons.Rounded.Fullscreen,
         title = stringResource(R.string.fullscreen_overlay_title),
@@ -393,10 +400,13 @@ private fun FullscreenOverlayCard(
                 modifier = Modifier.padding(top = 4.dp)
             ) {
                 items(state.config.fullscreenApps) { pkg ->
+                    val appLabel = remember(pkg, state.availableApps) {
+                        getAppLabel(context, pkg, state.availableApps)
+                    }
                     InputChip(
                         selected = true,
                         onClick = { },
-                        label = { Text(pkg.substringAfterLast('.')) },
+                        label = { Text(appLabel) },
                         trailingIcon = {
                             Icon(
                                 Icons.Rounded.Close,
@@ -794,15 +804,46 @@ private fun ButtonLayoutCard(
     }
 }
 
+private fun getAppLabel(
+    context: Context,
+    packageName: String,
+    availableApps: List<AppItem> = emptyList()
+): String {
+    val foundApp = availableApps.find { it.packageName == packageName }
+    if (foundApp != null && !foundApp.label.isNullOrBlank()) {
+        return foundApp.label
+    }
+    return try {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(appInfo).toString()
+    } catch (e: Exception) {
+        packageName
+    }
+}
+
 @Composable
 private fun SelectAppDialog(
     title: String,
     availableApps: List<AppItem>,
     existingApps: List<String>,
     onDismiss: () -> Unit,
-    onSelectApp: (String) -> Unit
+    onConfirm: (List<String>) -> Unit
 ) {
-    var customPackageInput by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedPackages by remember { mutableStateOf(existingApps.toSet()) }
+
+    val filteredList = remember(searchQuery, availableApps) {
+        if (searchQuery.isBlank()) {
+            availableApps
+        } else {
+            val query = searchQuery.trim().lowercase()
+            availableApps.filter { app ->
+                (app.label ?: "").lowercase().contains(query) ||
+                        app.packageName.lowercase().contains(query)
+            }
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -810,51 +851,174 @@ private fun SelectAppDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = customPackageInput,
-                    onValueChange = { customPackageInput = it },
-                    label = { Text(stringResource(R.string.package_name_hint)) },
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text(stringResource(R.string.search_apps_hint)) },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Search,
+                            contentDescription = null
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    Icons.Rounded.Clear,
+                                    contentDescription = stringResource(R.string.clear_search)
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (customPackageInput.isNotBlank()) {
-                    Button(
-                        onClick = { onSelectApp(customPackageInput.trim()) },
+
+                val trimmedQuery = searchQuery.trim()
+                if (trimmedQuery.isNotEmpty() && filteredList.none { it.packageName.equals(trimmedQuery, ignoreCase = true) }) {
+                    val isCustomSelected = selectedPackages.contains(trimmedQuery)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier
-                            .padding(top = 8.dp)
-                            .align(Alignment.End)
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedPackages = if (isCustomSelected) {
+                                    selectedPackages - trimmedQuery
+                                } else {
+                                    selectedPackages + trimmedQuery
+                                }
+                            }
                     ) {
-                        Text(stringResource(R.string.btn_add_custom))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                        ) {
+                            Checkbox(
+                                checked = isCustomSelected,
+                                onCheckedChange = { checked ->
+                                    selectedPackages = if (checked) {
+                                        selectedPackages + trimmedQuery
+                                    } else {
+                                        selectedPackages - trimmedQuery
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.btn_add_custom) + ": $trimmedQuery",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = trimmedQuery,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(stringResource(R.string.select_from_installed), style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.select_from_installed),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    if (selectedPackages.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.selected_apps_count, selectedPackages.size),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                LazyColumn(modifier = Modifier.heightIn(max = 250.dp)) {
-                    val filteredList = availableApps.filter { !existingApps.contains(it.packageName) }
-                    items(filteredList) { app ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onSelectApp(app.packageName) }
-                                .padding(vertical = 8.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Rounded.Android, contentDescription = null, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(app.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+                if (filteredList.isEmpty() && trimmedQuery.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.no_apps_added),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                        items(filteredList, key = { it.packageName }) { app ->
+                            val isChecked = selectedPackages.contains(app.packageName)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedPackages = if (isChecked) {
+                                            selectedPackages - app.packageName
+                                        } else {
+                                            selectedPackages + app.packageName
+                                        }
+                                    }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = { checked ->
+                                        selectedPackages = if (checked) {
+                                            selectedPackages + app.packageName
+                                        } else {
+                                            selectedPackages - app.packageName
+                                        }
+                                    }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(
+                                    imageVector = Icons.Rounded.Android,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = app.label ?: app.packageName,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = app.packageName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
+                            HorizontalDivider()
                         }
-                        HorizontalDivider()
                     }
                 }
             }
         },
         confirmButton = {
+            Button(
+                onClick = { onConfirm(selectedPackages.toList()) }
+            ) {
+                Text(stringResource(R.string.btn_save_apps))
+            }
+        },
+        dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.btn_close))
+                Text(stringResource(R.string.btn_cancel))
             }
         }
     )

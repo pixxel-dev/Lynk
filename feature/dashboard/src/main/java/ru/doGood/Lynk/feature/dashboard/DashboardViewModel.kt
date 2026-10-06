@@ -1018,6 +1018,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         saveAndApplyFloatingConfig(config)
     }
 
+    fun setQuickLaunchApps(apps: List<String>) {
+        val config = _state.value.floatingButtonsState.config.copy()
+        config.quickLaunchApps = ArrayList(apps)
+        saveAndApplyFloatingConfig(config)
+    }
+
     fun addFullscreenApp(packageName: String) {
         val config = _state.value.floatingButtonsState.config
         config.addFullscreenApp(packageName)
@@ -1027,6 +1033,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun removeFullscreenApp(packageName: String) {
         val config = _state.value.floatingButtonsState.config
         config.removeFullscreenApp(packageName)
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFullscreenApps(apps: List<String>) {
+        val config = _state.value.floatingButtonsState.config.copy()
+        config.fullscreenApps = ArrayList(apps)
         saveAndApplyFloatingConfig(config)
     }
 
