@@ -864,7 +864,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // --- Floating Buttons & Overlay Tweaks ---
-    fun loadFloatingConfig() {
+    fun getLatestFloatingConfig(): FloatingButtonConfig {
         val app = getApplication<Application>()
         val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
 
@@ -891,8 +891,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         config.refreshButtonSize = prefs.getInt("refresh_button_size", 48)
         config.refreshOpacityPercent = prefs.getInt("refresh_opacity_percent", 85)
 
-        config.syncActionsWithApps()
-
         config.isSeparateButtonsEnabled = prefs.getBoolean("separate_buttons_enabled", false)
         config.combinedButtonSize = prefs.getInt("combined_button_size", 48)
         config.isSecondaryDisplayMirroring = prefs.getBoolean("secondary_display_mirroring", true)
@@ -916,6 +914,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         config.refreshColorHex = prefs.getString("refresh_color_hex", "#FFA000") ?: "#FFA000"
         config.refreshShape = prefs.getString("refresh_shape", "CIRCLE") ?: "CIRCLE"
 
+        config.syncActionsWithApps()
+
+        return config
+    }
+
+    fun loadFloatingConfig() {
+        val config = getLatestFloatingConfig()
         _state.update {
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
@@ -1035,6 +1040,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         if (_state.value.floatingButtonsState.isServiceRunning) {
             context.stopService(intent)
         } else {
+            loadFloatingConfig()
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -1045,217 +1051,217 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleQuickLaunchEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isQuickLaunchEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleFullscreenOverlayEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isFullscreenOverlayEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleHomeNavigatorEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isHomeNavigatorEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleBackNavigatorEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isBackNavigatorEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleRefreshNavigatorEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isRefreshNavigatorEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleSeparateButtonsEnabled(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isSeparateButtonsEnabled = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.quickLaunchButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.quickLaunchOpacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.fullscreenButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.fullscreenOpacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.homeButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.homeOpacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun setBackSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.backButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setBackOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.backOpacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.refreshButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.refreshOpacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchColorHex(colorHex: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.quickLaunchColorHex = colorHex
         saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchShape(shape: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.quickLaunchShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenColorHex(colorHex: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.fullscreenColorHex = colorHex
         saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenShape(shape: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.fullscreenShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeColorHex(colorHex: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.homeColorHex = colorHex
         saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeShape(shape: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.homeShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
     fun setBackColorHex(colorHex: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.backColorHex = colorHex
         saveAndApplyFloatingConfig(config)
     }
 
     fun setBackShape(shape: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.backShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshColorHex(colorHex: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.refreshColorHex = colorHex
         saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshShape(shape: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.refreshShape = shape
         saveAndApplyFloatingConfig(config)
     }
 
     fun setCombinedSize(size: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.combinedButtonSize = size
         saveAndApplyFloatingConfig(config)
     }
 
     fun setOpacityPercent(percent: Int) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.opacityPercent = percent
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleSecondaryMirroring(enabled: Boolean) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.isSecondaryDisplayMirroring = enabled
         saveAndApplyFloatingConfig(config)
     }
 
     fun addQuickLaunchApp(packageName: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.addQuickLaunchApp(packageName)
         saveAndApplyFloatingConfig(config)
     }
 
     fun removeQuickLaunchApp(packageName: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.removeQuickLaunchApp(packageName)
         saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchApps(apps: List<String>) {
-        val config = _state.value.floatingButtonsState.config.copy()
+        val config = getLatestFloatingConfig()
         config.quickLaunchApps = ArrayList(apps)
         saveAndApplyFloatingConfig(config)
     }
 
     fun addFullscreenApp(packageName: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.addFullscreenApp(packageName)
         saveAndApplyFloatingConfig(config)
     }
 
     fun removeFullscreenApp(packageName: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         config.removeFullscreenApp(packageName)
         saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenApps(apps: List<String>) {
-        val config = _state.value.floatingButtonsState.config.copy()
+        val config = getLatestFloatingConfig()
         config.fullscreenApps = ArrayList(apps)
         saveAndApplyFloatingConfig(config)
     }
 
     fun toggleActionEnabled(actionId: String) {
-        val config = _state.value.floatingButtonsState.config
+        val config = getLatestFloatingConfig()
         val action = config.actions.find { it.id == actionId }
         action?.toggleEnabled()
         if (action != null) {
