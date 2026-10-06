@@ -1340,6 +1340,34 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
         intent.setPackage(app.packageName)
         app.sendBroadcast(intent)
+
+        if (_state.value.floatingButtonsState.profiles.any { it.isEnabled }) {
+            startOverlayServiceInternal(app)
+        }
+    }
+
+    private fun startOverlayServiceInternal(app: Context) {
+        if (!Settings.canDrawOverlays(app)) return
+        try {
+            val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
+            val startMethod = serviceClass.getMethod("startService", Context::class.java)
+            startMethod.invoke(null, app)
+        } catch (_: Exception) {
+            try {
+                val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
+                val intent = Intent(app, serviceClass)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    app.startForegroundService(intent)
+                } else {
+                    app.startService(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
+        intent.setPackage(app.packageName)
+        app.sendBroadcast(intent)
     }
 
     fun selectOverlayProfile(profileId: Int) {
@@ -1361,6 +1389,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             ?: getLatestProfile(profileId)
         currentProfile.isEnabled = enabled
         saveAndApplyProfileConfig(profileId, currentProfile)
+        if (enabled || _state.value.floatingButtonsState.profiles.any { it.isEnabled }) {
+            startOverlayServiceInternal(getApplication())
+        }
     }
 
     fun addOverlayProfile(name: String) {

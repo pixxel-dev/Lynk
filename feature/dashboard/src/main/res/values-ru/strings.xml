@@ -260,14 +260,14 @@
     <string name="overlay_profile_3">Оверлей 3</string>
     <string name="enable_overlay_profile">Включить этот оверлей</string>
     <string name="overlay_profile_status_desc">Управляет отображением плавающих кнопок этого профиля на экране</string>
-    <string name="add_new_overlay">+ Новый оверлей</string>
+    <string name="add_new_overlay">Новый оверлей</string>
     <string name="rename_overlay">Переименовать оверлей</string>
     <string name="delete_overlay">Удалить оверлей</string>
     <string name="overlay_name_label">Название оверлея</string>
     <string name="delete_overlay_confirm_title">Удалить оверлей</string>
     <string name="delete_overlay_confirm_msg">Вы уверены, что хотите удалить оверлей %1$s?</string>
-    <string name="button_settings">⚙️ Настройки кнопок</string>
-    <string name="hide_button_settings">⚙️ Скрыть настройки</string>
+    <string name="button_settings">Настройки кнопок</string>
+    <string name="hide_button_settings">Скрыть настройки</string>
     <string name="chip_quick_launch">🚀 Быстрый запуск</string>
     <string name="chip_fullscreen">📺 Оверлей</string>
     <string name="chip_home">🏠 Домой</string>

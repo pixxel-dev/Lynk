@@ -50,6 +50,20 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     companion object {
         private const val CHANNEL_ID = "OverlayServiceChannel"
         const val SECONDARY_DISPLAY_ID = 1003
+
+        @JvmStatic
+        fun startService(context: Context) {
+            try {
+                val intent = Intent(context, ForegroundOverlayService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private lateinit var defaultWindowManager: WindowManager
@@ -116,6 +130,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     private val overlayUpdateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == "ru.doGood.Lynk.ACTION_UPDATE_OVERLAY") {
+                loadOverlayProfiles()
                 updateOverlayButtons()
             }
         }
@@ -163,6 +178,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForegroundServiceInternal()
+        loadOverlayProfiles()
         updateOverlayButtons()
         return START_STICKY
     }
@@ -301,10 +317,17 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
     }
 
+    private fun loadOverlayProfiles(): List<Int> {
+        if (!::prefs.isInitialized) {
+            prefs = getSharedPreferences("${packageName}_preferences", Context.MODE_PRIVATE)
+        }
+        return getAllProfileIds()
+    }
+
     // --- Main Overlay Update Loop ---
 
     fun updateOverlayButtons() {
-        val currentProfileIds = getAllProfileIds()
+        val currentProfileIds = loadOverlayProfiles()
         val activeViewIds = ArrayList(profileViewsMap.keys)
         for (id in activeViewIds) {
             if (!currentProfileIds.contains(id) || !isProfileEnabled(id)) {

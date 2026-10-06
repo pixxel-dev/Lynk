@@ -148,48 +148,11 @@ fun FloatingButtonsScreen(
                         selected = isSelected,
                         onClick = { onSelectProfile(profile.id) },
                         text = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(
-                                    text = profile.name,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    fontSize = 14.sp
-                                )
-                                if (isSelected) {
-                                    IconButton(
-                                        onClick = {
-                                            profileToRename = profile
-                                            renameOverlayName = profile.name
-                                            showRenameOverlayDialog = true
-                                        },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Edit,
-                                            contentDescription = stringResource(R.string.rename_overlay),
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    if (state.profiles.size > 1) {
-                                        IconButton(
-                                            onClick = {
-                                                profileToDelete = profile
-                                                showDeleteOverlayDialog = true
-                                            },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.delete_overlay),
-                                                tint = MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            Text(
+                                text = profile.name,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp
+                            )
                         }
                     )
                 }
