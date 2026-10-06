@@ -24,9 +24,9 @@ android {
     signingConfigs {
         create("release") {
             storeFile = file("lynk_release.keystore")
-            storePassword = "lynk123"
-            keyAlias = "lynk"
-            keyPassword = "lynk123"
+            storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "lynk123pass"
+            keyAlias = System.getenv("KEY_ALIAS") ?: "my_key_alias"
+            keyPassword = System.getenv("KEY_PASSWORD") ?: "lynk123pass"
         }
     }
 

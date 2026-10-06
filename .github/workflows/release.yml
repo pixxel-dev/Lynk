@@ -23,11 +23,15 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Generate Release Keystore for CI
+      - name: Decode Keystore from Secrets
         run: |
-          keytool -genkeypair -v -keystore app/lynk_release.keystore -alias lynk -keyalg RSA -keysize 2048 -validity 10000 -storepass lynk123 -keypass lynk123 -dname "CN=Lynk, OU=Lynk, O=Lynk, L=City, S=State, C=US"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/lynk_release.keystore
 
       - name: Build Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew :app:assembleRelease
 
       - name: Extract Version Name
