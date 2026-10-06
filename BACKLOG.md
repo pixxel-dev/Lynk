@@ -9,6 +9,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Multi-Overlay Manager (Custom Overlay Builder): Capability to create up to 3 independent overlays, where the user can add 1 or more customizable buttons with individual parameters (size, opacity, position, actions) to each overlay.
 - [ ] Setup dependency injection framework (e.g. Dagger/Hilt or Koin) across modules.
 - [ ] Implement end-to-end instrumented tests & UI automated verification.
+- [ ] Integrate Cloud Storage connections in FileManager (Yandex Disk, Mail.ru, Google Drive, WebDAV support).
 
 ### In Progress
 
@@ -54,6 +55,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Конструктор кастомных оверлеев (Multi-Overlay Manager): Возможность создания до 3 независимых оверлеев, в каждый из которых пользователь сможет добавлять 1 или несколько настраиваемых кнопок со своими персональными параметрами (размер, прозрачность, позиция, действия).
 - [ ] Настроить фреймворк внедрения зависимостей (например, Dagger/Hilt или Koin) во всех модулях.
 - [ ] Реализовать сквозные (E2E) инструментальные тесты и автоматизированное тестирование UI.
+- [ ] Внедрить подключение к облачным дискам в файловый менеджер (Яндекс Диск, Облако Mail.ru, Google Drive, поддержка WebDAV).
 
 ### В работе (In Progress)
 
