@@ -68,22 +68,13 @@ android {
         compose = true
     }
 
-    splits {
-        abi {
-            isEnable = true
-            reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
-        }
-    }
+
 }
 
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-            val name = output.outputFileName.get()
-            // name typically looks like "app-arm64-v8a-release.apk" or "app-universal-release.apk"
-            output.outputFileName.set(name.replace("app-", "Lynk_${fullVersionName}-"))
+            output.outputFileName.set("Lynk_${fullVersionName}.apk")
         }
     }
 }
