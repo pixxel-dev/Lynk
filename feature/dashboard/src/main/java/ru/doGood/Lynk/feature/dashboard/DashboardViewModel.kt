@@ -901,6 +901,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         config.buttonColor = prefs.getString("button_color", "#7C4DFF") ?: "#7C4DFF"
         config.shape = prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE"
 
+        config.quickLaunchColorHex = prefs.getString("ql_color_hex", "#6750A4") ?: "#6750A4"
+        config.quickLaunchShape = prefs.getString("ql_shape", "CIRCLE") ?: "CIRCLE"
+
+        config.fullscreenColorHex = prefs.getString("fs_color_hex", "#1976D2") ?: "#1976D2"
+        config.fullscreenShape = prefs.getString("fs_shape", "CIRCLE") ?: "CIRCLE"
+
+        config.homeColorHex = prefs.getString("home_color_hex", "#388E3C") ?: "#388E3C"
+        config.homeShape = prefs.getString("home_shape", "CIRCLE") ?: "CIRCLE"
+
+        config.backColorHex = prefs.getString("back_color_hex", "#D32F2F") ?: "#D32F2F"
+        config.backShape = prefs.getString("back_shape", "CIRCLE") ?: "CIRCLE"
+
+        config.refreshColorHex = prefs.getString("refresh_color_hex", "#FFA000") ?: "#FFA000"
+        config.refreshShape = prefs.getString("refresh_shape", "CIRCLE") ?: "CIRCLE"
+
         _state.update {
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
@@ -944,6 +959,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             .putInt("opacity_percent", newConfig.opacityPercent)
             .putString("button_color", newConfig.buttonColor)
             .putString("button_shape", newConfig.shape)
+
+            .putString("ql_color_hex", newConfig.quickLaunchColorHex)
+            .putString("ql_shape", newConfig.quickLaunchShape)
+            .putString("fs_color_hex", newConfig.fullscreenColorHex)
+            .putString("fs_shape", newConfig.fullscreenShape)
+            .putString("home_color_hex", newConfig.homeColorHex)
+            .putString("home_shape", newConfig.homeShape)
+            .putString("back_color_hex", newConfig.backColorHex)
+            .putString("back_shape", newConfig.backShape)
+            .putString("refresh_color_hex", newConfig.refreshColorHex)
+            .putString("refresh_shape", newConfig.refreshShape)
             .apply()
 
         val configCopy = newConfig.copy()
@@ -1111,6 +1137,66 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun setRefreshOpacityPercent(percent: Int) {
         val config = _state.value.floatingButtonsState.config
         config.refreshOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setQuickLaunchColorHex(colorHex: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.quickLaunchColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setQuickLaunchShape(shape: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.quickLaunchShape = shape
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFullscreenColorHex(colorHex: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.fullscreenColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setFullscreenShape(shape: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.fullscreenShape = shape
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setHomeColorHex(colorHex: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.homeColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setHomeShape(shape: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.homeShape = shape
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setBackColorHex(colorHex: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.backColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setBackShape(shape: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.backShape = shape
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setRefreshColorHex(colorHex: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.refreshColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
+    }
+
+    fun setRefreshShape(shape: String) {
+        val config = _state.value.floatingButtonsState.config
+        config.refreshShape = shape
         saveAndApplyFloatingConfig(config)
     }
 

@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,18 +43,28 @@ fun FloatingButtonsScreen(
     onToggleQuickLaunch: (Boolean) -> Unit,
     onSetQuickLaunchSize: (Int) -> Unit,
     onSetQuickLaunchOpacity: (Int) -> Unit,
+    onSetQuickLaunchColor: (String) -> Unit = {},
+    onSetQuickLaunchShape: (String) -> Unit = {},
     onToggleFullscreenOverlay: (Boolean) -> Unit,
     onSetFullscreenSize: (Int) -> Unit,
     onSetFullscreenOpacity: (Int) -> Unit,
+    onSetFullscreenColor: (String) -> Unit = {},
+    onSetFullscreenShape: (String) -> Unit = {},
     onToggleHomeNavigator: (Boolean) -> Unit,
     onSetHomeSize: (Int) -> Unit,
     onSetHomeOpacity: (Int) -> Unit,
+    onSetHomeColor: (String) -> Unit = {},
+    onSetHomeShape: (String) -> Unit = {},
     onToggleBackNavigator: (Boolean) -> Unit,
     onSetBackSize: (Int) -> Unit,
     onSetBackOpacity: (Int) -> Unit,
+    onSetBackColor: (String) -> Unit = {},
+    onSetBackShape: (String) -> Unit = {},
     onToggleRefreshNavigator: (Boolean) -> Unit,
     onSetRefreshSize: (Int) -> Unit,
     onSetRefreshOpacity: (Int) -> Unit,
+    onSetRefreshColor: (String) -> Unit = {},
+    onSetRefreshShape: (String) -> Unit = {},
     onToggleSeparateButtons: (Boolean) -> Unit,
     onSetCombinedSize: (Int) -> Unit,
     onSetCombinedOpacity: (Int) -> Unit,
@@ -146,6 +157,8 @@ fun FloatingButtonsScreen(
                                     onToggleQuickLaunch = onToggleQuickLaunch,
                                     onSetQuickLaunchSize = onSetQuickLaunchSize,
                                     onSetQuickLaunchOpacity = onSetQuickLaunchOpacity,
+                                    onSetQuickLaunchColor = onSetQuickLaunchColor,
+                                    onSetQuickLaunchShape = onSetQuickLaunchShape,
                                     onRemoveQuickLaunchApp = onRemoveQuickLaunchApp,
                                     onShowAddDialog = { showAddQuickLaunchDialog = true }
                                 )
@@ -156,6 +169,8 @@ fun FloatingButtonsScreen(
                                     onToggleFullscreenOverlay = onToggleFullscreenOverlay,
                                     onSetFullscreenSize = onSetFullscreenSize,
                                     onSetFullscreenOpacity = onSetFullscreenOpacity,
+                                    onSetFullscreenColor = onSetFullscreenColor,
+                                    onSetFullscreenShape = onSetFullscreenShape,
                                     onRemoveFullscreenApp = onRemoveFullscreenApp,
                                     onShowAddDialog = { showAddFullscreenDialog = true }
                                 )
@@ -170,7 +185,9 @@ fun FloatingButtonsScreen(
                                     state = state,
                                     onToggleHomeNavigator = onToggleHomeNavigator,
                                     onSetHomeSize = onSetHomeSize,
-                                    onSetHomeOpacity = onSetHomeOpacity
+                                    onSetHomeOpacity = onSetHomeOpacity,
+                                    onSetHomeColor = onSetHomeColor,
+                                    onSetHomeShape = onSetHomeShape
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -178,7 +195,9 @@ fun FloatingButtonsScreen(
                                     state = state,
                                     onToggleBackNavigator = onToggleBackNavigator,
                                     onSetBackSize = onSetBackSize,
-                                    onSetBackOpacity = onSetBackOpacity
+                                    onSetBackOpacity = onSetBackOpacity,
+                                    onSetBackColor = onSetBackColor,
+                                    onSetBackShape = onSetBackShape
                                 )
                             }
                         }
@@ -191,7 +210,9 @@ fun FloatingButtonsScreen(
                                     state = state,
                                     onToggleRefreshNavigator = onToggleRefreshNavigator,
                                     onSetRefreshSize = onSetRefreshSize,
-                                    onSetRefreshOpacity = onSetRefreshOpacity
+                                    onSetRefreshOpacity = onSetRefreshOpacity,
+                                    onSetRefreshColor = onSetRefreshColor,
+                                    onSetRefreshShape = onSetRefreshShape
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -210,6 +231,8 @@ fun FloatingButtonsScreen(
                             onToggleQuickLaunch = onToggleQuickLaunch,
                             onSetQuickLaunchSize = onSetQuickLaunchSize,
                             onSetQuickLaunchOpacity = onSetQuickLaunchOpacity,
+                            onSetQuickLaunchColor = onSetQuickLaunchColor,
+                            onSetQuickLaunchShape = onSetQuickLaunchShape,
                             onRemoveQuickLaunchApp = onRemoveQuickLaunchApp,
                             onShowAddDialog = { showAddQuickLaunchDialog = true }
                         )
@@ -218,6 +241,8 @@ fun FloatingButtonsScreen(
                             onToggleFullscreenOverlay = onToggleFullscreenOverlay,
                             onSetFullscreenSize = onSetFullscreenSize,
                             onSetFullscreenOpacity = onSetFullscreenOpacity,
+                            onSetFullscreenColor = onSetFullscreenColor,
+                            onSetFullscreenShape = onSetFullscreenShape,
                             onRemoveFullscreenApp = onRemoveFullscreenApp,
                             onShowAddDialog = { showAddFullscreenDialog = true }
                         )
@@ -225,19 +250,25 @@ fun FloatingButtonsScreen(
                             state = state,
                             onToggleHomeNavigator = onToggleHomeNavigator,
                             onSetHomeSize = onSetHomeSize,
-                            onSetHomeOpacity = onSetHomeOpacity
+                            onSetHomeOpacity = onSetHomeOpacity,
+                            onSetHomeColor = onSetHomeColor,
+                            onSetHomeShape = onSetHomeShape
                         )
                         BackNavigatorCard(
                             state = state,
                             onToggleBackNavigator = onToggleBackNavigator,
                             onSetBackSize = onSetBackSize,
-                            onSetBackOpacity = onSetBackOpacity
+                            onSetBackOpacity = onSetBackOpacity,
+                            onSetBackColor = onSetBackColor,
+                            onSetBackShape = onSetBackShape
                         )
                         RefreshButtonCard(
                             state = state,
                             onToggleRefreshNavigator = onToggleRefreshNavigator,
                             onSetRefreshSize = onSetRefreshSize,
-                            onSetRefreshOpacity = onSetRefreshOpacity
+                            onSetRefreshOpacity = onSetRefreshOpacity,
+                            onSetRefreshColor = onSetRefreshColor,
+                            onSetRefreshShape = onSetRefreshShape
                         )
                         ButtonLayoutCard(
                             config = state.config,
@@ -287,6 +318,8 @@ private fun QuickLaunchCard(
     onToggleQuickLaunch: (Boolean) -> Unit,
     onSetQuickLaunchSize: (Int) -> Unit,
     onSetQuickLaunchOpacity: (Int) -> Unit,
+    onSetQuickLaunchColor: (String) -> Unit,
+    onSetQuickLaunchShape: (String) -> Unit,
     onRemoveQuickLaunchApp: (String) -> Unit,
     onShowAddDialog: () -> Unit
 ) {
@@ -301,7 +334,11 @@ private fun QuickLaunchCard(
         sizeDp = state.config.quickLaunchButtonSize,
         onSetSize = onSetQuickLaunchSize,
         opacityPercent = state.config.quickLaunchOpacityPercent,
-        onSetOpacity = onSetQuickLaunchOpacity
+        onSetOpacity = onSetQuickLaunchOpacity,
+        selectedColorHex = state.config.quickLaunchColorHex,
+        onSetColorHex = onSetQuickLaunchColor,
+        selectedShape = state.config.quickLaunchShape,
+        onSetShape = onSetQuickLaunchShape
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -358,6 +395,8 @@ private fun FullscreenOverlayCard(
     onToggleFullscreenOverlay: (Boolean) -> Unit,
     onSetFullscreenSize: (Int) -> Unit,
     onSetFullscreenOpacity: (Int) -> Unit,
+    onSetFullscreenColor: (String) -> Unit,
+    onSetFullscreenShape: (String) -> Unit,
     onRemoveFullscreenApp: (String) -> Unit,
     onShowAddDialog: () -> Unit
 ) {
@@ -372,7 +411,11 @@ private fun FullscreenOverlayCard(
         sizeDp = state.config.fullscreenButtonSize,
         onSetSize = onSetFullscreenSize,
         opacityPercent = state.config.fullscreenOpacityPercent,
-        onSetOpacity = onSetFullscreenOpacity
+        onSetOpacity = onSetFullscreenOpacity,
+        selectedColorHex = state.config.fullscreenColorHex,
+        onSetColorHex = onSetFullscreenColor,
+        selectedShape = state.config.fullscreenShape,
+        onSetShape = onSetFullscreenShape
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -428,7 +471,9 @@ private fun HomeNavigatorCard(
     state: FloatingButtonsState,
     onToggleHomeNavigator: (Boolean) -> Unit,
     onSetHomeSize: (Int) -> Unit,
-    onSetHomeOpacity: (Int) -> Unit
+    onSetHomeOpacity: (Int) -> Unit,
+    onSetHomeColor: (String) -> Unit,
+    onSetHomeShape: (String) -> Unit
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Home,
@@ -440,7 +485,11 @@ private fun HomeNavigatorCard(
         sizeDp = state.config.homeButtonSize,
         onSetSize = onSetHomeSize,
         opacityPercent = state.config.homeOpacityPercent,
-        onSetOpacity = onSetHomeOpacity
+        onSetOpacity = onSetHomeOpacity,
+        selectedColorHex = state.config.homeColorHex,
+        onSetColorHex = onSetHomeColor,
+        selectedShape = state.config.homeShape,
+        onSetShape = onSetHomeShape
     )
 }
 
@@ -449,7 +498,9 @@ private fun BackNavigatorCard(
     state: FloatingButtonsState,
     onToggleBackNavigator: (Boolean) -> Unit,
     onSetBackSize: (Int) -> Unit,
-    onSetBackOpacity: (Int) -> Unit
+    onSetBackOpacity: (Int) -> Unit,
+    onSetBackColor: (String) -> Unit,
+    onSetBackShape: (String) -> Unit
 ) {
     FloatingButtonCard(
         icon = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -461,7 +512,11 @@ private fun BackNavigatorCard(
         sizeDp = state.config.backButtonSize,
         onSetSize = onSetBackSize,
         opacityPercent = state.config.backOpacityPercent,
-        onSetOpacity = onSetBackOpacity
+        onSetOpacity = onSetBackOpacity,
+        selectedColorHex = state.config.backColorHex,
+        onSetColorHex = onSetBackColor,
+        selectedShape = state.config.backShape,
+        onSetShape = onSetBackShape
     )
 }
 
@@ -470,7 +525,9 @@ private fun RefreshButtonCard(
     state: FloatingButtonsState,
     onToggleRefreshNavigator: (Boolean) -> Unit,
     onSetRefreshSize: (Int) -> Unit,
-    onSetRefreshOpacity: (Int) -> Unit
+    onSetRefreshOpacity: (Int) -> Unit,
+    onSetRefreshColor: (String) -> Unit,
+    onSetRefreshShape: (String) -> Unit
 ) {
     FloatingButtonCard(
         icon = Icons.Rounded.Refresh,
@@ -482,7 +539,11 @@ private fun RefreshButtonCard(
         sizeDp = state.config.refreshButtonSize,
         onSetSize = onSetRefreshSize,
         opacityPercent = state.config.refreshOpacityPercent,
-        onSetOpacity = onSetRefreshOpacity
+        onSetOpacity = onSetRefreshOpacity,
+        selectedColorHex = state.config.refreshColorHex,
+        onSetColorHex = onSetRefreshColor,
+        selectedShape = state.config.refreshShape,
+        onSetShape = onSetRefreshShape
     )
 }
 
@@ -592,6 +653,10 @@ private fun FloatingButtonCard(
     onSetSize: (Int) -> Unit,
     opacityPercent: Int,
     onSetOpacity: (Int) -> Unit,
+    selectedColorHex: String = "#6750A4",
+    onSetColorHex: (String) -> Unit = {},
+    selectedShape: String = "CIRCLE",
+    onSetShape: (String) -> Unit = {},
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -647,15 +712,110 @@ private fun FloatingButtonCard(
                 Column(modifier = Modifier.padding(top = 12.dp)) {
                     if (content != null) {
                         content()
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                    }
+
+                    // Color Selector
+                    Text(
+                        text = stringResource(R.string.button_color_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val colorPresets = remember {
+                        listOf("#6750A4", "#1976D2", "#388E3C", "#D32F2F", "#1C1B1F", "#FFA000")
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        colorPresets.forEach { hex ->
+                            val isSelected = selectedColorHex.equals(hex, ignoreCase = true)
+                            val parsedColor = remember(hex) {
+                                try {
+                                    androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(hex))
+                                } catch (_: Exception) {
+                                    androidx.compose.ui.graphics.Color.Magenta
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .clip(CircleShape)
+                                    .background(parsedColor)
+                                    .then(
+                                        if (isSelected) {
+                                            Modifier.border(
+                                                2.5.dp,
+                                                MaterialTheme.colorScheme.onSurface,
+                                                CircleShape
+                                            )
+                                        } else Modifier
+                                    )
+                                    .clickable { onSetColorHex(hex) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        tint = androidx.compose.ui.graphics.Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Shape Selector
+                    Text(
+                        text = stringResource(R.string.button_shape_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val shapes = remember {
+                        listOf(
+                            "CIRCLE" to R.string.shape_circle,
+                            "ROUNDED_SQUARE" to R.string.shape_rounded_square,
+                            "SQUARE" to R.string.shape_square
+                        )
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        shapes.forEach { (shapeKey, stringRes) ->
+                            val isSelected = selectedShape == shapeKey
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { onSetShape(shapeKey) },
+                                label = {
+                                    Text(
+                                        stringResource(stringRes),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                },
+                                leadingIcon = if (isSelected) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                } else null
+                            )
+                        }
                     }
 
                     AnimatedVisibility(visible = isSeparateButtons) {
                         Column {
-                            if (content != null) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                            } else {
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
 
                             Text(
                                 text = stringResource(R.string.button_size_format, sizeDp),

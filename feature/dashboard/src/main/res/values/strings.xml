@@ -150,6 +150,11 @@
     <string name="overlay_display_mode">Overlay Mode &amp; Display</string>
     <string name="button_size_format">Button size: %1$d dp</string>
     <string name="button_opacity_format">Button opacity: %1$d%%</string>
+    <string name="button_color_label">Button color:</string>
+    <string name="button_shape_label">Button shape:</string>
+    <string name="shape_circle">Circle</string>
+    <string name="shape_rounded_square">Rounded Square</string>
+    <string name="shape_square">Square</string>
     <string name="sep_buttons_title">Separate floating buttons</string>
     <string name="sep_buttons_subtitle">Manage buttons independently or as a single block</string>
     <string name="combined_button_size_format">Size of buttons in combined block: %1$d dp</string>

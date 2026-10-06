@@ -107,14 +107,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         currentForegroundPackage = packageName
         createNotificationChannel()
 
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Lynk Floating Service")
-            .setContentText("Служба плавающих кнопок активна")
-            .setSmallIcon(R.drawable.ic_menu)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-
-        startForeground(1, notification)
+        startForegroundServiceInternal()
 
         defaultWindowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         setupSecondaryDisplayContext()
@@ -132,7 +125,25 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         updateOverlayButtons()
     }
 
+    private fun startForegroundServiceInternal() {
+        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Lynk Floating Service")
+            .setContentText("Служба плавающих кнопок активна")
+            .setSmallIcon(R.drawable.ic_menu)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build()
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        } else {
+            startForeground(1, notification)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startForegroundServiceInternal()
         updateOverlayButtons()
         return START_STICKY
     }
@@ -292,18 +303,11 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, sizePx, isHorizontal)
         combinedView?.alpha = alphaFloat
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -328,8 +332,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -380,14 +384,23 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     private var activeSettingsDialogView: View? = null
 
-    private fun applyButtonStyling(imageView: ImageView) {
-        val colorHex = prefs.getString("button_color", "#7C4DFF") ?: "#7C4DFF"
-        val shapeStr = prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE"
+    private fun applyButtonStyling(imageView: ImageView, buttonType: String = "") {
+        val (colorKey, shapeKey, defaultColor) = when (buttonType) {
+            "ql" -> Triple("ql_color_hex", "ql_shape", "#6750A4")
+            "fs" -> Triple("fs_color_hex", "fs_shape", "#1976D2")
+            "home" -> Triple("home_color_hex", "home_shape", "#388E3C")
+            "back" -> Triple("back_color_hex", "back_shape", "#D32F2F")
+            "refresh" -> Triple("refresh_color_hex", "refresh_shape", "#FFA000")
+            else -> Triple("button_color", "button_shape", "#7C4DFF")
+        }
+
+        val colorHex = prefs.getString(colorKey, prefs.getString("button_color", defaultColor) ?: defaultColor) ?: defaultColor
+        val shapeStr = prefs.getString(shapeKey, prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE") ?: "CIRCLE"
 
         val colorInt = try {
             Color.parseColor(colorHex)
         } catch (_: Exception) {
-            Color.parseColor("#7C4DFF")
+            Color.parseColor(defaultColor)
         }
 
         val drawable = GradientDrawable().apply {
@@ -441,7 +454,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_menu)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "ql")
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -454,7 +467,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "fs")
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -467,7 +480,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_home)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "home")
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -480,7 +493,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_back)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "back")
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -493,7 +506,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(R.drawable.ic_refresh)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "refresh")
 
             val lp = item.layoutParams as LinearLayout.LayoutParams
             if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
@@ -533,23 +546,17 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
         ).toInt()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         if (quickLaunchView == null) {
             val qv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             qv.alpha = alphaFloat
             val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_menu)
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "ql")
 
             val params = WindowManager.LayoutParams(
-                sizePx, sizePx, layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                sizePx, sizePx,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -569,7 +576,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "ql")
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(qv, params)
@@ -583,14 +590,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 qvSec.alpha = alphaFloat
                 val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_menu)
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "ql")
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
 
                 val paramsSec = WindowManager.LayoutParams(
-                    sizePx, sizePx, layoutFlag,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    sizePx, sizePx,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
@@ -610,7 +618,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "ql")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(qvSec, paramsSec)
@@ -633,13 +641,6 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
         ).toInt()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         if (fullscreenToggleView != null) {
             val fv = fullscreenToggleView!!
             fv.alpha = alphaFloat
@@ -649,7 +650,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "fs")
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(fv, params)
@@ -658,11 +659,12 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             fv.alpha = alphaFloat
             val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "fs")
 
             val params = WindowManager.LayoutParams(
-                sizePx, sizePx, layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                sizePx, sizePx,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -688,7 +690,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "fs")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(fvSec, paramsSec)
@@ -697,14 +699,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 fvSec.alpha = alphaFloat
                 val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "fs")
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
 
                 val paramsSec = WindowManager.LayoutParams(
-                    sizePx, sizePx, layoutFlag,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    sizePx, sizePx,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
@@ -751,23 +754,17 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
         ).toInt()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         if (homeView == null) {
             val hv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             hv.alpha = alphaFloat
             val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_home)
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "home")
 
             val params = WindowManager.LayoutParams(
-                sizePx, sizePx, layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                sizePx, sizePx,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -787,7 +784,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "home")
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(hv, params)
@@ -801,14 +798,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 hvSec.alpha = alphaFloat
                 val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_home)
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "home")
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
 
                 val paramsSec = WindowManager.LayoutParams(
-                    sizePx, sizePx, layoutFlag,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    sizePx, sizePx,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
@@ -828,7 +826,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "home")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(hvSec, paramsSec)
@@ -860,23 +858,17 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
         ).toInt()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         if (backView == null) {
             val bv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             bv.alpha = alphaFloat
             val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_back)
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "back")
 
             val params = WindowManager.LayoutParams(
-                sizePx, sizePx, layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                sizePx, sizePx,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -896,7 +888,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "back")
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(bv, params)
@@ -910,14 +902,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 bvSec.alpha = alphaFloat
                 val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_back)
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "back")
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
 
                 val paramsSec = WindowManager.LayoutParams(
-                    sizePx, sizePx, layoutFlag,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    sizePx, sizePx,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
@@ -937,7 +930,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "back")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(bvSec, paramsSec)
@@ -969,23 +962,17 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
         ).toInt()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         if (refreshView == null) {
             val rv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
             rv.alpha = alphaFloat
             val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.setImageResource(R.drawable.ic_refresh)
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "refresh")
 
             val params = WindowManager.LayoutParams(
-                sizePx, sizePx, layoutFlag,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                sizePx, sizePx,
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -1005,7 +992,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
             iv.layoutParams.width = sizePx
             iv.layoutParams.height = sizePx
-            applyButtonStyling(iv)
+            applyButtonStyling(iv, "refresh")
             params.width = sizePx
             params.height = sizePx
             defaultWindowManager.updateViewLayout(rv, params)
@@ -1019,14 +1006,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 rvSec.alpha = alphaFloat
                 val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.setImageResource(R.drawable.ic_refresh)
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "refresh")
 
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
 
                 val paramsSec = WindowManager.LayoutParams(
-                    sizePx, sizePx, layoutFlag,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                    sizePx, sizePx,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
@@ -1046,7 +1034,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
                 ivSec.layoutParams.width = sizePx
                 ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec)
+                applyButtonStyling(ivSec, "refresh")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 secWM.updateViewLayout(rvSec, paramsSec)
@@ -1166,13 +1154,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             .create()
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-        dialog.window?.setType(layoutFlag)
+        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
         dialog.show()
     }
 
@@ -1321,8 +1304,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
         val sizeKey = if (prefPrefix == "combined") "combined_button_size" else "${prefPrefix}_button_size"
         val opacityKey = if (prefPrefix == "combined") "opacity_percent" else "${prefPrefix}_opacity_percent"
-        val colorKey = "button_color"
-        val shapeKey = "button_shape"
+        val colorKey = if (prefPrefix == "combined") "button_color" else "${prefPrefix}_color_hex"
+        val shapeKey = if (prefPrefix == "combined") "button_shape" else "${prefPrefix}_shape"
 
         val currentSize = prefs.getInt(sizeKey, if (prefPrefix == "combined") 48 else prefs.getInt("combined_button_size", 48))
         val currentOpacity = prefs.getInt(opacityKey, prefs.getInt("opacity_percent", 85))
@@ -1532,20 +1515,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         containerLayout.addView(colorRow)
 
-        val layoutFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams.TYPE_PHONE
-        }
-
         val dialogWidth = (resources.displayMetrics.widthPixels * 0.85).toInt().coerceAtMost(dpToPx(340))
 
         val params = WindowManager.LayoutParams(
             dialogWidth,
             WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutFlag,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER

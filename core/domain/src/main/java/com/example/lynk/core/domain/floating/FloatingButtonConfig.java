@@ -46,6 +46,17 @@ public class FloatingButtonConfig {
     private String buttonColor;
     private String shape;
 
+    private String quickLaunchColorHex;
+    private String quickLaunchShape;
+    private String fullscreenColorHex;
+    private String fullscreenShape;
+    private String homeColorHex;
+    private String homeShape;
+    private String backColorHex;
+    private String backShape;
+    private String refreshColorHex;
+    private String refreshShape;
+
     private boolean secondaryDisplayMirroring;
 
     private List<FloatingButtonAction> actions;
@@ -90,6 +101,17 @@ public class FloatingButtonConfig {
 
         this.buttonColor = "#7C4DFF";
         this.shape = "CIRCLE";
+
+        this.quickLaunchColorHex = "#6750A4";
+        this.quickLaunchShape = "CIRCLE";
+        this.fullscreenColorHex = "#1976D2";
+        this.fullscreenShape = "CIRCLE";
+        this.homeColorHex = "#388E3C";
+        this.homeShape = "CIRCLE";
+        this.backColorHex = "#D32F2F";
+        this.backShape = "CIRCLE";
+        this.refreshColorHex = "#FFA000";
+        this.refreshShape = "CIRCLE";
 
         this.secondaryDisplayMirroring = true;
 
@@ -136,6 +158,17 @@ public class FloatingButtonConfig {
 
             this.buttonColor = other.buttonColor != null ? other.buttonColor : "#7C4DFF";
             this.shape = other.shape != null ? other.shape : "CIRCLE";
+
+            this.quickLaunchColorHex = other.quickLaunchColorHex != null ? other.quickLaunchColorHex : "#6750A4";
+            this.quickLaunchShape = other.quickLaunchShape != null ? other.quickLaunchShape : "CIRCLE";
+            this.fullscreenColorHex = other.fullscreenColorHex != null ? other.fullscreenColorHex : "#1976D2";
+            this.fullscreenShape = other.fullscreenShape != null ? other.fullscreenShape : "CIRCLE";
+            this.homeColorHex = other.homeColorHex != null ? other.homeColorHex : "#388E3C";
+            this.homeShape = other.homeShape != null ? other.homeShape : "CIRCLE";
+            this.backColorHex = other.backColorHex != null ? other.backColorHex : "#D32F2F";
+            this.backShape = other.backShape != null ? other.backShape : "CIRCLE";
+            this.refreshColorHex = other.refreshColorHex != null ? other.refreshColorHex : "#FFA000";
+            this.refreshShape = other.refreshShape != null ? other.refreshShape : "CIRCLE";
 
             this.secondaryDisplayMirroring = other.secondaryDisplayMirroring;
             this.actions = new ArrayList<>();
@@ -522,6 +555,86 @@ public class FloatingButtonConfig {
 
     public void setShape(String shape) {
         this.shape = shape != null ? shape : "CIRCLE";
+    }
+
+    public String getQuickLaunchColorHex() {
+        return quickLaunchColorHex != null ? quickLaunchColorHex : "#6750A4";
+    }
+
+    public void setQuickLaunchColorHex(String quickLaunchColorHex) {
+        this.quickLaunchColorHex = quickLaunchColorHex != null ? quickLaunchColorHex : "#6750A4";
+    }
+
+    public String getQuickLaunchShape() {
+        return quickLaunchShape != null ? quickLaunchShape : "CIRCLE";
+    }
+
+    public void setQuickLaunchShape(String quickLaunchShape) {
+        this.quickLaunchShape = quickLaunchShape != null ? quickLaunchShape : "CIRCLE";
+    }
+
+    public String getFullscreenColorHex() {
+        return fullscreenColorHex != null ? fullscreenColorHex : "#1976D2";
+    }
+
+    public void setFullscreenColorHex(String fullscreenColorHex) {
+        this.fullscreenColorHex = fullscreenColorHex != null ? fullscreenColorHex : "#1976D2";
+    }
+
+    public String getFullscreenShape() {
+        return fullscreenShape != null ? fullscreenShape : "CIRCLE";
+    }
+
+    public void setFullscreenShape(String fullscreenShape) {
+        this.fullscreenShape = fullscreenShape != null ? fullscreenShape : "CIRCLE";
+    }
+
+    public String getHomeColorHex() {
+        return homeColorHex != null ? homeColorHex : "#388E3C";
+    }
+
+    public void setHomeColorHex(String homeColorHex) {
+        this.homeColorHex = homeColorHex != null ? homeColorHex : "#388E3C";
+    }
+
+    public String getHomeShape() {
+        return homeShape != null ? homeShape : "CIRCLE";
+    }
+
+    public void setHomeShape(String homeShape) {
+        this.homeShape = homeShape != null ? homeShape : "CIRCLE";
+    }
+
+    public String getBackColorHex() {
+        return backColorHex != null ? backColorHex : "#D32F2F";
+    }
+
+    public void setBackColorHex(String backColorHex) {
+        this.backColorHex = backColorHex != null ? backColorHex : "#D32F2F";
+    }
+
+    public String getBackShape() {
+        return backShape != null ? backShape : "CIRCLE";
+    }
+
+    public void setBackShape(String backShape) {
+        this.backShape = backShape != null ? backShape : "CIRCLE";
+    }
+
+    public String getRefreshColorHex() {
+        return refreshColorHex != null ? refreshColorHex : "#FFA000";
+    }
+
+    public void setRefreshColorHex(String refreshColorHex) {
+        this.refreshColorHex = refreshColorHex != null ? refreshColorHex : "#FFA000";
+    }
+
+    public String getRefreshShape() {
+        return refreshShape != null ? refreshShape : "CIRCLE";
+    }
+
+    public void setRefreshShape(String refreshShape) {
+        this.refreshShape = refreshShape != null ? refreshShape : "CIRCLE";
     }
 
     public List<FloatingButtonAction> getActions() {
