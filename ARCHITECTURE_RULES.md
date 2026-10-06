@@ -42,9 +42,7 @@ The project is developed and maintained by a collaborative multi-agent AI system
 6. **Code Review & Security Auditor Agent:** Automated static code analysis (Checkstyle/ktlint), security vulnerability scanning, dependency auditing, and strict enforcement of the pure Java architectural boundary in `:core:domain`.
 
 ### 6. App Signing
-- **Single Keystore Requirement:** All builds (both Release and Debug) MUST be signed with the unified `lynk_release.keystore` to ensure seamless updates and avoid "App not installed" errors for the end user when transitioning between development and production versions.
-- **Keystore Security:** Committing secret `.keystore` or `.jks` files to the Git repository is strictly forbidden. Keystore files must be listed in `.gitignore` and provided securely via environment variables or local environment.
-- **GitHub Repository Secrets Usage:** All release builds in CI/CD MUST strictly use signing credentials from Repository Secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Storing keystore files in the repository code is strictly forbidden.
+- **Release Signing & Security**: Release builds in CI/CD are signed using GitHub Repository Secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`). For local development, use default Debug signing. Key files are strictly forbidden from being committed to Git.
 
 ### 7. Localization Protocol & Rules
 - **Automatic String Synchronization:** Upon adding any new UI text or modifying existing strings, agents are required to automatically generate and update keys in both `res/values/strings.xml` (EN) and `res/values-ru/strings.xml` (RU).
@@ -97,9 +95,7 @@ The project is developed and maintained by a collaborative multi-agent AI system
 6. **Code Review & Security Auditor Agent (Агент статического анализа и безопасности):** Автоматическая проверка кода на соответствие стандартам Checkstyle/ktlint, аудит безопасности и уязвимостей зависимостей, а также строгое соблюдение границы «чистого Java» в модуле `:core:domain`.
 
 ### 6. Подпись приложения
-- **Единый ключ подписи (Keystore):** Все сборки (как Release, так и Debug) ДОЛЖНЫ подписываться единым ключом `lynk_release.keystore`, чтобы гарантировать бесшовные обновления и избежать ошибки «Приложение не установлено» у конечного пользователя при переходе между тестовыми и рабочими версиями.
-- **Безопасность ключей:** Запрещен коммит секретных `.keystore` и `.jks` файлов в Git-репозиторий. Файлы ключей должны содержаться в `.gitignore` и передаваться через переменные окружения или локальное окружение.
-- **Использование GitHub Repository Secrets:** Все релизные сборки в CI/CD должны строго использовать подпись из Repository Secrets: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Хранение файлов ключей в коде репозитория запрещено.
+- **Подпись релиза и безопасность**: Релизные сборки в CI/CD подписываются с использованием GitHub Repository Secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`). Для локальной разработки используйте стандартную подпись Debug. Файлы ключей запрещено коммитить в Git.
 
 ### 7. Регламент и правила локализации
 - **Автоматическая синхронизация строк:** При любом добавлении нового текста или изменении UI агенты обязаны автоматически генерировать и обновлять ключи в `res/values/strings.xml` (EN) и `res/values-ru/strings.xml` (RU).
