@@ -5,6 +5,10 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
+val baseVersion = "0.0.1"
+val buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "1"
+val fullVersionName = "$baseVersion.$buildNumber"
+
 android {
     namespace = "ru.doGood.Lynk"
     compileSdk {
@@ -15,8 +19,8 @@ android {
         applicationId = "ru.doGood.Lynk"
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.0.1"
+        versionCode = buildNumber.toIntOrNull() ?: 1
+        versionName = fullVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -53,16 +57,24 @@ android {
     (this as? com.android.build.gradle.AppExtension)?.applicationVariants?.all {
         outputs.all {
             val outputImpl = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val version = versionName ?: "0.0.1"
-            outputImpl?.outputFileName = "Lynk_$version.apk"
+            outputImpl?.outputFileName = "Lynk_${fullVersionName}.apk"
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
     buildFeatures {
         compose = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("Lynk_${fullVersionName}.apk")
+        }
     }
 }
 

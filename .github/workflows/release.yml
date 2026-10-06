@@ -36,6 +36,7 @@ jobs:
 
       - name: Build Release APK
         env:
+          BUILD_NUMBER: ${{ github.run_number }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -43,9 +44,12 @@ jobs:
 
       - name: Extract Version Name
         id: extract_version
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          VERSION_NAME=$(grep 'versionName =' app/build.gradle.kts | awk -F'"' '{print $2}')
-          if [ -z "$VERSION_NAME" ]; then VERSION_NAME="0.0.1"; fi
+          BASE_VERSION=$(grep 'val baseVersion =' app/build.gradle.kts | awk -F'"' '{print $2}')
+          if [ -z "$BASE_VERSION" ]; then BASE_VERSION="0.0.1"; fi
+          VERSION_NAME="${BASE_VERSION}.${BUILD_NUMBER}"
           echo "version=$VERSION_NAME" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
