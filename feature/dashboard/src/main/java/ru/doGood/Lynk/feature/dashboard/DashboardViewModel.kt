@@ -12,14 +12,6 @@ import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.lynk.core.domain.app.AppItem
-import com.example.lynk.core.domain.approval.ApprovalManager
-import com.example.lynk.core.domain.approval.ApprovalRequest
-import com.example.lynk.core.domain.audit.AuditResult
-import com.example.lynk.core.domain.audit.RuleAuditor
-import com.example.lynk.core.domain.audit.rules.ArchitecturalRule
-import com.example.lynk.core.domain.audit.rules.DuplicatePatternRule
-import com.example.lynk.core.domain.backlog.BacklogItem
-import com.example.lynk.core.domain.backlog.BacklogManager
 import com.example.lynk.core.domain.file.FileItem
 import com.example.lynk.core.domain.floating.FloatingButtonAction
 import com.example.lynk.core.domain.floating.FloatingButtonConfig
@@ -103,9 +95,6 @@ data class DashboardState(
     val selectedTab: Int = 0,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val appLanguage: AppLanguage = AppLanguage.RU,
-    val backlogItems: List<BacklogItem> = emptyList(),
-    val approvalRequests: List<ApprovalRequest> = emptyList(),
-    val auditResults: List<AuditResult> = emptyList(),
     val fileManagerState: FileManagerState = FileManagerState(),
     val installerState: ApkInstallerState = ApkInstallerState(),
     val systemInfoState: SystemInfoState = SystemInfoState(),
@@ -115,8 +104,6 @@ data class DashboardState(
 
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val backlogManager = BacklogManager()
-    private val approvalManager = ApprovalManager()
     // private val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager("1.0.0")
 
     private val _state = MutableStateFlow(DashboardState())
@@ -134,18 +121,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         ru.doGood.Lynk.feature.dashboard.util.LocaleHelper.applyLanguage(application, initialLang)
         _state.update { it.copy(appLanguage = initialLang) }
 
-        // Initialize Backlog Mock Data
-        val item1 = BacklogItem("1", "Task 7: Fullscreen Migration", "Migrate File Manager & APK Installer to Compose", 100)
-        val item2 = BacklogItem("2", "Setup Architecture Rules", "Keep domain module clean pure Java", 80)
-        val item3 = BacklogItem("3", "Navigation 3 Integration", "Adaptive list-detail layouts", 90)
-        backlogManager.addItem(item1)
-        backlogManager.addItem(item2)
-        backlogManager.addItem(item3)
-
-        val req1 = ApprovalRequest("req1", "Approve Task 7 Fullscreen UI Migration", "lead")
-        approvalManager.submitRequest(req1)
-
-        refreshBacklogState()
         loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
         loadDeviceInfo()
         loadInstalledApps()
@@ -265,44 +240,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             }
         }
-    }
-
-    // --- Backlog & Audit ---
-    private fun refreshBacklogState() {
-        _state.update {
-            it.copy(
-                backlogItems = backlogManager.itemsSortedByPriority,
-                approvalRequests = listOfNotNull(approvalManager.getRequest("req1"))
-            )
-        }
-    }
-
-    fun completeBacklogItem(id: String) {
-        backlogManager.completeItem(id)
-        refreshBacklogState()
-    }
-
-    fun approveRequest(id: String) {
-        approvalManager.approveRequest(id)
-        refreshBacklogState()
-    }
-
-    fun rejectRequest(id: String) {
-        approvalManager.rejectRequest(id)
-        refreshBacklogState()
-    }
-
-    fun runAudit() {
-        val rules = listOf(
-            ArchitecturalRule("**/*.java", "Java domain source rules"),
-            ArchitecturalRule("**/*.kt", "Kotlin Compose feature rules")
-        )
-
-        val auditor = RuleAuditor<List<ArchitecturalRule>>()
-        auditor.addRule(DuplicatePatternRule())
-
-        val results = auditor.audit(rules)
-        _state.update { it.copy(auditResults = results) }
     }
 
     // --- File Explorer ---
@@ -466,11 +403,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun deleteSelectedFiles() {
-        val selected = _state.value.fileManagerState.selectedFiles.toList()
-        deleteFiles(selected)
-    }
-
     fun renameFile(oldPath: String, newName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val src = File(oldPath)
@@ -624,15 +556,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // --- APK Installer ---
-    fun selectApkForInstallation(path: String) {
-        _state.update {
-            it.copy(
-                selectedTab = 1, // Switch to APK tab
-                installerState = it.installerState.copy(selectedApkPath = path)
-            )
-        }
-    }
-
     fun runWaterfallInstall() {
         val apkPath = _state.value.installerState.selectedApkPath ?: return
         val apkFile = File(apkPath)

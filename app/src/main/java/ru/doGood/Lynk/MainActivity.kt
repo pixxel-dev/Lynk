@@ -28,7 +28,6 @@ import ru.doGood.Lynk.ui.theme.LynkTheme
 @Serializable
 object MainDashboardRoute
 
-@OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
