@@ -1,10 +1,22 @@
 package com.example.lynk.core.domain.floating;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class FloatingButtonConfig {
+
+    public static final String SHAPE_CIRCLE = "CIRCLE";
+    public static final String SHAPE_ROUNDED_SQUARE = "ROUNDED_SQUARE";
+    public static final String SHAPE_SQUARE = "SQUARE";
+    public static final String SHAPE_STAR = "STAR";
+    public static final String SHAPE_OCTAGON = "OCTAGON";
+    public static final String SHAPE_HEART = "HEART";
+
+    public static final List<String> ALL_SHAPES = Collections.unmodifiableList(
+        Arrays.asList(SHAPE_CIRCLE, SHAPE_ROUNDED_SQUARE, SHAPE_SQUARE, SHAPE_STAR, SHAPE_OCTAGON, SHAPE_HEART)
+    );
 
     private boolean quickLaunchEnabled;
     private boolean fullscreenOverlayEnabled;

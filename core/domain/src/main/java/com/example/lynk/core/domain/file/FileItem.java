@@ -8,6 +8,7 @@ public class FileItem {
     private final boolean isDirectory;
     private boolean isSelected;
     private boolean isCloud;
+    private String downloadUrl;
 
     public FileItem(String name, String path, long size, long lastModified, boolean isDirectory) {
         this.name = name;
@@ -17,6 +18,7 @@ public class FileItem {
         this.isDirectory = isDirectory;
         this.isSelected = false;
         this.isCloud = false;
+        this.downloadUrl = null;
     }
 
     public FileItem(String name, String path, long size, long lastModified, boolean isDirectory, boolean isCloud) {
@@ -27,6 +29,18 @@ public class FileItem {
         this.isDirectory = isDirectory;
         this.isSelected = false;
         this.isCloud = isCloud;
+        this.downloadUrl = null;
+    }
+
+    public FileItem(String name, String path, long size, long lastModified, boolean isDirectory, boolean isCloud, String downloadUrl) {
+        this.name = name;
+        this.path = path;
+        this.size = size;
+        this.lastModified = lastModified;
+        this.isDirectory = isDirectory;
+        this.isSelected = false;
+        this.isCloud = isCloud;
+        this.downloadUrl = downloadUrl;
     }
 
     public String getName() {
@@ -63,5 +77,13 @@ public class FileItem {
     
     public boolean isCloud() {
         return isCloud;
+    }
+
+    public String getDownloadUrl() {
+        return (downloadUrl != null && !downloadUrl.trim().isEmpty()) ? downloadUrl : path;
+    }
+
+    public void setDownloadUrl(String downloadUrl) {
+        this.downloadUrl = downloadUrl;
     }
 }

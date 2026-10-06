@@ -167,6 +167,9 @@
     <string name="shape_circle">Круглая</string>
     <string name="shape_rounded_square">Скругленный квадрат</string>
     <string name="shape_square">Квадрат</string>
+    <string name="shape_star">Звезда</string>
+    <string name="shape_octagon">Восьмиугольник</string>
+    <string name="shape_heart">Сердечко</string>
     <string name="sep_buttons_title">Разделять плавающие кнопки</string>
     <string name="sep_buttons_subtitle">Управлять кнопками независимо либо единым блоком</string>
     <string name="combined_button_size_format">Размер кнопок в совмещенном блоке: %1$d dp</string>

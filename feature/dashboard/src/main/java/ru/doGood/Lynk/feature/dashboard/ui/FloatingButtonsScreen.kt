@@ -8,7 +8,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -603,7 +606,9 @@ private fun ServiceStatusCard(
     onOpenUsageStatsSettings: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds(),
         colors = CardDefaults.cardColors(
             containerColor = if (state.isServiceRunning)
                 MaterialTheme.colorScheme.primaryContainer
@@ -707,7 +712,11 @@ private fun FloatingButtonCard(
     onSetShape: (String) -> Unit = {},
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -827,24 +836,30 @@ private fun FloatingButtonCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     val shapes = remember {
                         listOf(
-                            "CIRCLE" to R.string.shape_circle,
-                            "ROUNDED_SQUARE" to R.string.shape_rounded_square,
-                            "SQUARE" to R.string.shape_square
+                            "CIRCLE" to ("●" to R.string.shape_circle),
+                            "ROUNDED_SQUARE" to ("▢" to R.string.shape_rounded_square),
+                            "SQUARE" to ("■" to R.string.shape_square),
+                            "STAR" to ("★" to R.string.shape_star),
+                            "OCTAGON" to ("🛑" to R.string.shape_octagon),
+                            "HEART" to ("♥" to R.string.shape_heart)
                         )
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
                     ) {
-                        shapes.forEach { (shapeKey, stringRes) ->
+                        shapes.forEach { (shapeKey, iconAndRes) ->
+                            val (symbol, stringRes) = iconAndRes
                             val isSelected = selectedShape == shapeKey
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { onSetShape(shapeKey) },
                                 label = {
                                     Text(
-                                        stringResource(stringRes),
+                                        text = "$symbol ${stringResource(stringRes)}",
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                 },
@@ -904,7 +919,11 @@ private fun ButtonLayoutCard(
     onSetCombinedOpacity: (Int) -> Unit,
     onToggleSecondaryMirroring: (Boolean) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds()
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(

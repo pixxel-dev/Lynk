@@ -14,7 +14,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -28,6 +32,7 @@ import android.os.Looper
 import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
+import android.widget.HorizontalScrollView
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -412,6 +417,107 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     private var activeSettingsDialogView: View? = null
 
+    private class PathDrawable(
+        private val shapeType: String,
+        private val fillColor: Int,
+        private val strokeColor: Int = Color.parseColor("#80FFFFFF"),
+        private val strokeWidthPx: Float = 3f
+    ) : Drawable() {
+
+        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = fillColor
+        }
+
+        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            color = strokeColor
+            strokeWidth = strokeWidthPx
+        }
+
+        private val path = Path()
+
+        override fun onBoundsChange(bounds: Rect) {
+            super.onBoundsChange(bounds)
+            updatePath(bounds)
+        }
+
+        private fun updatePath(bounds: Rect) {
+            path.reset()
+            val w = bounds.width().toFloat()
+            val h = bounds.height().toFloat()
+            if (w <= 0f || h <= 0f) return
+
+            val cx = bounds.left + w / 2f
+            val cy = bounds.top + h / 2f
+            val pad = strokeWidthPx / 2f
+
+            when (shapeType) {
+                "STAR" -> {
+                    val outerR = (Math.min(w, h) / 2f) - pad
+                    val innerR = outerR * 0.4f
+                    for (i in 0 until 10) {
+                        val angle = -Math.PI / 2 + i * (Math.PI / 5)
+                        val r = if (i % 2 == 0) outerR else innerR
+                        val x = cx + (r * Math.cos(angle)).toFloat()
+                        val y = cy + (r * Math.sin(angle)).toFloat()
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    path.close()
+                }
+                "OCTAGON" -> {
+                    val r = (Math.min(w, h) / 2f) - pad
+                    for (i in 0 until 8) {
+                        val angle = -Math.PI / 2 + i * (Math.PI / 4) + (Math.PI / 8)
+                        val x = cx + (r * Math.cos(angle)).toFloat()
+                        val y = cy + (r * Math.sin(angle)).toFloat()
+                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    }
+                    path.close()
+                }
+                "HEART" -> {
+                    val l = bounds.left + pad
+                    val t = bounds.top + pad
+                    val rw = w - pad * 2
+                    val rh = h - pad * 2
+                    val r = l + rw
+
+                    path.moveTo(cx, t + rh * 0.28f)
+                    path.cubicTo(cx - rw * 0.25f, t, l, t + rh * 0.15f, l, t + rh * 0.45f)
+                    path.cubicTo(l, t + rh * 0.68f, cx - rw * 0.2f, t + rh * 0.85f, cx, t + rh * 0.95f)
+                    path.cubicTo(cx + rw * 0.2f, t + rh * 0.85f, r, t + rh * 0.68f, r, t + rh * 0.45f)
+                    path.cubicTo(r, t + rh * 0.15f, cx + rw * 0.25f, t, cx, t + rh * 0.28f)
+                    path.close()
+                }
+            }
+        }
+
+        override fun draw(canvas: Canvas) {
+            if (path.isEmpty) {
+                updatePath(bounds)
+            }
+            canvas.drawPath(path, fillPaint)
+            if (strokeWidthPx > 0) {
+                canvas.drawPath(path, strokePaint)
+            }
+        }
+
+        override fun setAlpha(alpha: Int) {
+            fillPaint.alpha = alpha
+            strokePaint.alpha = alpha
+            invalidateSelf()
+        }
+
+        override fun setColorFilter(colorFilter: ColorFilter?) {
+            fillPaint.colorFilter = colorFilter
+            strokePaint.colorFilter = colorFilter
+            invalidateSelf()
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+    }
+
     private fun applyButtonStyling(imageView: ImageView, buttonType: String = "") {
         val (colorKey, shapeKey, defaultColor) = when (buttonType) {
             "ql" -> Triple("ql_color_hex", "ql_shape", "#6750A4")
@@ -432,29 +538,39 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             Color.parseColor(defaultColor)
         }
 
-        val drawable = GradientDrawable().apply {
-            when (shapeStr) {
-                "SQUARE" -> {
+        val strokePx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.5f, resources.displayMetrics)
+
+        val drawable: Drawable = when (shapeStr) {
+            "SQUARE" -> {
+                GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP, 2f, resources.displayMetrics
                     )
+                    setColor(colorInt)
+                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
                 }
-                "ROUNDED_SQUARE" -> {
+            }
+            "ROUNDED_SQUARE" -> {
+                GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = TypedValue.applyDimension(
                         TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics
                     )
-                }
-                else -> { // "CIRCLE"
-                    shape = GradientDrawable.OVAL
+                    setColor(colorInt)
+                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
                 }
             }
-            setColor(colorInt)
-            setStroke(
-                TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.5f, resources.displayMetrics).toInt(),
-                Color.parseColor("#80FFFFFF")
-            )
+            "STAR", "OCTAGON", "HEART" -> {
+                PathDrawable(shapeStr, colorInt, Color.parseColor("#80FFFFFF"), strokePx)
+            }
+            else -> { // "CIRCLE"
+                GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(colorInt)
+                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
+                }
+            }
         }
 
         imageView.background = drawable
@@ -1942,7 +2058,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        val shapes = listOf("CIRCLE" to "Круг", "ROUNDED_SQUARE" to "Скругленный", "SQUARE" to "Квадрат")
+        val shapes = listOf(
+            "CIRCLE" to "● Круг",
+            "ROUNDED_SQUARE" to "▢ Скругленный",
+            "SQUARE" to "■ Квадрат",
+            "STAR" to "★ Звезда",
+            "OCTAGON" to "🛑 Восьмиугольник",
+            "HEART" to "♥ Сердечко"
+        )
         val shapeButtons = mutableListOf<TextView>()
 
         fun updateShapeUi(selected: String) {
@@ -1967,6 +2090,11 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
         }
 
+        val shapeScrollView = HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(shapeRow)
+        }
+
         for ((shapeValue, shapeName) in shapes) {
             val shapeBtn = TextView(context).apply {
                 text = shapeName
@@ -1974,7 +2102,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 setPadding(dpToPx(10), dpToPx(6), dpToPx(10), dpToPx(6))
                 gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     setMargins(dpToPx(2), 0, dpToPx(2), 0)
                 }
                 setOnClickListener {
@@ -1987,7 +2115,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             shapeRow.addView(shapeBtn)
         }
         updateShapeUi(currentShape)
-        containerLayout.addView(shapeRow)
+        containerLayout.addView(shapeScrollView)
 
         addSpacer(12)
 
