@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -80,11 +82,7 @@ data class SystemInfoState(
 
 data class FloatingButtonsState(
     val selectedProfileId: Int = 1,
-    val profiles: List<OverlayProfile> = listOf(
-        OverlayProfile(1, "Оверлей 1", false, false, FloatingButtonConfig()),
-        OverlayProfile(2, "Оверлей 2", false, false, FloatingButtonConfig()),
-        OverlayProfile(3, "Оверлей 3", false, false, FloatingButtonConfig())
-    ),
+    val profiles: List<OverlayProfile> = emptyList(),
     val config: FloatingButtonConfig = FloatingButtonConfig(),
     val isOverlayPermissionGranted: Boolean = false,
     val isUsageStatsPermissionGranted: Boolean = false,
@@ -1148,17 +1146,71 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         return getLatestProfile(_state.value.floatingButtonsState.selectedProfileId).config
     }
 
+    fun loadProfilesList(): List<OverlayProfile> {
+        val app = getApplication<Application>()
+        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString("overlay_profiles_json", null)
+        val profileMetaList = mutableListOf<Triple<Int, String, Boolean>>()
+
+        if (!jsonStr.isNullOrEmpty()) {
+            try {
+                val jsonArray = JSONArray(jsonStr)
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    val id = obj.getInt("id")
+                    val name = obj.optString("name", "Оверлей $id")
+                    val isEnabled = obj.optBoolean("isEnabled", false)
+                    profileMetaList.add(Triple(id, name, isEnabled))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (profileMetaList.isEmpty()) {
+            val hasLegacy1 = prefs.contains("overlay_1_enabled") || prefs.contains("overlay_1_name") || prefs.contains("quick_launch_enabled")
+            val hasLegacy2 = prefs.contains("overlay_2_enabled") || prefs.contains("overlay_2_name")
+            val hasLegacy3 = prefs.contains("overlay_3_enabled") || prefs.contains("overlay_3_name")
+
+            if (hasLegacy1 || hasLegacy2 || hasLegacy3) {
+                profileMetaList.add(Triple(1, prefs.getString("overlay_1_name", "Оверлей 1") ?: "Оверлей 1", false))
+                if (hasLegacy2) profileMetaList.add(Triple(2, prefs.getString("overlay_2_name", "Оверлей 2") ?: "Оверлей 2", false))
+                if (hasLegacy3) profileMetaList.add(Triple(3, prefs.getString("overlay_3_name", "Оверлей 3") ?: "Оверлей 3", false))
+            } else {
+                profileMetaList.add(Triple(1, "Оверлей 1", false))
+            }
+        }
+
+        val profiles = profileMetaList.map { (id, _, _) ->
+            getLatestProfile(id)
+        }
+        saveProfilesListToPrefs(prefs, profiles)
+        return profiles
+    }
+
+    private fun saveProfilesListToPrefs(prefs: android.content.SharedPreferences, profiles: List<OverlayProfile>) {
+        val jsonArray = JSONArray()
+        for (p in profiles) {
+            val obj = JSONObject()
+            obj.put("id", p.id)
+            obj.put("name", p.name)
+            obj.put("isEnabled", p.isEnabled)
+            obj.put("isSeparateButtons", p.isSeparateButtons)
+            jsonArray.put(obj)
+        }
+        prefs.edit().putString("overlay_profiles_json", jsonArray.toString()).apply()
+    }
+
     fun loadFloatingConfig() {
-        val p1 = getLatestProfile(1)
-        val p2 = getLatestProfile(2)
-        val p3 = getLatestProfile(3)
-        val profiles = listOf(p1, p2, p3)
-        val selId = _state.value.floatingButtonsState.selectedProfileId
-        val activeProf = profiles.find { it.id == selId } ?: p1
+        val profiles = loadProfilesList()
+        val currentSelId = _state.value.floatingButtonsState.selectedProfileId
+        val selId = if (profiles.any { it.id == currentSelId }) currentSelId else (profiles.firstOrNull()?.id ?: 1)
+        val activeProf = profiles.find { it.id == selId } ?: profiles.firstOrNull() ?: OverlayProfile()
 
         _state.update {
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
+                    selectedProfileId = selId,
                     profiles = profiles,
                     config = activeProf.config.copy(),
                     availableApps = it.installerState.installedApps
@@ -1272,6 +1324,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val updatedProfiles = it.floatingButtonsState.profiles.map { p ->
                 if (p.id == profileId) profile else p
             }
+            saveProfilesListToPrefs(prefs, updatedProfiles)
             val activeProfile = updatedProfiles.find { p -> p.id == it.floatingButtonsState.selectedProfileId } ?: profile
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
@@ -1288,13 +1341,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun selectOverlayProfile(profileId: Int) {
         _state.update {
-            val selectedId = profileId.coerceIn(1, 3)
-            val activeProf = it.floatingButtonsState.profiles.find { p -> p.id == selectedId }
+            val activeProf = it.floatingButtonsState.profiles.find { p -> p.id == profileId }
                 ?: it.floatingButtonsState.profiles.firstOrNull()
-                ?: OverlayProfile(selectedId, "Оверлей $selectedId", false, false, FloatingButtonConfig())
+                ?: OverlayProfile(profileId, "Оверлей $profileId", false, false, FloatingButtonConfig())
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
-                    selectedProfileId = selectedId,
+                    selectedProfileId = activeProf.id,
                     config = activeProf.config.copy()
                 )
             )
@@ -1306,6 +1358,83 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             ?: getLatestProfile(profileId)
         currentProfile.isEnabled = enabled
         saveAndApplyProfileConfig(profileId, currentProfile)
+    }
+
+    fun addOverlayProfile(name: String) {
+        val app = getApplication<Application>()
+        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
+        val currentProfiles = _state.value.floatingButtonsState.profiles.toMutableList()
+        val nextId = (currentProfiles.maxOfOrNull { it.id } ?: 0) + 1
+        val profileName = name.trim().ifBlank { "Оверлей $nextId" }
+        val newProfile = OverlayProfile(nextId, profileName, true, false, FloatingButtonConfig())
+
+        currentProfiles.add(newProfile)
+        saveProfilesListToPrefs(prefs, currentProfiles)
+        saveAndApplyProfileConfig(nextId, newProfile)
+        selectOverlayProfile(nextId)
+    }
+
+    fun deleteOverlayProfile(profileId: String) {
+        val idInt = profileId.toIntOrNull() ?: return
+        deleteOverlayProfile(idInt)
+    }
+
+    fun deleteOverlayProfile(profileId: Int) {
+        val currentProfiles = _state.value.floatingButtonsState.profiles
+        if (currentProfiles.size <= 1) return
+
+        val profileToDelete = currentProfiles.find { it.id == profileId } ?: return
+        val updatedProfiles = currentProfiles.filter { it.id != profileId }
+
+        val app = getApplication<Application>()
+        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
+
+        val pPrefix = "overlay_${profileId}_"
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(pPrefix) }.forEach { key ->
+            editor.remove(key)
+        }
+        editor.apply()
+
+        saveProfilesListToPrefs(prefs, updatedProfiles)
+
+        val newSelectedId = if (_state.value.floatingButtonsState.selectedProfileId == profileId) {
+            updatedProfiles.first().id
+        } else {
+            _state.value.floatingButtonsState.selectedProfileId
+        }
+
+        val activeProf = updatedProfiles.find { it.id == newSelectedId } ?: updatedProfiles.first()
+
+        _state.update {
+            it.copy(
+                floatingButtonsState = it.floatingButtonsState.copy(
+                    selectedProfileId = newSelectedId,
+                    profiles = updatedProfiles,
+                    config = activeProf.config.copy()
+                )
+            )
+        }
+
+        val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
+        intent.setPackage(app.packageName)
+        app.sendBroadcast(intent)
+    }
+
+    fun renameOverlayProfile(profileId: String, newName: String) {
+        val idInt = profileId.toIntOrNull() ?: return
+        renameOverlayProfile(idInt, newName)
+    }
+
+    fun renameOverlayProfile(profileId: Int, newName: String) {
+        val cleanName = newName.trim()
+        if (cleanName.isBlank()) return
+
+        val currentProfiles = _state.value.floatingButtonsState.profiles
+        val targetProfile = currentProfiles.find { it.id == profileId } ?: return
+        targetProfile.name = cleanName
+
+        saveAndApplyProfileConfig(profileId, targetProfile)
     }
 
     private fun updateActiveProfileConfig(action: (FloatingButtonConfig, OverlayProfile) -> Unit) {

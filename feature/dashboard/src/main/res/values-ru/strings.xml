@@ -260,5 +260,11 @@
     <string name="overlay_profile_3">Оверлей 3</string>
     <string name="enable_overlay_profile">Включить этот оверлей</string>
     <string name="overlay_profile_status_desc">Управляет отображением плавающих кнопок этого профиля на экране</string>
+    <string name="add_new_overlay">+ Новый оверлей</string>
+    <string name="rename_overlay">Переименовать оверлей</string>
+    <string name="delete_overlay">Удалить оверлей</string>
+    <string name="overlay_name_label">Название оверлея</string>
+    <string name="delete_overlay_confirm_title">Удалить оверлей?</string>
+    <string name="delete_overlay_confirm_msg">Вы уверены, что хотите удалить «%1$s»?</string>
 
 </resources>

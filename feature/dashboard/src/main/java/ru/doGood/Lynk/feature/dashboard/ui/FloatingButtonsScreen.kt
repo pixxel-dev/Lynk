@@ -21,6 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -51,6 +54,9 @@ fun FloatingButtonsScreen(
     state: FloatingButtonsState,
     onSelectProfile: (Int) -> Unit = {},
     onToggleProfileEnabled: (Int, Boolean) -> Unit = { _, _ -> },
+    onAddOverlayProfile: (String) -> Unit = {},
+    onDeleteOverlayProfile: (String) -> Unit = {},
+    onRenameOverlayProfile: (String, String) -> Unit = { _, _ -> },
     onToggleQuickLaunch: (Boolean) -> Unit,
     onSetQuickLaunchSize: (Int) -> Unit,
     onSetQuickLaunchOpacity: (Int) -> Unit,
@@ -103,6 +109,16 @@ fun FloatingButtonsScreen(
 
     var showAddQuickLaunchDialog by remember { mutableStateOf(false) }
     var showAddFullscreenDialog by remember { mutableStateOf(false) }
+
+    var showAddOverlayDialog by remember { mutableStateOf(false) }
+    var newOverlayName by remember { mutableStateOf("") }
+
+    var showRenameOverlayDialog by remember { mutableStateOf(false) }
+    var profileToRename by remember { mutableStateOf<OverlayProfile?>(null) }
+    var renameOverlayName by remember { mutableStateOf("") }
+
+    var showDeleteOverlayDialog by remember { mutableStateOf(false) }
+    var profileToDelete by remember { mutableStateOf<OverlayProfile?>(null) }
 
     LaunchedEffect(Unit) {
         onCheckPermissions(context)
@@ -160,33 +176,92 @@ fun FloatingButtonsScreen(
 
         // Overlay Profiles TabRow (Spans full width)
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
-            TabRow(
-                selectedTabIndex = (state.selectedProfileId - 1).coerceIn(0, 2),
+            val selectedIndex = state.profiles.indexOfFirst { it.id == state.selectedProfileId }.coerceAtLeast(0)
+            ScrollableTabRow(
+                selectedTabIndex = selectedIndex,
+                edgePadding = 8.dp,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 contentColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
             ) {
-                val profileTabs = listOf(
-                    1 to stringResource(R.string.overlay_profile_1),
-                    2 to stringResource(R.string.overlay_profile_2),
-                    3 to stringResource(R.string.overlay_profile_3)
-                )
-                profileTabs.forEach { (profileId, label) ->
-                    val isSelected = state.selectedProfileId == profileId
+                state.profiles.forEach { profile ->
+                    val isSelected = state.selectedProfileId == profile.id
                     Tab(
                         selected = isSelected,
-                        onClick = { onSelectProfile(profileId) },
+                        onClick = { onSelectProfile(profile.id) },
                         text = {
-                            Text(
-                                text = label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = profile.name,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    fontSize = 14.sp
+                                )
+                                if (isSelected) {
+                                    IconButton(
+                                        onClick = {
+                                            profileToRename = profile
+                                            renameOverlayName = profile.name
+                                            showRenameOverlayDialog = true
+                                        },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = stringResource(R.string.rename_overlay),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    if (state.profiles.size > 1) {
+                                        IconButton(
+                                            onClick = {
+                                                profileToDelete = profile
+                                                showDeleteOverlayDialog = true
+                                            },
+                                            modifier = Modifier.size(24.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.delete_overlay),
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     )
                 }
+                // "+ Новый оверлей" Tab
+                Tab(
+                    selected = false,
+                    onClick = {
+                        newOverlayName = ""
+                        showAddOverlayDialog = true
+                    },
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.add_new_overlay),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                )
             }
         }
 
@@ -196,8 +271,18 @@ fun FloatingButtonsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ProfileStatusCard(
                         profile = state.activeProfile,
+                        canDelete = state.profiles.size > 1,
                         onToggleProfileEnabled = { enabled ->
                             onToggleProfileEnabled(state.selectedProfileId, enabled)
+                        },
+                        onRenameClick = {
+                            profileToRename = state.activeProfile
+                            renameOverlayName = state.activeProfile.name
+                            showRenameOverlayDialog = true
+                        },
+                        onDeleteClick = {
+                            profileToDelete = state.activeProfile
+                            showDeleteOverlayDialog = true
                         }
                     )
 
@@ -382,6 +467,110 @@ fun FloatingButtonsScreen(
             onConfirm = { selectedApps ->
                 onSetFullscreenApps(selectedApps)
                 showAddFullscreenDialog = false
+            }
+        )
+    }
+
+    // Add New Overlay Dialog
+    if (showAddOverlayDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddOverlayDialog = false },
+            title = { Text(text = stringResource(R.string.add_new_overlay)) },
+            text = {
+                OutlinedTextField(
+                    value = newOverlayName,
+                    onValueChange = { newOverlayName = it },
+                    label = { Text(stringResource(R.string.overlay_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showAddOverlayDialog = false
+                        onAddOverlayProfile(newOverlayName)
+                    }
+                ) {
+                    Text(stringResource(R.string.btn_add_custom))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddOverlayDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
+
+    // Rename Overlay Dialog
+    if (showRenameOverlayDialog && profileToRename != null) {
+        AlertDialog(
+            onDismissRequest = { showRenameOverlayDialog = false },
+            title = { Text(text = stringResource(R.string.rename_overlay)) },
+            text = {
+                OutlinedTextField(
+                    value = renameOverlayName,
+                    onValueChange = { renameOverlayName = it },
+                    label = { Text(stringResource(R.string.overlay_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val prof = profileToRename
+                        showRenameOverlayDialog = false
+                        if (prof != null && renameOverlayName.isNotBlank()) {
+                            onRenameOverlayProfile(prof.id.toString(), renameOverlayName)
+                        }
+                    }
+                ) {
+                    Text(stringResource(R.string.btn_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameOverlayDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
+            }
+        )
+    }
+
+    // Delete Overlay Dialog
+    if (showDeleteOverlayDialog && profileToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteOverlayDialog = false },
+            title = { Text(text = stringResource(R.string.delete_overlay_confirm_title)) },
+            text = {
+                Text(
+                    text = stringResource(
+                        R.string.delete_overlay_confirm_msg,
+                        profileToDelete?.name ?: ""
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val prof = profileToDelete
+                        showDeleteOverlayDialog = false
+                        if (prof != null) {
+                            onDeleteOverlayProfile(prof.id.toString())
+                        }
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.btn_delete),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteOverlayDialog = false }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
             }
         )
     }
@@ -1328,7 +1517,10 @@ private fun SelectAppDialog(
 @Composable
 private fun ProfileStatusCard(
     profile: OverlayProfile,
-    onToggleProfileEnabled: (Boolean) -> Unit
+    canDelete: Boolean,
+    onToggleProfileEnabled: (Boolean) -> Unit,
+    onRenameClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -1348,12 +1540,45 @@ private fun ProfileStatusCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "${profile.name}: ${stringResource(R.string.enable_overlay_profile)}",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = profile.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = onRenameClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.rename_overlay),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    if (canDelete) {
+                        IconButton(
+                            onClick = onDeleteClick,
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = stringResource(R.string.delete_overlay),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.enable_overlay_profile),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Text(
                     text = stringResource(R.string.overlay_profile_status_desc),
                     style = MaterialTheme.typography.bodySmall,

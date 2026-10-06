@@ -254,47 +254,58 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                else emptySet()
     }
 
+    private fun getAllProfileIds(): List<Int> {
+        val jsonStr = prefs.getString("overlay_profiles_json", null)
+        if (!jsonStr.isNullOrEmpty()) {
+            try {
+                val jsonArray = org.json.JSONArray(jsonStr)
+                val ids = mutableListOf<Int>()
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    ids.add(obj.getInt("id"))
+                }
+                if (ids.isNotEmpty()) return ids
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+        val ids = mutableListOf<Int>()
+        for (i in 1..100) {
+            val pKey = getPrefKey(i, "enabled")
+            val pName = getPrefKey(i, "name")
+            if (prefs.contains(pKey) || prefs.contains(pName) || i == 1) {
+                ids.add(i)
+            }
+        }
+        return if (ids.isNotEmpty()) ids else listOf(1)
+    }
+
     private fun getDefaultY(profileId: Int, buttonType: String): Int {
-        return when (profileId) {
-            1 -> when (buttonType) {
-                "combined", "ql" -> 200
-                "fs" -> 100
-                "home" -> 300
-                "back" -> 400
-                "refresh" -> 500
-                "freeform" -> 600
-                else -> 200
-            }
-            2 -> when (buttonType) {
-                "combined", "ql" -> 400
-                "fs" -> 250
-                "home" -> 500
-                "back" -> 600
-                "refresh" -> 700
-                "freeform" -> 800
-                else -> 400
-            }
-            3 -> when (buttonType) {
-                "combined", "ql" -> 600
-                "fs" -> 400
-                "home" -> 700
-                "back" -> 800
-                "refresh" -> 900
-                "freeform" -> 1000
-                else -> 600
-            }
-            else -> 200
+        val offset = ((profileId - 1) % 10) * 150
+        return when (buttonType) {
+            "combined", "ql" -> 200 + offset
+            "fs" -> 100 + offset
+            "home" -> 300 + offset
+            "back" -> 400 + offset
+            "refresh" -> 500 + offset
+            "freeform" -> 600 + offset
+            else -> 200 + offset
         }
     }
 
     // --- Main Overlay Update Loop ---
 
     fun updateOverlayButtons() {
-        for (profileId in 1..3) {
+        val currentProfileIds = getAllProfileIds()
+        val activeViewIds = ArrayList(profileViewsMap.keys)
+        for (id in activeViewIds) {
+            if (!currentProfileIds.contains(id) || !isProfileEnabled(id)) {
+                removeProfileOverlayButtons(id)
+            }
+        }
+        for (profileId in currentProfileIds) {
             if (isProfileEnabled(profileId)) {
                 updateProfileOverlayButtons(profileId)
-            } else {
-                removeProfileOverlayButtons(profileId)
             }
         }
     }
