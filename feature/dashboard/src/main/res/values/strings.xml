@@ -12,7 +12,6 @@
     <string name="subtab_logs">System Logs</string>
     <string name="subtab_rights">Rights</string>
 
-
     <string name="title_files">• File Explorer</string>
     <string name="title_installer">• APK Installer</string>
     <string name="title_system">• System Diagnostics</string>
@@ -21,10 +20,10 @@
 
     <string name="system_info_title">System Info &amp; Diagnostics</string>
 
-    <string name="lang_card_title">Interface Language / Язык интерфейса</string>
-    <string name="lang_card_desc">Choose application language / Выберите язык приложения</string>
-    <string name="lang_ru">Русский (Russian)</string>
-    <string name="lang_en">English (Английский)</string>
+    <string name="lang_card_title">Interface Language</string>
+    <string name="lang_card_desc">Choose application language</string>
+    <string name="lang_ru">Russian</string>
+    <string name="lang_en">English</string>
 
     <string name="hardware_os_title">Hardware &amp; OS</string>
     <string name="manufacturer">Manufacturer</string>
@@ -45,7 +44,7 @@
     <string name="btn_clear_logs">Clear Logs</string>
     <string name="no_logs">No logs captured yet. Press \'Start\' to begin logcat stream.</string>
 
-    <string name="permissions_title">Permissions Info / Права доступа</string>
+    <string name="permissions_title">Permissions Info</string>
     <string name="refresh_status">Refresh status</string>
     <string name="granted">Granted</string>
     <string name="not_granted">Not Granted</string>
@@ -56,11 +55,11 @@
     <string name="theme_light">Light Theme</string>
     <string name="theme_dark">Dark Theme</string>
 
-    <string name="action_home_navigator">Home Navigator / Навигатор "Домой"</string>
+    <string name="action_home_navigator">Home Navigator</string>
     <string name="action_home_navigator_desc">Navigate to home screen</string>
-    <string name="action_back_navigator">Back Navigator / Навигатор "Назад"</string>
+    <string name="action_back_navigator">Back Navigator</string>
     <string name="action_back_navigator_desc">Trigger back action</string>
-    <string name="action_refresh_navigator">Refresh / Обновить</string>
+    <string name="action_refresh_navigator">Refresh</string>
     <string name="action_refresh_navigator_desc">Refresh interface or trigger update</string>
 
     <!-- FileManagerScreen -->
@@ -76,6 +75,19 @@
     <string name="internal_storage">Internal Storage</string>
     <string name="storage_title">Storage</string>
     <string name="storage_free_total">Free %1$s / Total %2$s</string>
+    <string name="storage_free">Free: %1$s</string>
+    <string name="storage_total">Total: %1$s</string>
+    <string name="storage_internal">Internal Storage (/storage/emulated/0)</string>
+    <string name="storage_root">Device Root (/)</string>
+    <string name="storage_external">USB / External Storage</string>
+    <string name="storage_cloud">Cloud Connections (WebDAV / Cloud)...</string>
+    <string name="cloud_dialog_title">Cloud Connections</string>
+    <string name="cloud_dialog_message">Support for WebDAV, Google Drive, Yandex.Disk and other cloud storages will be available in future updates.</string>
+    <string name="open_with">Open with...</string>
+    <string name="rename_file">Rename</string>
+    <string name="rename_file_title">Rename File / Folder</string>
+    <string name="enter_new_name">Enter new name:</string>
+    <string name="file_permissions">Permissions</string>
     <string name="search_files_hint">Search files...</string>
     <string name="clear_search">Clear search</string>
     <string name="selected_count">Selected (%1$d)</string>
@@ -88,8 +100,23 @@
     <string name="install_apk">Install APK</string>
     <string name="file_properties">Properties</string>
     <string name="btn_cancel">Cancel</string>
+    <string name="btn_save">Save</string>
     <string name="file_folder">Folder</string>
     <string name="more_options">More options</string>
+
+    <!-- ApkInstallerScreen & Waterfall -->
+    <string name="waterfall_dialog_title">Waterfall APK Installation</string>
+    <string name="target_apk_file">Target APK File</string>
+    <string name="no_apk_selected">No APK selected</string>
+    <string name="browse_apk">Browse APK</string>
+    <string name="installing">Installing...</string>
+    <string name="waterfall_install">Waterfall Install</string>
+    <string name="installation_diagnostic_steps">Installation Diagnostic Steps</string>
+    <string name="ready">Ready</string>
+    <string name="installed_system_user_apps">Installed System &amp; User Apps</string>
+    <string name="installation_succeeded">Installation Succeeded</string>
+    <string name="installation_failed">Installation Failed</string>
+    <string name="run_step">Run step</string>
 
     <!-- FloatingButtonsScreen -->
     <string name="add_quick_launch_title">Add to Quick Launch</string>
@@ -153,6 +180,7 @@
     <string name="version_status_unchecked">Version status unchecked</string>
     <string name="new_version_available_format">New version v%1$s available!</string>
     <string name="latest_version_installed">Latest version installed</string>
+    <string name="latest_version_installed_format">You have the latest version installed (v%1$s)</string>
     <string name="btn_checking">Checking...</string>
     <string name="btn_check">Check</string>
     <string name="latest_release_format">Latest release: v%1$s</string>
@@ -170,6 +198,7 @@
     <string name="file_prop_path">Path: %1$s</string>
     <string name="file_prop_size">Size: %1$s</string>
     <string name="file_prop_type">Type: %1$s</string>
+    <string name="file_prop_date">Modified: %1$s</string>
     <string name="file_type_folder">Folder</string>
     <string name="file_type_file">File</string>
     <string name="btn_close">Close</string>

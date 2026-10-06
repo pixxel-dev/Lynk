@@ -354,7 +354,7 @@ fun SystemLogsTab(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isRecording) {
@@ -398,31 +398,31 @@ fun SystemLogsTab(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.error
                             ),
-                            modifier = Modifier.defaultMinSize(minWidth = 72.dp, minHeight = 36.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Icon(Icons.Rounded.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = stringResource(R.string.btn_stop),
+                                style = MaterialTheme.typography.labelLarge,
                                 maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Clip
+                                softWrap = false
                             )
                         }
                     } else {
                         Button(
                             onClick = onStartRecording,
-                            modifier = Modifier.defaultMinSize(minWidth = 72.dp, minHeight = 36.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = stringResource(R.string.btn_start),
+                                style = MaterialTheme.typography.labelLarge,
                                 maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Clip
+                                softWrap = false
                             )
                         }
                     }

@@ -11,12 +11,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.installer.InstallResult
 import com.example.lynk.core.domain.installer.InstallStep
+import ru.doGood.Lynk.feature.dashboard.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,15 +62,15 @@ fun ApkInstallerScreen(
 
                 item {
                     Text(
-                        text = "Installation Diagnostic Steps",
+                        text = stringResource(R.string.installation_diagnostic_steps),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
                     )
                 }
 
-                items(InstallStep.values()) { step ->
-                    val statusText = stepStatuses[step] ?: "Ready"
+                items(InstallStep.entries) { step ->
+                    val statusText = stepStatuses[step] ?: stringResource(R.string.ready)
                     val isActive = activeStep == step
 
                     InstallStepCard(
@@ -95,7 +97,7 @@ fun ApkInstallerScreen(
             ) {
                 item {
                     Text(
-                        text = "Installed System & User Apps",
+                        text = stringResource(R.string.installed_system_user_apps),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
@@ -127,15 +129,15 @@ fun ApkInstallerScreen(
 
             item {
                 Text(
-                    text = "Installation Strategies Diagnostic",
+                    text = stringResource(R.string.installation_diagnostic_steps),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                 )
             }
 
-            items(InstallStep.values()) { step ->
-                val statusText = stepStatuses[step] ?: "Ready"
+            items(InstallStep.entries) { step ->
+                val statusText = stepStatuses[step] ?: stringResource(R.string.ready)
                 val isActive = activeStep == step
 
                 InstallStepCard(
@@ -155,7 +157,7 @@ fun ApkInstallerScreen(
 
             item {
                 Text(
-                    text = "Installed System & User Apps",
+                    text = stringResource(R.string.installed_system_user_apps),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
@@ -199,12 +201,12 @@ private fun TargetApkCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Target APK File",
+                        text = stringResource(R.string.target_apk_file),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        text = selectedApkPath ?: "No APK selected",
+                        text = selectedApkPath ?: stringResource(R.string.no_apk_selected),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                         maxLines = 2,
@@ -227,7 +229,7 @@ private fun TargetApkCard(
                     Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Browse APK",
+                        text = stringResource(R.string.browse_apk),
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = 1
                     )
@@ -246,7 +248,7 @@ private fun TargetApkCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Installing...",
+                            text = stringResource(R.string.installing),
                             style = MaterialTheme.typography.labelLarge,
                             maxLines = 1
                         )
@@ -254,7 +256,7 @@ private fun TargetApkCard(
                         Icon(Icons.Rounded.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Waterfall Install",
+                            text = stringResource(R.string.waterfall_install),
                             style = MaterialTheme.typography.labelLarge,
                             maxLines = 1
                         )
@@ -292,7 +294,7 @@ private fun InstallResultCard(result: InstallResult) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (result.isSuccess) "Installation Succeeded" else "Installation Failed",
+                    text = if (result.isSuccess) stringResource(R.string.installation_succeeded) else stringResource(R.string.installation_failed),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -356,7 +358,7 @@ fun InstallStepCard(
                 onClick = onExecuteStep,
                 enabled = enabled
             ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = "Run step")
+                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(R.string.run_step))
             }
         }
     }

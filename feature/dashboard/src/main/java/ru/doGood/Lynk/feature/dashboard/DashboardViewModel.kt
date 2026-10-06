@@ -43,6 +43,14 @@ import java.util.*
 
 enum class SortType { NAME, SIZE, DATE, TYPE }
 
+data class InlineInstallState(
+    val apkFile: FileItem,
+    val isInstalling: Boolean = false,
+    val activeStep: InstallStep? = null,
+    val stepStatuses: Map<InstallStep, Pair<Boolean?, String>> = emptyMap(),
+    val installResult: InstallResult? = null
+)
+
 data class FileManagerState(
     val currentPath: String = Environment.getExternalStorageDirectory()?.absolutePath ?: "/",
     val rawFiles: List<FileItem> = emptyList(),
@@ -56,6 +64,7 @@ data class FileManagerState(
     val freeSpaceBytes: Long = 0L,
     val totalSpaceBytes: Long = 0L,
     val message: String? = null,
+    val inlineInstallState: InlineInstallState? = null
 )
 
 data class ApkInstallerState(
@@ -460,6 +469,123 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteSelectedFiles() {
         val selected = _state.value.fileManagerState.selectedFiles.toList()
         deleteFiles(selected)
+    }
+
+    fun renameFile(oldPath: String, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val src = File(oldPath)
+            if (src.exists() && newName.isNotBlank()) {
+                val dest = File(src.parentFile, newName)
+                if (src.renameTo(dest)) {
+                    loadDirectory(_state.value.fileManagerState.currentPath)
+                }
+            }
+        }
+    }
+
+    fun startInlineWaterfallInstall(fileItem: FileItem) {
+        val file = File(fileItem.path)
+        if (!file.exists()) return
+
+        val initialStatuses = InstallStep.values().associateWith<InstallStep, Pair<Boolean?, String>> {
+            null to "Waiting..."
+        }.toMutableMap()
+
+        _state.update {
+            it.copy(
+                fileManagerState = it.fileManagerState.copy(
+                    inlineInstallState = InlineInstallState(
+                        apkFile = fileItem,
+                        isInstalling = true,
+                        stepStatuses = initialStatuses
+                    )
+                )
+            )
+        }
+
+        val updateStep = { step: InstallStep, isSuccess: Boolean?, status: String ->
+            _state.update { state ->
+                val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+                val newStatuses = currentInline.stepStatuses.toMutableMap()
+                newStatuses[step] = isSuccess to status
+                state.copy(
+                    fileManagerState = state.fileManagerState.copy(
+                        inlineInstallState = currentInline.copy(
+                            activeStep = step,
+                            stepStatuses = newStatuses
+                        )
+                    )
+                )
+            }
+        }
+
+        val pine = ApkInstaller { _, callback ->
+            updateStep(InstallStep.PINE, null, "Hook checking...")
+            updateStep(InstallStep.PINE, false, "Pine hook unavailable")
+            callback.onResult(InstallResult(false, "Pine hook unavailable", InstallStep.PINE))
+        }
+
+        val shizuku = ApkInstaller { _, callback ->
+            updateStep(InstallStep.SHIZUKU, null, "Checking Shizuku API...")
+            updateStep(InstallStep.SHIZUKU, false, "Shizuku permission not granted")
+            callback.onResult(InstallResult(false, "Shizuku permission not granted", InstallStep.SHIZUKU))
+        }
+
+        val nativeAdb = ApkInstaller { _, callback ->
+            updateStep(InstallStep.NATIVE_ADB, null, "Connecting Native ADB...")
+            updateStep(InstallStep.NATIVE_ADB, false, "Native ADB port closed")
+            callback.onResult(InstallResult(false, "Native ADB port closed", InstallStep.NATIVE_ADB))
+        }
+
+        val localAdb = ApkInstaller { _, callback ->
+            updateStep(InstallStep.LOCAL_ADB, null, "Connecting Local ADB...")
+            updateStep(InstallStep.LOCAL_ADB, false, "Local ADB pairing required")
+            callback.onResult(InstallResult(false, "Local ADB pairing required", InstallStep.LOCAL_ADB))
+        }
+
+        val packageInstaller = ApkInstaller { apkFile, callback ->
+            updateStep(InstallStep.PACKAGE_INSTALLER, null, "Launching Package Installer...")
+            try {
+                val application = getApplication<Application>()
+                val apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    application,
+                    application.packageName + ".fileprovider",
+                    apkFile
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                application.startActivity(intent)
+                updateStep(InstallStep.PACKAGE_INSTALLER, true, "Sent to Package Installer")
+                callback.onResult(InstallResult(true, "Sent to Android Package Installer via FileProvider", InstallStep.PACKAGE_INSTALLER))
+            } catch (e: Exception) {
+                updateStep(InstallStep.PACKAGE_INSTALLER, false, "FileProvider error: ${e.message}")
+                callback.onResult(InstallResult(false, "FileProvider error: ${e.message}", InstallStep.PACKAGE_INSTALLER))
+            }
+        }
+
+        val strategy = WaterfallInstallStrategy(pine, shizuku, nativeAdb, localAdb, packageInstaller)
+        strategy.executeInstall(file) { result ->
+            _state.update { state ->
+                val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+                state.copy(
+                    fileManagerState = state.fileManagerState.copy(
+                        inlineInstallState = currentInline.copy(
+                            isInstalling = false,
+                            installResult = result
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    fun dismissInlineInstall() {
+        _state.update {
+            it.copy(fileManagerState = it.fileManagerState.copy(inlineInstallState = null))
+        }
     }
 
     private fun applyFilterAndSort(fmState: FileManagerState): FileManagerState {

@@ -182,9 +182,9 @@ fun PermissionsInfoTab(
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(if (isLandscape) 2 else 1),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxSize()
         ) {
             items(permissionsList, key = { it.id }) { permission ->
@@ -235,13 +235,13 @@ fun PermissionCard(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(16.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
@@ -258,9 +258,9 @@ fun PermissionCard(
                             imageVector = permission.icon,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(24.dp)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = permission.title,
                             style = MaterialTheme.typography.titleSmall,
@@ -270,7 +270,7 @@ fun PermissionCard(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Surface(
                         color = if (permission.isGranted) {
@@ -278,7 +278,7 @@ fun PermissionCard(
                         } else {
                             MaterialTheme.colorScheme.errorContainer
                         },
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             text = if (permission.isGranted) {
@@ -293,27 +293,28 @@ fun PermissionCard(
                                 MaterialTheme.colorScheme.onErrorContainer
                             },
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = permission.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 3,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Button(
                 onClick = onOpenSettings,
                 modifier = Modifier.align(Alignment.End),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 colors = if (permission.isGranted) {
                     ButtonDefaults.outlinedButtonColors()
                 } else {
@@ -323,9 +324,9 @@ fun PermissionCard(
                 Icon(
                     imageVector = if (permission.isGranted) Icons.Rounded.Check else Icons.Rounded.Settings,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = if (permission.isGranted) {
                         stringResource(R.string.permission_settings)

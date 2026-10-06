@@ -12,7 +12,6 @@
     <string name="subtab_logs">Логи системы</string>
     <string name="subtab_rights">Права доступа</string>
 
-
     <string name="title_files">• Файловый менеджер</string>
     <string name="title_installer">• Установка APK</string>
     <string name="title_system">• Диагностика системы</string>
@@ -21,10 +20,10 @@
 
     <string name="system_info_title">Информация о системе и диагностика</string>
 
-    <string name="lang_card_title">Язык интерфейса / Interface Language</string>
+    <string name="lang_card_title">Язык интерфейса</string>
     <string name="lang_card_desc">Выберите язык отображения меню и кнопок приложения</string>
-    <string name="lang_ru">Русский (Russian)</string>
-    <string name="lang_en">English (Английский)</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
 
     <string name="hardware_os_title">Аппаратная часть и ОС</string>
     <string name="manufacturer">Производитель</string>
@@ -45,7 +44,7 @@
     <string name="btn_clear_logs">Очистить логи</string>
     <string name="no_logs">Записи логов пока нет. Нажмите \'Старт\' для начала захвата logcat.</string>
 
-    <string name="permissions_title">Права доступа / Permissions Info</string>
+    <string name="permissions_title">Права доступа</string>
     <string name="refresh_status">Обновить статус</string>
     <string name="granted">Предоставлено</string>
     <string name="not_granted">Не предоставлено</string>
@@ -60,7 +59,7 @@
     <string name="action_home_navigator_desc">Возврат на главный экран</string>
     <string name="action_back_navigator">Навигатор "Назад"</string>
     <string name="action_back_navigator_desc">Возврат назад</string>
-    <string name="action_refresh_navigator">Обновить / Refresh</string>
+    <string name="action_refresh_navigator">Обновить</string>
     <string name="action_refresh_navigator_desc">Перезапуск интерфейса или обновление</string>
 
     <!-- FileManagerScreen -->
@@ -76,6 +75,19 @@
     <string name="internal_storage">Внутренняя память</string>
     <string name="storage_title">Хранилище</string>
     <string name="storage_free_total">Свободно %1$s / Всего %2$s</string>
+    <string name="storage_free">Свободно: %1$s</string>
+    <string name="storage_total">Всего: %1$s</string>
+    <string name="storage_internal">Внутренняя память (/storage/emulated/0)</string>
+    <string name="storage_root">Корень устройства (/)</string>
+    <string name="storage_external">USB / Внешние накопители</string>
+    <string name="storage_cloud">Облачные подключения (WebDAV / Облака)...</string>
+    <string name="cloud_dialog_title">Облачные подключения</string>
+    <string name="cloud_dialog_message">Поддержка WebDAV, Google Drive, Яндекс.Диск и других облачных сервисов будет добавлена в ближайших обновлениях.</string>
+    <string name="open_with">Открыть с помощью...</string>
+    <string name="rename_file">Переименовать</string>
+    <string name="rename_file_title">Переименовать файл / папку</string>
+    <string name="enter_new_name">Введите новое имя:</string>
+    <string name="file_permissions">Права доступа</string>
     <string name="search_files_hint">Поиск файлов...</string>
     <string name="clear_search">Очистить поиск</string>
     <string name="selected_count">Выбрано (%1$d)</string>
@@ -88,8 +100,23 @@
     <string name="install_apk">Установить APK</string>
     <string name="file_properties">Свойства</string>
     <string name="btn_cancel">Отмена</string>
+    <string name="btn_save">Сохранить</string>
     <string name="file_folder">Папка</string>
     <string name="more_options">Ещё опции</string>
+
+    <!-- ApkInstallerScreen & Waterfall -->
+    <string name="waterfall_dialog_title">Waterfall-установка APK</string>
+    <string name="target_apk_file">Целевой APK-файл</string>
+    <string name="no_apk_selected">APK не выбран</string>
+    <string name="browse_apk">Выбрать APK</string>
+    <string name="installing">Установка...</string>
+    <string name="waterfall_install">Waterfall установка</string>
+    <string name="installation_diagnostic_steps">Шаги диагностики установки</string>
+    <string name="ready">Готово</string>
+    <string name="installed_system_user_apps">Установленные системные и пользовательские ПО</string>
+    <string name="installation_succeeded">Установка успешно завершена</string>
+    <string name="installation_failed">Ошибка установки</string>
+    <string name="run_step">Запустить шаг</string>
 
     <!-- FloatingButtonsScreen -->
     <string name="add_quick_launch_title">Добавить в Быстрый Запуск</string>
@@ -153,6 +180,7 @@
     <string name="version_status_unchecked">Статус версии не проверен</string>
     <string name="new_version_available_format">Доступна новая версия v%1$s!</string>
     <string name="latest_version_installed">Установлена актуальная версия</string>
+    <string name="latest_version_installed_format">У вас установлена актуальная версия (v%1$s)</string>
     <string name="btn_checking">Проверка...</string>
     <string name="btn_check">Проверить</string>
     <string name="latest_release_format">Свежий релиз: v%1$s</string>
@@ -170,6 +198,7 @@
     <string name="file_prop_path">Путь: %1$s</string>
     <string name="file_prop_size">Размер: %1$s</string>
     <string name="file_prop_type">Тип: %1$s</string>
+    <string name="file_prop_date">Изменён: %1$s</string>
     <string name="file_type_folder">Папка</string>
     <string name="file_type_file">Файл</string>
     <string name="btn_close">Закрыть</string>

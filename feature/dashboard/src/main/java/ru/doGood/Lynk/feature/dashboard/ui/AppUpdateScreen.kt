@@ -37,6 +37,12 @@ fun AppUpdateScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
+    val showUpdateDetails = updateInfo != null &&
+            (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE ||
+                    updateInfo.state == UpdateInfo.UpdateState.DOWNLOADING ||
+                    updateInfo.state == UpdateInfo.UpdateState.DOWNLOADED ||
+                    isDownloading || isDownloaded)
+
     if (isLandscape) {
         Row(
             modifier = modifier
@@ -58,9 +64,9 @@ fun AppUpdateScreen(
                     onCheckForUpdates = onCheckForUpdates
                 )
 
-                updateInfo?.let { info ->
+                if (showUpdateDetails && updateInfo != null) {
                     LatestVersionCard(
-                        updateInfo = info,
+                        updateInfo = updateInfo,
                         isDownloading = isDownloading,
                         isDownloaded = isDownloaded,
                         downloadProgress = downloadProgress,
@@ -72,15 +78,17 @@ fun AppUpdateScreen(
             }
 
             // Right Column: Changelog
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
-                ChangelogCard(
-                    updateInfo = updateInfo,
-                    modifier = Modifier.fillMaxSize()
-                )
+            if (showUpdateDetails) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                ) {
+                    ChangelogCard(
+                        updateInfo = updateInfo,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     } else {
@@ -99,10 +107,10 @@ fun AppUpdateScreen(
                 )
             }
 
-            updateInfo?.let { info ->
+            if (showUpdateDetails && updateInfo != null) {
                 item {
                     LatestVersionCard(
-                        updateInfo = info,
+                        updateInfo = updateInfo,
                         isDownloading = isDownloading,
                         isDownloaded = isDownloaded,
                         downloadProgress = downloadProgress,
@@ -113,7 +121,7 @@ fun AppUpdateScreen(
                 }
 
                 item {
-                    ChangelogCard(updateInfo = info)
+                    ChangelogCard(updateInfo = updateInfo)
                 }
             }
         }
@@ -172,7 +180,7 @@ private fun CurrentVersionCard(
                         isChecking -> stringResource(R.string.checking_updates)
                         updateInfo == null -> stringResource(R.string.version_status_unchecked)
                         updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.new_version_available_format, updateInfo.latestVersion.removePrefix("v"))
-                        else -> stringResource(R.string.latest_version_installed)
+                        else -> stringResource(R.string.latest_version_installed_format, currentVersion)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer

@@ -1,7 +1,12 @@
 package ru.doGood.Lynk.feature.dashboard.ui
 
-import androidx.compose.animation.AnimatedVisibility
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Environment
+import android.webkit.MimeTypeMap
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -16,13 +21,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.example.lynk.core.domain.file.FileItem
+import com.example.lynk.core.domain.installer.InstallStep
+import ru.doGood.Lynk.feature.dashboard.InlineInstallState
 import ru.doGood.Lynk.feature.dashboard.R
 import ru.doGood.Lynk.feature.dashboard.SortType
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -40,6 +50,7 @@ fun FileManagerScreen(
     freeSpaceFormatted: String,
     totalSpaceFormatted: String,
     usedPercentage: Float,
+    inlineInstallState: InlineInstallState? = null,
     onPathClick: (String) -> Unit,
     onNavigateUp: () -> Unit,
     onFileClick: (FileItem) -> Unit,
@@ -54,12 +65,22 @@ fun FileManagerScreen(
     onClearSelection: () -> Unit,
     onInstallApk: (FileItem) -> Unit,
     onShowProperties: (FileItem) -> Unit,
+    onRenameFile: (String, String) -> Unit = { _, _ -> },
+    onStartInlineWaterfallInstall: (FileItem) -> Unit = {},
+    onDismissInlineInstall: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
+    var showStorageMenu by remember { mutableStateOf(false) }
+    var showCloudModal by remember { mutableStateOf(false) }
+
     var selectedItemForMenu by remember { mutableStateOf<FileItem?>(null) }
+    var filePropertiesToShow by remember { mutableStateOf<FileItem?>(null) }
+    var fileToRename by remember { mutableStateOf<FileItem?>(null) }
     var fileToDelete by remember { mutableStateOf<FileItem?>(null) }
     var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     val rootPath = Environment.getExternalStorageDirectory().absolutePath
@@ -73,9 +94,7 @@ fun FileManagerScreen(
         currentPath
     }
 
-    Column(
-        modifier = modifier.fillMaxSize()
-    ) {
+    Column(modifier = modifier.fillMaxSize()) {
         // Compact Directory Navigation Header
         Surface(
             color = MaterialTheme.colorScheme.surface,
@@ -110,6 +129,8 @@ fun FileManagerScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Sort Button & Dropdown
                 Box {
                     IconButton(
                         onClick = { showSortMenu = true },
@@ -124,30 +145,22 @@ fun FileManagerScreen(
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_by_name)) },
                             onClick = { onSortTypeChange(SortType.NAME); showSortMenu = false },
-                            leadingIcon = {
-                                if (sortType == SortType.NAME) Icon(Icons.Rounded.Check, null)
-                            }
+                            leadingIcon = { if (sortType == SortType.NAME) Icon(Icons.Rounded.Check, null) }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_by_size)) },
                             onClick = { onSortTypeChange(SortType.SIZE); showSortMenu = false },
-                            leadingIcon = {
-                                if (sortType == SortType.SIZE) Icon(Icons.Rounded.Check, null)
-                            }
+                            leadingIcon = { if (sortType == SortType.SIZE) Icon(Icons.Rounded.Check, null) }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_by_date)) },
                             onClick = { onSortTypeChange(SortType.DATE); showSortMenu = false },
-                            leadingIcon = {
-                                if (sortType == SortType.DATE) Icon(Icons.Rounded.Check, null)
-                            }
+                            leadingIcon = { if (sortType == SortType.DATE) Icon(Icons.Rounded.Check, null) }
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.sort_by_type)) },
                             onClick = { onSortTypeChange(SortType.TYPE); showSortMenu = false },
-                            leadingIcon = {
-                                if (sortType == SortType.TYPE) Icon(Icons.Rounded.Check, null)
-                            }
+                            leadingIcon = { if (sortType == SortType.TYPE) Icon(Icons.Rounded.Check, null) }
                         )
                         HorizontalDivider()
                         DropdownMenuItem(
@@ -163,9 +176,7 @@ fun FileManagerScreen(
                         onClick = onPaste,
                         modifier = Modifier.size(36.dp)
                     ) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ) {
+                        Badge(containerColor = MaterialTheme.colorScheme.primary) {
                             Text("$clipboardCount")
                         }
                         Icon(Icons.Rounded.ContentPaste, contentDescription = stringResource(R.string.file_paste))
@@ -173,126 +184,36 @@ fun FileManagerScreen(
                 }
             }
         }
-            // Storage & Search Controls
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Compact Storage Card
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = stringResource(R.string.storage_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = stringResource(R.string.storage_free_total, freeSpaceFormatted, totalSpaceFormatted),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            LinearProgressIndicator(
-                                progress = { usedPercentage },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(4.dp),
-                                color = if (usedPercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            )
-                        }
-                    }
 
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.search_files_hint)) },
-                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { onSearchQueryChange("") }) {
-                                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            } else {
-                // Storage Stats Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Rounded.Storage,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = stringResource(R.string.storage_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Text(
-                                text = stringResource(R.string.storage_free_total, freeSpaceFormatted, totalSpaceFormatted),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        LinearProgressIndicator(
-                            progress = { usedPercentage },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp),
-                            color = if (usedPercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        )
-                    }
-                }
+        // Storage & Search Controls
+        if (isLandscape) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Storage Card with Dropdown Switcher
+                StorageCard(
+                    freeSpaceFormatted = freeSpaceFormatted,
+                    totalSpaceFormatted = totalSpaceFormatted,
+                    usedPercentage = usedPercentage,
+                    showStorageMenu = showStorageMenu,
+                    onToggleStorageMenu = { showStorageMenu = !showStorageMenu },
+                    onDismissStorageMenu = { showStorageMenu = false },
+                    onSelectInternal = { onPathClick(Environment.getExternalStorageDirectory().absolutePath) },
+                    onSelectRoot = { onPathClick("/") },
+                    onSelectExternal = { onPathClick("/storage") },
+                    onSelectCloud = { showCloudModal = true },
+                    modifier = Modifier.weight(1f)
+                )
 
                 // Search Bar
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchQueryChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    modifier = Modifier.weight(1f),
                     placeholder = { Text(stringResource(R.string.search_files_hint)) },
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     trailingIcon = {
@@ -306,179 +227,570 @@ fun FileManagerScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
             }
+        } else {
+            // Storage Stats Card with Dropdown Switcher
+            StorageCard(
+                freeSpaceFormatted = freeSpaceFormatted,
+                totalSpaceFormatted = totalSpaceFormatted,
+                usedPercentage = usedPercentage,
+                showStorageMenu = showStorageMenu,
+                onToggleStorageMenu = { showStorageMenu = !showStorageMenu },
+                onDismissStorageMenu = { showStorageMenu = false },
+                onSelectInternal = { onPathClick(Environment.getExternalStorageDirectory().absolutePath) },
+                onSelectRoot = { onPathClick("/") },
+                onSelectExternal = { onPathClick("/storage") },
+                onSelectCloud = { showCloudModal = true },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            )
 
-            // Selection Action Bar
-            AnimatedVisibility(visible = selectedFiles.isNotEmpty()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                placeholder = { Text(stringResource(R.string.search_files_hint)) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchQueryChange("") }) {
+                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+        }
+
+        // Selection Action Bar
+        AnimatedVisibility(visible = selectedFiles.isNotEmpty()) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(12.dp)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = stringResource(R.string.selected_count, selectedFiles.size),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        Row {
-                            IconButton(onClick = onCopySelected) {
-                                Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy))
-                            }
-                            IconButton(onClick = onCutSelected) {
-                                Icon(Icons.Rounded.ContentCut, stringResource(R.string.btn_cut))
-                            }
-                            IconButton(onClick = {
-                                val selectedItems = files.filter { selectedFiles.contains(it.path) }
-                                if (selectedItems.isNotEmpty()) {
-                                    filesPendingDelete = selectedItems
-                                }
-                            }) {
-                                Icon(
-                                    Icons.Rounded.Delete,
-                                    stringResource(R.string.btn_delete),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            }
-                            IconButton(onClick = onClearSelection) {
-                                Icon(Icons.Rounded.Close, stringResource(R.string.btn_deselect))
-                            }
-                        }
-                    }
-                }
-            }
-
-            // File List
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 8.dp)
-            ) {
-                items(files, key = { it.path }) { item ->
-                    FileItemRow(
-                        item = item,
-                        isSelected = selectedFiles.contains(item.path),
-                        onClick = { onFileClick(item) },
-                        onLongClick = { onFileLongClick(item) },
-                        onMoreClick = { selectedItemForMenu = item }
+                    Text(
+                        text = stringResource(R.string.selected_count, selectedFiles.size),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
+                    Row {
+                        IconButton(onClick = onCopySelected) {
+                            Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy))
+                        }
+                        IconButton(onClick = onCutSelected) {
+                            Icon(Icons.Rounded.ContentCut, stringResource(R.string.btn_cut))
+                        }
+                        IconButton(onClick = {
+                            val selectedItems = files.filter { selectedFiles.contains(it.path) }
+                            if (selectedItems.isNotEmpty()) {
+                                filesPendingDelete = selectedItems
+                            }
+                        }) {
+                            Icon(
+                                Icons.Rounded.Delete,
+                                stringResource(R.string.btn_delete),
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        IconButton(onClick = onClearSelection) {
+                            Icon(Icons.Rounded.Close, stringResource(R.string.btn_deselect))
+                        }
+                    }
                 }
             }
+        }
 
-            // Context Menu / Options Dialog for an item
-            selectedItemForMenu?.let { file ->
-                val isApk = file.name.endsWith(".apk", ignoreCase = true)
-                AlertDialog(
-                    onDismissRequest = { selectedItemForMenu = null },
-                    title = {
-                        Text(
-                            text = file.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    text = {
-                        Column {
-                            if (isApk) {
-                                ListItem(
-                                    headlineContent = { Text(stringResource(R.string.install_apk)) },
-                                    leadingContent = { Icon(Icons.Rounded.Android, null) },
-                                    modifier = Modifier.combinedClickable {
-                                        selectedItemForMenu = null
-                                        onInstallApk(file)
-                                    }
-                                )
-                            }
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.file_properties)) },
-                                leadingContent = { Icon(Icons.Rounded.Info, null) },
-                                modifier = Modifier.combinedClickable {
-                                    selectedItemForMenu = null
-                                    onShowProperties(file)
-                                }
-                            )
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.btn_delete)) },
-                                leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                modifier = Modifier.combinedClickable {
-                                    selectedItemForMenu = null
-                                    fileToDelete = file
-                                }
-                            )
+        // File List
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 8.dp)
+        ) {
+            items(files, key = { it.path }) { item ->
+                FileItemRow(
+                    item = item,
+                    isSelected = selectedFiles.contains(item.path),
+                    onClick = {
+                        // 1.3 Selection mode check: if items selected, single tap toggles check
+                        if (selectedFiles.isNotEmpty() && !item.isUpNavigation) {
+                            onFileLongClick(item)
+                        } else if (item.isUpNavigation) {
+                            onNavigateUp()
+                        } else if (item.isDirectory) {
+                            onPathClick(item.path)
+                        } else if (item.name.endsWith(".apk", ignoreCase = true)) {
+                            // 1.5 Inline Waterfall APK Installation
+                            onStartInlineWaterfallInstall(item)
+                        } else {
+                            // 1.2 Open file with Intent ACTION_VIEW
+                            openFileWithIntent(context, item)
                         }
                     },
-                    confirmButton = {
-                        TextButton(onClick = { selectedItemForMenu = null }) {
-                            Text(stringResource(R.string.btn_cancel))
-                        }
-                    }
-                )
-            }
-
-            // Delete Confirmation Dialog for single file
-            fileToDelete?.let { file ->
-                AlertDialog(
-                    onDismissRequest = { fileToDelete = null },
-                    title = { Text(stringResource(R.string.delete_file_title)) },
-                    text = { Text(stringResource(R.string.delete_file_message, file.name)) },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                val path = file.path
-                                fileToDelete = null
-                                onDeleteFiles(listOf(path))
-                            }
-                        ) {
-                            Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
+                    onLongClick = {
+                        if (!item.isUpNavigation) {
+                            onFileLongClick(item)
                         }
                     },
-                    dismissButton = {
-                        TextButton(onClick = { fileToDelete = null }) {
-                            Text(stringResource(R.string.btn_cancel))
-                        }
-                    }
-                )
-            }
-
-            // Delete Confirmation Dialog for multiple files
-            if (filesPendingDelete.isNotEmpty()) {
-                val titleText = stringResource(R.string.delete_file_title)
-                val messageText = stringResource(R.string.delete_file_message, "${filesPendingDelete.size} items")
-
-                AlertDialog(
-                    onDismissRequest = { filesPendingDelete = emptyList() },
-                    title = { Text(titleText) },
-                    text = { Text(messageText) },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                val pathsToDelete = filesPendingDelete.map { it.path }
-                                filesPendingDelete = emptyList()
-                                onDeleteFiles(pathsToDelete)
-                            }
-                        ) {
-                            Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { filesPendingDelete = emptyList() }
-                        ) {
-                            Text(stringResource(R.string.btn_cancel))
-                        }
-                    }
+                    onMoreClick = { selectedItemForMenu = item }
                 )
             }
         }
+
+        // --- Dialogs ---
+
+        // Cloud Storage Info Modal
+        if (showCloudModal) {
+            AlertDialog(
+                onDismissRequest = { showCloudModal = false },
+                title = { Text(stringResource(R.string.cloud_dialog_title)) },
+                text = { Text(stringResource(R.string.cloud_dialog_message)) },
+                confirmButton = {
+                    TextButton(onClick = { showCloudModal = false }) {
+                        Text(stringResource(R.string.btn_close))
+                    }
+                }
+            )
+        }
+
+        // 1.4 Context Menu / Actions Dialog for an item
+        selectedItemForMenu?.let { file ->
+            val isApk = file.name.endsWith(".apk", ignoreCase = true)
+            AlertDialog(
+                onDismissRequest = { selectedItemForMenu = null },
+                title = {
+                    Text(
+                        text = file.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                text = {
+                    Column {
+                        if (isApk) {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.install_apk)) },
+                                leadingContent = { Icon(Icons.Rounded.Android, null, tint = MaterialTheme.colorScheme.primary) },
+                                modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    if (target != null) {
+                                        onStartInlineWaterfallInstall(target)
+                                    }
+                                }
+                            )
+                        }
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.file_properties)) },
+                            leadingContent = { Icon(Icons.Rounded.Info, null) },
+                            modifier = Modifier.combinedClickable {
+                                val target = selectedItemForMenu
+                                selectedItemForMenu = null
+                                filePropertiesToShow = target
+                            }
+                        )
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.rename_file)) },
+                            leadingContent = { Icon(Icons.Rounded.Edit, null) },
+                            modifier = Modifier.combinedClickable {
+                                val target = selectedItemForMenu
+                                selectedItemForMenu = null
+                                fileToRename = target
+                            }
+                        )
+                        HorizontalDivider()
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.btn_copy)) },
+                            leadingContent = { Icon(Icons.Rounded.ContentCopy, null) },
+                            modifier = Modifier.combinedClickable {
+                                val target = selectedItemForMenu
+                                selectedItemForMenu = null
+                                if (target != null) {
+                                    onFileLongClick(target)
+                                    onCopySelected()
+                                }
+                            }
+                        )
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.btn_cut)) },
+                            leadingContent = { Icon(Icons.Rounded.ContentCut, null) },
+                            modifier = Modifier.combinedClickable {
+                                val target = selectedItemForMenu
+                                selectedItemForMenu = null
+                                if (target != null) {
+                                    onFileLongClick(target)
+                                    onCutSelected()
+                                }
+                            }
+                        )
+                        if (clipboardCount > 0) {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.file_paste)) },
+                                leadingContent = { Icon(Icons.Rounded.ContentPaste, null) },
+                                modifier = Modifier.combinedClickable {
+                                    selectedItemForMenu = null
+                                    onPaste()
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        ListItem(
+                            headlineContent = { Text(stringResource(R.string.btn_delete)) },
+                            leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                            modifier = Modifier.combinedClickable {
+                                val target = selectedItemForMenu
+                                selectedItemForMenu = null
+                                fileToDelete = target
+                            }
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { selectedItemForMenu = null }) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // Rename Dialog
+        fileToRename?.let { file ->
+            var newName by remember { mutableStateOf(file.name) }
+            AlertDialog(
+                onDismissRequest = { fileToRename = null },
+                title = { Text(stringResource(R.string.rename_file_title)) },
+                text = {
+                    Column {
+                        Text(stringResource(R.string.enter_new_name), style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = newName,
+                            onValueChange = { newName = it },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val path = file.path
+                            fileToRename = null
+                            if (newName.isNotBlank() && newName != file.name) {
+                                onRenameFile(path, newName)
+                            }
+                        }
+                    ) {
+                        Text(stringResource(R.string.btn_save))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { fileToRename = null }) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // File Detailed Properties Dialog
+        filePropertiesToShow?.let { fileItem ->
+            val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
+            val javaFile = remember(fileItem.path) { File(fileItem.path) }
+
+            val readable = if (javaFile.canRead()) "r" else "-"
+            val writable = if (javaFile.canWrite()) "w" else "-"
+            val executable = if (javaFile.canExecute()) "x" else "-"
+            val permsString = "$readable$writable$executable"
+
+            AlertDialog(
+                onDismissRequest = { filePropertiesToShow = null },
+                title = { Text(stringResource(R.string.file_properties_title)) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(stringResource(R.string.file_prop_name, fileItem.name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.file_prop_path, fileItem.path), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.file_prop_size, if (fileItem.isDirectory) stringResource(R.string.file_type_folder) else formatFileSize(fileItem.size)), style = MaterialTheme.typography.bodySmall)
+                        if (fileItem.lastModified > 0) {
+                            Text(stringResource(R.string.file_prop_date, dateFormat.format(Date(fileItem.lastModified))), style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(stringResource(R.string.file_permissions) + ": $permsString", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { filePropertiesToShow = null }) {
+                        Text(stringResource(R.string.btn_close))
+                    }
+                }
+            )
+        }
+
+        // Delete Confirmation Dialog for single file
+        fileToDelete?.let { file ->
+            AlertDialog(
+                onDismissRequest = { fileToDelete = null },
+                title = { Text(stringResource(R.string.delete_file_title)) },
+                text = { Text(stringResource(R.string.delete_file_message, file.name)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val path = file.path
+                            fileToDelete = null
+                            onDeleteFiles(listOf(path))
+                        }
+                    ) {
+                        Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { fileToDelete = null }) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // Delete Confirmation Dialog for multiple files
+        if (filesPendingDelete.isNotEmpty()) {
+            val titleText = stringResource(R.string.delete_file_title)
+            val messageText = stringResource(R.string.delete_file_message, "${filesPendingDelete.size} items")
+
+            AlertDialog(
+                onDismissRequest = { filesPendingDelete = emptyList() },
+                title = { Text(titleText) },
+                text = { Text(messageText) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            val pathsToDelete = filesPendingDelete.map { it.path }
+                            filesPendingDelete = emptyList()
+                            onDeleteFiles(pathsToDelete)
+                        }
+                    ) {
+                        Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { filesPendingDelete = emptyList() }
+                    ) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // 1.5 Inline Waterfall Installation Dialog
+        inlineInstallState?.let { inlineState ->
+            AlertDialog(
+                onDismissRequest = onDismissInlineInstall,
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Rounded.Android,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(R.string.waterfall_dialog_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = inlineState.apkFile.name,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        InstallStep.entries.forEach { step ->
+                            val statusPair = inlineState.stepStatuses[step]
+                            val isSuccess = statusPair?.first
+                            val statusMsg = statusPair?.second ?: stringResource(R.string.ready)
+                            val isActive = inlineState.activeStep == step
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                when (isSuccess) {
+                                    true -> Text("✅", modifier = Modifier.size(20.dp))
+                                    false -> Text("❌", modifier = Modifier.size(20.dp))
+                                    null -> {
+                                        if (isActive && inlineState.isInstalling) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(16.dp),
+                                                strokeWidth = 2.dp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                        } else {
+                                            Text("⏳", modifier = Modifier.size(20.dp))
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = step.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = statusMsg,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = onDismissInlineInstall) {
+                        Text(stringResource(R.string.btn_close))
+                    }
+                }
+            )
+        }
     }
+}
+
+@Composable
+private fun StorageCard(
+    freeSpaceFormatted: String,
+    totalSpaceFormatted: String,
+    usedPercentage: Float,
+    showStorageMenu: Boolean,
+    onToggleStorageMenu: () -> Unit,
+    onDismissStorageMenu: () -> Unit,
+    onSelectInternal: () -> Unit,
+    onSelectRoot: () -> Unit,
+    onSelectExternal: () -> Unit,
+    onSelectCloud: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box {
+                    TextButton(
+                        onClick = onToggleStorageMenu,
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Storage,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = stringResource(R.string.storage_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Icon(
+                            Icons.Rounded.ArrowDropDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // 1.1 Storage Switcher Dropdown
+                    DropdownMenu(
+                        expanded = showStorageMenu,
+                        onDismissRequest = onDismissStorageMenu
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.storage_internal)) },
+                            onClick = { onSelectInternal(); onDismissStorageMenu() },
+                            leadingIcon = { Icon(Icons.Rounded.PhoneAndroid, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.storage_root)) },
+                            onClick = { onSelectRoot(); onDismissStorageMenu() },
+                            leadingIcon = { Icon(Icons.Rounded.FolderSpecial, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.storage_external)) },
+                            onClick = { onSelectExternal(); onDismissStorageMenu() },
+                            leadingIcon = { Icon(Icons.Rounded.Usb, null) }
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.storage_cloud)) },
+                            onClick = { onSelectCloud(); onDismissStorageMenu() },
+                            leadingIcon = { Icon(Icons.Rounded.Cloud, null) }
+                        )
+                    }
+                }
+
+                // 1. Memory Info into 2 clean lines
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = stringResource(R.string.storage_free, freeSpaceFormatted),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(R.string.storage_total, totalSpaceFormatted),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { usedPercentage },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp),
+                color = if (usedPercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -514,32 +826,41 @@ fun FileItemRow(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon
-            val icon = when {
-                item.isUpNavigation -> Icons.AutoMirrored.Rounded.ArrowBack
-                item.isDirectory -> Icons.Rounded.Folder
-                item.name.endsWith(".apk", ignoreCase = true) -> Icons.Rounded.Android
-                item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".rar", ignoreCase = true) -> Icons.Rounded.FolderZip
-                item.name.endsWith(".jpg", ignoreCase = true) || item.name.endsWith(".png", ignoreCase = true) -> Icons.Rounded.Image
-                item.name.endsWith(".mp4", ignoreCase = true) || item.name.endsWith(".mkv", ignoreCase = true) -> Icons.Rounded.Movie
-                item.name.endsWith(".mp3", ignoreCase = true) || item.name.endsWith(".wav", ignoreCase = true) -> Icons.Rounded.AudioFile
-                else -> Icons.Rounded.InsertDriveFile
+            // Checkbox indicator if selected
+            if (isSelected) {
+                Icon(
+                    Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            } else {
+                val icon = when {
+                    item.isUpNavigation -> Icons.AutoMirrored.Rounded.ArrowBack
+                    item.isDirectory -> Icons.Rounded.Folder
+                    item.name.endsWith(".apk", ignoreCase = true) -> Icons.Rounded.Android
+                    item.name.endsWith(".zip", ignoreCase = true) || item.name.endsWith(".rar", ignoreCase = true) -> Icons.Rounded.FolderZip
+                    item.name.endsWith(".jpg", ignoreCase = true) || item.name.endsWith(".png", ignoreCase = true) -> Icons.Rounded.Image
+                    item.name.endsWith(".mp4", ignoreCase = true) || item.name.endsWith(".mkv", ignoreCase = true) -> Icons.Rounded.Movie
+                    item.name.endsWith(".mp3", ignoreCase = true) || item.name.endsWith(".wav", ignoreCase = true) -> Icons.Rounded.AudioFile
+                    else -> Icons.Rounded.InsertDriveFile
+                }
+
+                val iconTint = when {
+                    item.isDirectory || item.isUpNavigation -> MaterialTheme.colorScheme.primary
+                    item.name.endsWith(".apk", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.secondary
+                }
+
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
             }
-
-            val iconTint = when {
-                item.isDirectory || item.isUpNavigation -> MaterialTheme.colorScheme.primary
-                item.name.endsWith(".apk", ignoreCase = true) -> MaterialTheme.colorScheme.tertiary
-                else -> MaterialTheme.colorScheme.secondary
-            }
-
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(32.dp)
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
 
             // Details
             Column(modifier = Modifier.weight(1f)) {
@@ -581,6 +902,36 @@ fun FileItemRow(
                 }
             }
         }
+    }
+}
+
+fun openFileWithIntent(context: Context, fileItem: FileItem) {
+    try {
+        val file = File(fileItem.path)
+        if (!file.exists()) return
+
+        val uri: Uri = FileProvider.getUriForFile(
+            context,
+            context.packageName + ".fileprovider",
+            file
+        )
+
+        val extension = MimeTypeMap.getFileExtensionFromUrl(fileItem.path)
+        val mimeType = if (!extension.isNullOrEmpty()) {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.lowercase(Locale.getDefault()))
+        } else {
+            context.contentResolver.getType(uri)
+        } ?: "*/*"
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.open_with)))
+    } catch (e: Exception) {
+        Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 

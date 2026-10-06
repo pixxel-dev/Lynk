@@ -182,7 +182,9 @@ fun DashboardMainScreen(
                 bottomBar = {
                     // Bottom Navigation Bar for Mobile Portrait Screen
                     if (!useSideNav) {
-                        NavigationBar {
+                        NavigationBar(
+                            windowInsets = WindowInsets(0, 0, 0, 0)
+                        ) {
                             NavigationBarItem(
                                 selected = state.selectedTab == 0,
                                 onClick = { viewModel.setSelectedTab(0) },
@@ -229,6 +231,7 @@ fun DashboardMainScreen(
                             usedPercentage = if (state.fileManagerState.totalSpaceBytes > 0) {
                                 1f - (state.fileManagerState.freeSpaceBytes.toFloat() / state.fileManagerState.totalSpaceBytes.toFloat())
                             } else 0f,
+                            inlineInstallState = state.fileManagerState.inlineInstallState,
                             onPathClick = { path -> viewModel.loadDirectory(path) },
                             onNavigateUp = { viewModel.navigateUp() },
                             onFileClick = { file ->
@@ -237,7 +240,7 @@ fun DashboardMainScreen(
                                 } else if (file.isDirectory) {
                                     viewModel.loadDirectory(file.path)
                                 } else if (file.name.endsWith(".apk", ignoreCase = true)) {
-                                    viewModel.selectApkForInstallation(file.path)
+                                    viewModel.startInlineWaterfallInstall(file)
                                 } else {
                                     filePropertiesToShow = file
                                 }
@@ -255,8 +258,11 @@ fun DashboardMainScreen(
                             onPaste = { viewModel.pasteFiles() },
                             onDeleteFiles = { paths -> viewModel.deleteFiles(paths) },
                             onClearSelection = { viewModel.clearSelection() },
-                            onInstallApk = { file -> viewModel.selectApkForInstallation(file.path) },
-                            onShowProperties = { file -> filePropertiesToShow = file }
+                            onInstallApk = { file -> viewModel.startInlineWaterfallInstall(file) },
+                            onShowProperties = { file -> filePropertiesToShow = file },
+                            onRenameFile = { oldPath, newName -> viewModel.renameFile(oldPath, newName) },
+                            onStartInlineWaterfallInstall = { file -> viewModel.startInlineWaterfallInstall(file) },
+                            onDismissInlineInstall = { viewModel.dismissInlineInstall() }
                         )
 
                         1 -> ApkInstallerScreen(
