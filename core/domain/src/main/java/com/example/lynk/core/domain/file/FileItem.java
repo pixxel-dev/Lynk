@@ -7,6 +7,7 @@ public class FileItem {
     private final long lastModified;
     private final boolean isDirectory;
     private boolean isSelected;
+    private boolean isCloud;
 
     public FileItem(String name, String path, long size, long lastModified, boolean isDirectory) {
         this.name = name;
@@ -15,6 +16,17 @@ public class FileItem {
         this.lastModified = lastModified;
         this.isDirectory = isDirectory;
         this.isSelected = false;
+        this.isCloud = false;
+    }
+
+    public FileItem(String name, String path, long size, long lastModified, boolean isDirectory, boolean isCloud) {
+        this.name = name;
+        this.path = path;
+        this.size = size;
+        this.lastModified = lastModified;
+        this.isDirectory = isDirectory;
+        this.isSelected = false;
+        this.isCloud = isCloud;
     }
 
     public String getName() {
@@ -47,5 +59,9 @@ public class FileItem {
 
     public boolean isUpNavigation() {
         return "..".equals(name);
+    }
+    
+    public boolean isCloud() {
+        return isCloud;
     }
 }

@@ -109,6 +109,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
 
+    private var activeCloudConnection: com.example.lynk.core.domain.cloud.CloudConnection? = null
+    private val savedCloudConnections = mutableListOf<com.example.lynk.core.domain.cloud.CloudConnection>()
+
     private var logcatProcess: Process? = null
     private var logReaderThread: Thread? = null
     private val recordedLogsBuilder = StringBuilder()
@@ -126,6 +129,46 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         loadInstalledApps()
         loadFloatingConfig()
         checkForUpdates()
+        loadCloudConnections()
+    }
+    
+    private fun loadCloudConnections() {
+        val prefs = getApplication<Application>().getSharedPreferences("lynk_prefs", Context.MODE_PRIVATE)
+        val count = prefs.getInt("cloud_connections_count", 0)
+        savedCloudConnections.clear()
+        for (i in 0 until count) {
+            val id = prefs.getString("cloud_id_$i", "") ?: ""
+            val name = prefs.getString("cloud_name_$i", "") ?: ""
+            val url = prefs.getString("cloud_url_$i", "") ?: ""
+            val username = prefs.getString("cloud_username_$i", "") ?: ""
+            val token = prefs.getString("cloud_token_$i", "") ?: ""
+            
+            if (id.isNotEmpty()) {
+                val conn = com.example.lynk.core.domain.cloud.CloudConnection(id, name, url, username, token)
+                savedCloudConnections.add(conn)
+            }
+        }
+        
+        // MVP: if we have any, just set the first one as active for testing
+        if (savedCloudConnections.isNotEmpty()) {
+            activeCloudConnection = savedCloudConnections.first()
+        }
+    }
+    
+    fun saveCloudConnection(connection: com.example.lynk.core.domain.cloud.CloudConnection) {
+        savedCloudConnections.add(connection)
+        val prefs = getApplication<Application>().getSharedPreferences("lynk_prefs", Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            putInt("cloud_connections_count", savedCloudConnections.size)
+            for ((index, conn) in savedCloudConnections.withIndex()) {
+                putString("cloud_id_$index", conn.id)
+                putString("cloud_name_$index", conn.name)
+                putString("cloud_url_$index", conn.webDavUrl)
+                putString("cloud_username_$index", conn.username)
+                putString("cloud_token_$index", conn.passwordToken)
+            }
+        }.apply()
+        activeCloudConnection = connection
     }
 
     fun setSelectedTab(tabIndex: Int) {
@@ -245,39 +288,49 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     // --- File Explorer ---
     fun loadDirectory(path: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val dir = File(path)
-            if (!dir.exists() || !dir.isDirectory) return@launch
-
             val filesList = mutableListOf<FileItem>()
-
-            // Parent folder navigation ".." removed because TopAppBar handles it
-
-            val childFiles = dir.listFiles() ?: emptyArray()
-            for (file in childFiles) {
-                filesList.add(
-                    FileItem(
-                        file.name,
-                        file.absolutePath,
-                        file.length(),
-                        file.lastModified(),
-                        file.isDirectory
-                    )
-                )
-            }
-
             var freeBytes = 0L
             var totalBytes = 0L
-            try {
-                val stat = StatFs(dir.absolutePath)
-                freeBytes = stat.availableBytes
-                totalBytes = stat.totalBytes
-            } catch (ignored: Exception) { }
+            val currentPath: String
+            
+            if (path.startsWith("webdav://") && activeCloudConnection != null) {
+                currentPath = path
+                try {
+                    val client = com.example.lynk.core.domain.cloud.WebDavClient(activeCloudConnection)
+                    filesList.addAll(client.listFiles(path))
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                val dir = File(path)
+                if (!dir.exists() || !dir.isDirectory) return@launch
+
+                val childFiles = dir.listFiles() ?: emptyArray()
+                for (file in childFiles) {
+                    filesList.add(
+                        FileItem(
+                            file.name,
+                            file.absolutePath,
+                            file.length(),
+                            file.lastModified(),
+                            file.isDirectory
+                        )
+                    )
+                }
+
+                try {
+                    val stat = StatFs(dir.absolutePath)
+                    freeBytes = stat.availableBytes
+                    totalBytes = stat.totalBytes
+                } catch (ignored: Exception) { }
+                currentPath = dir.absolutePath
+            }
 
             withContext(Dispatchers.Main) {
                 _state.update {
                     val currentFm = it.fileManagerState
                     val newFm = currentFm.copy(
-                        currentPath = dir.absolutePath,
+                        currentPath = currentPath,
                         rawFiles = filesList,
                         freeSpaceBytes = freeBytes,
                         totalSpaceBytes = totalBytes,
@@ -294,6 +347,21 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val rootPath = Environment.getExternalStorageDirectory().absolutePath
         if (currentPath == rootPath) return
         
+        if (currentPath.startsWith("webdav://")) {
+            val withoutPrefix = currentPath.substring(9)
+            val withoutTrailing = if (withoutPrefix.endsWith("/")) withoutPrefix.substring(0, withoutPrefix.length - 1) else withoutPrefix
+            val lastSlash = withoutTrailing.lastIndexOf('/')
+            
+            if (lastSlash > 0) {
+                val parentPath = "webdav://" + withoutTrailing.substring(0, lastSlash)
+                loadDirectory(parentPath)
+            } else if (lastSlash == 0) {
+                val parentPath = "webdav://" + withoutTrailing.substring(0, 1) // just "/"
+                loadDirectory(parentPath)
+            }
+            return
+        }
+
         val parent = File(currentPath).parentFile
         if (parent?.exists() == true) {
             loadDirectory(parent.absolutePath)
