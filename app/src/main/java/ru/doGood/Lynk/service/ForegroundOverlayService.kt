@@ -1686,16 +1686,22 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         onClick: Runnable?,
         prefPrefix: String
     ) {
-        val longPressHandler = Handler(Looper.getMainLooper())
-        var longPressRunnable: Runnable? = null
+        touchView.isClickable = true
+        if (onClick != null) {
+            touchView.setOnClickListener { onClick.run() }
+        }
+        touchView.setOnLongClickListener {
+            touchView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            showQuickSettingsDialog(prefPrefix)
+            true
+        }
 
         touchView.setOnTouchListener(object : View.OnTouchListener {
             private var initialX = 0
             private var initialY = 0
             private var initialTouchX = 0f
             private var initialTouchY = 0f
-            private var isClick = false
-            private var isLongPress = false
+            private var isDragging = false
 
             override fun onTouch(v: View, event: MotionEvent): Boolean {
                 when (event.action) {
@@ -1704,33 +1710,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         initialY = params.y
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
-                        isClick = true
-                        isLongPress = false
-
-                        val runnable = Runnable {
-                            if (isClick && !isLongPress) {
-                                isLongPress = true
-                                isClick = false
-                                v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                                showQuickSettingsDialog(prefPrefix)
-                            }
-                        }
-                        longPressRunnable = runnable
-                        longPressHandler.postDelayed(
-                            runnable,
-                            ViewConfiguration.getLongPressTimeout().toLong()
-                        )
-                        return true
+                        isDragging = false
+                        return false // LET VIEW HANDLE CLICKS
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val deltaX = (event.rawX - initialTouchX).toInt()
                         val deltaY = (event.rawY - initialTouchY).toInt()
                         val touchSlop = ViewConfiguration.get(this@ForegroundOverlayService).scaledTouchSlop
-                        if (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop) {
-                            isClick = false
-                            longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
+
+                        if (!isDragging && (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop)) {
+                            isDragging = true
+                            // Send cancel to view so it doesn't trigger click/long-click
+                            val cancelEvent = MotionEvent.obtain(event)
+                            cancelEvent.action = MotionEvent.ACTION_CANCEL
+                            v.onTouchEvent(cancelEvent)
+                            cancelEvent.recycle()
                         }
-                        if (!isClick && !isLongPress) {
+
+                        if (isDragging) {
                             params.x = initialX + deltaX
                             params.y = initialY + deltaY
                             defaultWindowManager.updateViewLayout(dragView, params)
@@ -1742,16 +1739,12 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                                 paramsSecondary.y = screenHeight - params.y - dragView.height
                                 secondaryWindowManager?.updateViewLayout(dragViewSecondary, paramsSecondary)
                             }
+                            return true // Intercept!
                         }
-                        return true
+                        return false
                     }
                     MotionEvent.ACTION_UP -> {
-                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-                        if (isLongPress) {
-                            // Long press handled by quick settings dialog
-                        } else if (isClick) {
-                            onClick?.run()
-                        } else {
+                        if (isDragging) {
                             val screenWidth = resources.displayMetrics.widthPixels
                             val screenHeight = resources.displayMetrics.heightPixels
 
@@ -1795,12 +1788,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                                 .putInt("${prefPrefix}_pos_x", params.x)
                                 .putInt("${prefPrefix}_pos_y", params.y)
                                 .apply()
+                            
+                            isDragging = false
+                            return true // Drag ended, do not fire click
                         }
-                        return true
+                        return false // Was not dragging, let click happen
                     }
                     MotionEvent.ACTION_CANCEL -> {
-                        longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-                        return true
+                        isDragging = false
+                        return false
                     }
                 }
                 return false
