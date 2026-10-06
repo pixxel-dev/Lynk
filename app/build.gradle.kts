@@ -26,9 +26,12 @@ android {
             val releaseKeystore = file("lynk_release.keystore")
             if (releaseKeystore.exists()) {
                 storeFile = releaseKeystore
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "lynk123pass"
-                keyAlias = System.getenv("KEY_ALIAS") ?: "my_key_alias"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "lynk123pass"
+                val storePass = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() } ?: "lynk123pass"
+                val alias = System.getenv("KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "lynk"
+                val keyPass = System.getenv("KEY_PASSWORD")?.takeIf { it.isNotBlank() } ?: "lynk123pass"
+                storePassword = storePass
+                keyAlias = alias
+                keyPassword = keyPass
             } else {
                 // Идиоматичный фолбэк Gradle для релизного конфига на дебаг-подпись
                 initWith(getByName("debug"))

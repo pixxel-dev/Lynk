@@ -25,12 +25,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Decode Keystore from Secret
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      - name: Setup Keystore for CI Build
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > app/lynk_release.keystore
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/lynk_release.keystore
+          else
+            keytool -genkeypair -v -keystore app/lynk_release.keystore -alias lynk -keyalg RSA -keysize 2048 -validity 10000 -storepass lynk123pass -keypass lynk123pass -dname "CN=Lynk, OU=Lynk, O=Lynk, L=City, S=State, C=US"
+          fi
 
       - name: Build Release APK
         env:
@@ -50,7 +51,9 @@ jobs:
         with:
           tag_name: v${{ env.VERSION_NAME }}
           name: Release v${{ env.VERSION_NAME }}
-          files: app/build/outputs/apk/release/app-release.apk
+          allowUpdates: true
+          overwrite: true
+          files: app/build/outputs/apk/release/*.apk
           fail_on_unmatched_files: true
           generate_release_notes: true
         env:
