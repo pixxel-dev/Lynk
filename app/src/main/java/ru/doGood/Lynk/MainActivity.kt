@@ -8,8 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
-import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,7 +20,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.*
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.serialization.Serializable
-import ru.doGood.Lynk.feature.dashboard.DashboardDetailScreen
 import ru.doGood.Lynk.feature.dashboard.DashboardViewModel
 import ru.doGood.Lynk.feature.dashboard.ui.DashboardMainScreen
 import ru.doGood.Lynk.feature.dashboard.util.LocaleHelper
@@ -30,9 +27,6 @@ import ru.doGood.Lynk.ui.theme.LynkTheme
 
 @Serializable
 object MainDashboardRoute
-
-@Serializable
-data class ApprovalDetailRoute(val id: String)
 
 @OptIn(androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi::class)
 class MainActivity : ComponentActivity() {
@@ -57,10 +51,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 LynkTheme(themeMode = state.themeMode) {
                     val backStack = remember { mutableStateListOf<Any>(MainDashboardRoute) }
-                    val listDetailStrategy = rememberListDetailSceneStrategy<Any>()
-                    val sceneStrategies = remember(backStack.size) {
-                        if (backStack.size > 1) listOf(listDetailStrategy) else emptyList()
-                    }
 
                     BackHandler(enabled = backStack.size > 1) {
                         if (backStack.size > 1) {
@@ -74,29 +64,10 @@ class MainActivity : ComponentActivity() {
                     ) {
                         NavDisplay(
                             backStack = backStack,
-                            sceneStrategies = sceneStrategies,
                             entryProvider = entryProvider {
-                                entry<MainDashboardRoute>(
-                                    metadata = ListDetailSceneStrategy.listPane()
-                                ) {
+                                entry<MainDashboardRoute> {
                                     DashboardMainScreen(
-                                        viewModel = mainViewModel,
-                                        onNavigateToDetail = { id ->
-                                            backStack.add(ApprovalDetailRoute(id))
-                                        }
-                                    )
-                                }
-                                entry<ApprovalDetailRoute>(
-                                    metadata = ListDetailSceneStrategy.detailPane()
-                                ) { route ->
-                                    DashboardDetailScreen(
-                                        id = route.id,
-                                        viewModel = mainViewModel,
-                                        onBack = {
-                                            if (backStack.size > 1) {
-                                                backStack.removeAt(backStack.lastIndex)
-                                            }
-                                        }
+                                        viewModel = mainViewModel
                                     )
                                 }
                             }

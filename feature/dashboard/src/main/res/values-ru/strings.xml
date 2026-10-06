@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Lynk</string>
     <string name="github_repo_path">pixxel-dev/Lynk</string>
-    <string name="tab_backlog">Бэклог</string>
+
     <string name="tab_files">Файлы</string>
     <string name="tab_installer">Установщик</string>
     <string name="tab_system">Система</string>
@@ -12,7 +12,7 @@
     <string name="subtab_logs">Логи системы</string>
     <string name="subtab_rights">Права доступа</string>
 
-    <string name="title_backlog">• Бэклог и аудит</string>
+
     <string name="title_files">• Файловый менеджер</string>
     <string name="title_installer">• Установка APK</string>
     <string name="title_system">• Диагностика системы</string>
@@ -97,12 +97,12 @@
     <string name="quick_launch_btn_subtitle">Быстрое меню со списком избранных приложений</string>
     <string name="quick_launch_apps_label">Приложения меню (%1$d):</string>
     <string name="add_application">Добавить приложение</string>
-    <string name="no_apps_added">Приложения не добавлены. Нажмите &apos;+&apos;, чтобы добавить.</string>
+    <string name="no_apps_added">Приложения не добавлены. Нажмите \'+\', чтобы добавить.</string>
     <string name="btn_remove">Удалить</string>
     <string name="fullscreen_overlay_title">Авто-оверлей (На весь экран)</string>
     <string name="fullscreen_overlay_subtitle">Кнопка разворота на экран поверх выбранных ПО</string>
     <string name="target_apps_label">Целевые приложения (%1$d):</string>
-    <string name="no_target_apps">Приложения не добавлены. Нажмите &apos;+&apos;, чтобы выбрать.</string>
+    <string name="no_target_apps">Приложения не добавлены. Нажмите \'+\', чтобы выбрать.</string>
     <string name="home_navigator_title">Навигатор "Домой"</string>
     <string name="home_navigator_subtitle">Плавающая кнопка быстрого возврата на рабочий стол</string>
     <string name="back_navigator_title">Навигатор "Назад"</string>
@@ -157,7 +157,7 @@
     <string name="btn_download_install">Скачать и установить</string>
     <string name="download_progress_format">Прогресс: %1$d%%</string>
     <string name="changelog_title">Журнал изменений (Changelog)</string>
-    <string name="changelog_placeholder">• Нажмите &apos;Проверить&apos;, чтобы загрузить актуальный список изменений.</string>
+    <string name="changelog_placeholder">• Нажмите \'Проверить\', чтобы загрузить актуальный список изменений.</string>
 
     <!-- DashboardMainScreen / File Properties Dialog -->
     <string name="file_properties_title">Свойства файла</string>
@@ -169,12 +169,4 @@
     <string name="file_type_file">Файл</string>
     <string name="btn_close">Закрыть</string>
 
-    <!-- BacklogScreen -->
-    <string name="run_architectural_audit">Запустить правила архитектурного аудита</string>
-    <string name="audit_results_title">Результаты аудита</string>
-    <string name="audit_rule_format">Правило: %1$s</string>
-    <string name="audit_passed_format">Пройдено: %1$s</string>
-    <string name="audit_message_format">Сообщение: %1$s</string>
-    <string name="priority_format">Приоритет: %1$s</string>
-    <string name="btn_ok">OK</string>
 </resources>

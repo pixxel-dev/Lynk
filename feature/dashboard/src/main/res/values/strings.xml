@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Lynk</string>
     <string name="github_repo_path">pixxel-dev/Lynk</string>
-    <string name="tab_backlog">Backlog</string>
+
     <string name="tab_files">Files</string>
     <string name="tab_installer">Installer</string>
     <string name="tab_system">System</string>
@@ -12,7 +12,7 @@
     <string name="subtab_logs">System Logs</string>
     <string name="subtab_rights">Rights</string>
 
-    <string name="title_backlog">• Backlog &amp; Audit</string>
+
     <string name="title_files">• File Explorer</string>
     <string name="title_installer">• APK Installer</string>
     <string name="title_system">• System Diagnostics</string>
@@ -169,12 +169,4 @@
     <string name="file_type_file">File</string>
     <string name="btn_close">Close</string>
 
-    <!-- BacklogScreen -->
-    <string name="run_architectural_audit">Run Architectural Audit Rules</string>
-    <string name="audit_results_title">Audit Results</string>
-    <string name="audit_rule_format">Rule: %1$s</string>
-    <string name="audit_passed_format">Passed: %1$s</string>
-    <string name="audit_message_format">Message: %1$s</string>
-    <string name="priority_format">Priority: %1$s</string>
-    <string name="btn_ok">OK</string>
 </resources>

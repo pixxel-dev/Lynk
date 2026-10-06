@@ -477,7 +477,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     fun selectApkForInstallation(path: String) {
         _state.update {
             it.copy(
-                selectedTab = 2, // Switch to APK tab
+                selectedTab = 1, // Switch to APK tab
                 installerState = it.installerState.copy(selectedApkPath = path)
             )
         }

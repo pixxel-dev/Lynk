@@ -31,8 +31,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardMainScreen(
-    viewModel: DashboardViewModel,
-    onNavigateToDetail: (String) -> Unit
+    viewModel: DashboardViewModel
 ) {
     val state by viewModel.state.collectAsState()
     val windowAdaptiveInfo = currentWindowAdaptiveInfo()
@@ -78,12 +77,11 @@ fun DashboardMainScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = when (state.selectedTab) {
-                                0 -> stringResource(R.string.title_backlog)
-                                1 -> stringResource(R.string.title_files)
-                                2 -> stringResource(R.string.title_installer)
-                                3 -> stringResource(R.string.title_system)
-                                4 -> stringResource(R.string.title_buttons)
-                                5 -> stringResource(R.string.title_update)
+                                0 -> stringResource(R.string.title_files)
+                                1 -> stringResource(R.string.title_installer)
+                                2 -> stringResource(R.string.title_system)
+                                3 -> stringResource(R.string.title_buttons)
+                                4 -> stringResource(R.string.title_update)
                                 else -> ""
                             },
                             style = MaterialTheme.typography.bodyMedium,
@@ -93,7 +91,7 @@ fun DashboardMainScreen(
                 },
                 actions = {
                     // Quick App Update Shortcut
-                    IconButton(onClick = { viewModel.setSelectedTab(5) }) {
+                    IconButton(onClick = { viewModel.setSelectedTab(4) }) {
                         if (state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                             Badge(containerColor = MaterialTheme.colorScheme.error) {
                                 Text("!")
@@ -135,12 +133,11 @@ fun DashboardMainScreen(
                         verticalArrangement = Arrangement.spacedBy(0.dp, androidx.compose.ui.Alignment.CenterVertically)
                     ) {
                         val railItems = listOf(
-                            Triple(0, R.string.tab_backlog, Icons.Rounded.Task),
-                            Triple(1, R.string.tab_files, Icons.Rounded.Folder),
-                            Triple(2, R.string.tab_installer, Icons.Rounded.Android),
-                            Triple(3, R.string.tab_system, Icons.Rounded.Info),
-                            Triple(4, R.string.tab_buttons, Icons.Rounded.Widgets),
-                            Triple(5, R.string.tab_update, Icons.Rounded.SystemUpdate)
+                            Triple(0, R.string.tab_files, Icons.Rounded.Folder),
+                            Triple(1, R.string.tab_installer, Icons.Rounded.Android),
+                            Triple(2, R.string.tab_system, Icons.Rounded.Info),
+                            Triple(3, R.string.tab_buttons, Icons.Rounded.Widgets),
+                            Triple(4, R.string.tab_update, Icons.Rounded.SystemUpdate)
                         )
 
                         railItems.forEach { (tabIndex, stringResId, iconVector) ->
@@ -149,7 +146,7 @@ fun DashboardMainScreen(
                                 selected = state.selectedTab == tabIndex,
                                 onClick = { viewModel.setSelectedTab(tabIndex) },
                                 icon = {
-                                    if (tabIndex == 5 && state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
+                                    if (tabIndex == 4 && state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                                         BadgedBox(
                                             badge = { Badge { Text("!") } }
                                         ) {
@@ -191,36 +188,30 @@ fun DashboardMainScreen(
                             NavigationBarItem(
                                 selected = state.selectedTab == 0,
                                 onClick = { viewModel.setSelectedTab(0) },
-                                icon = { Icon(Icons.Rounded.Task, contentDescription = stringResource(R.string.tab_backlog)) },
-                                label = { Text(stringResource(R.string.tab_backlog)) }
-                            )
-                            NavigationBarItem(
-                                selected = state.selectedTab == 1,
-                                onClick = { viewModel.setSelectedTab(1) },
                                 icon = { Icon(Icons.Rounded.Folder, contentDescription = stringResource(R.string.tab_files)) },
                                 label = { Text(stringResource(R.string.tab_files)) }
                             )
                             NavigationBarItem(
-                                selected = state.selectedTab == 2,
-                                onClick = { viewModel.setSelectedTab(2) },
+                                selected = state.selectedTab == 1,
+                                onClick = { viewModel.setSelectedTab(1) },
                                 icon = { Icon(Icons.Rounded.Android, contentDescription = stringResource(R.string.tab_installer)) },
                                 label = { Text(stringResource(R.string.tab_installer)) }
                             )
                             NavigationBarItem(
-                                selected = state.selectedTab == 3,
-                                onClick = { viewModel.setSelectedTab(3) },
+                                selected = state.selectedTab == 2,
+                                onClick = { viewModel.setSelectedTab(2) },
                                 icon = { Icon(Icons.Rounded.Info, contentDescription = stringResource(R.string.tab_system)) },
                                 label = { Text(stringResource(R.string.tab_system)) }
                             )
                             NavigationBarItem(
-                                selected = state.selectedTab == 4,
-                                onClick = { viewModel.setSelectedTab(4) },
+                                selected = state.selectedTab == 3,
+                                onClick = { viewModel.setSelectedTab(3) },
                                 icon = { Icon(Icons.Rounded.Widgets, contentDescription = stringResource(R.string.tab_buttons)) },
                                 label = { Text(stringResource(R.string.tab_buttons)) }
                             )
                             NavigationBarItem(
-                                selected = state.selectedTab == 5,
-                                onClick = { viewModel.setSelectedTab(5) },
+                                selected = state.selectedTab == 4,
+                                onClick = { viewModel.setSelectedTab(4) },
                                 icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = stringResource(R.string.tab_update)) },
                                 label = { Text(stringResource(R.string.tab_update)) }
                             )
@@ -232,14 +223,7 @@ fun DashboardMainScreen(
             ) { innerPadding ->
                 Box(modifier = Modifier.padding(innerPadding)) {
                     when (state.selectedTab) {
-                        0 -> BacklogScreen(
-                            backlogItems = state.backlogItems,
-                            auditResults = state.auditResults,
-                            onItemClick = { item -> onNavigateToDetail(item.id) },
-                            onRunAuditClick = { viewModel.runAudit() }
-                        )
-
-                        1 -> FileManagerScreen(
+                        0 -> FileManagerScreen(
                             currentPath = state.fileManagerState.currentPath,
                             files = state.fileManagerState.filteredFiles,
                             searchQuery = state.fileManagerState.searchQuery,
@@ -283,20 +267,20 @@ fun DashboardMainScreen(
                             onShowProperties = { file -> filePropertiesToShow = file }
                         )
 
-                        2 -> ApkInstallerScreen(
+                        1 -> ApkInstallerScreen(
                             selectedApkPath = state.installerState.selectedApkPath,
                             isInstalling = state.installerState.isInstalling,
                             installResult = state.installerState.installResult,
                             activeStep = state.installerState.activeStep,
                             stepStatuses = state.installerState.stepStatuses,
                             installedApps = state.installerState.installedApps,
-                            onSelectApkClick = { viewModel.setSelectedTab(1) },
+                            onSelectApkClick = { viewModel.setSelectedTab(0) },
                             onStartWaterfallInstall = { viewModel.runWaterfallInstall() },
                             onInstallByStep = { step -> viewModel.runSingleInstallStep(step) },
                             onToggleAppChecked = { app, checked -> viewModel.toggleAppChecked(app, checked) }
                         )
 
-                        3 -> SystemInfoScreen(
+                        2 -> SystemInfoScreen(
                             deviceInfo = state.systemInfoState.deviceInfo,
                             isRecordingLogs = state.systemInfoState.isRecordingLogs,
                             logsText = state.systemInfoState.logsText,
@@ -307,7 +291,7 @@ fun DashboardMainScreen(
                             onRefreshPermissions = { viewModel.refreshPermissions() }
                         )
 
-                        4 -> FloatingButtonsScreen(
+                        3 -> FloatingButtonsScreen(
                             state = state.floatingButtonsState,
                             onToggleQuickLaunch = { viewModel.toggleQuickLaunchEnabled(it) },
                             onSetQuickLaunchSize = { viewModel.setQuickLaunchSize(it) },
@@ -336,7 +320,7 @@ fun DashboardMainScreen(
                             onToggleOverlayService = { context -> viewModel.toggleOverlayService(context) }
                         )
 
-                        5 -> AppUpdateScreen(
+                        4 -> AppUpdateScreen(
                             currentVersion = "1.0.0",
                             updateInfo = state.updateState.updateInfo,
                             isChecking = state.updateState.isChecking,
