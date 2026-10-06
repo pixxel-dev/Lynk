@@ -9,6 +9,8 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Setup dependency injection framework (e.g. Dagger/Hilt or Koin) across modules.
 - [ ] Implement end-to-end instrumented tests & UI automated verification.
 - [ ] Integrate Cloud Storage connections in FileManager (Yandex Disk, Mail.ru, Google Drive, WebDAV support).
+- [ ] Built-in File Viewer and Archiver in File Manager: Support for viewing text files, extracting/compressing ZIP/RAR archives, and built-in media viewer.
+- [ ] Boot Autostart Manager: Automatic launch of user-selected applications upon device/head unit boot (`BOOT_COMPLETED`).
 
 ### In Progress
 
@@ -56,6 +58,8 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Настроить фреймворк внедрения зависимостей (например, Dagger/Hilt или Koin) во всех модулях.
 - [ ] Реализовать сквозные (E2E) инструментальные тесты и автоматизированное тестирование UI.
 - [ ] Внедрить подключение к облачным дискам в файловый менеджер (Яндекс Диск, Облако Mail.ru, Google Drive, поддержка WebDAV).
+- [ ] Встроенный просмотрщик файлов и архиватор в ФМ: Поддержка просмотра текстовых файлов, распаковки/упаковки ZIP/RAR архивов и встроенного просмотрщика медиа.
+- [ ] Менеджер автозапуска при загрузке устройства: Автоматический запуск выбранных пользователем приложений при включении магнитолы/телефона (`BOOT_COMPLETED`).
 
 ### В работе (In Progress)
 
