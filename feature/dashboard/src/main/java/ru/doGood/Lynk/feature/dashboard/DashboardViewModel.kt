@@ -509,7 +509,23 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         val packageInstaller = ApkInstaller { file, callback ->
             updateStepStatus(InstallStep.PACKAGE_INSTALLER, "Launching Package Installer...")
-            callback.onResult(InstallResult(true, "Sent to Android Package Installer", InstallStep.PACKAGE_INSTALLER))
+            try {
+                val application = getApplication<Application>()
+                val apkUri = androidx.core.content.FileProvider.getUriForFile(
+                    application,
+                    application.packageName + ".fileprovider",
+                    file
+                )
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                application.startActivity(intent)
+                callback.onResult(InstallResult(true, "Sent to Android Package Installer via FileProvider", InstallStep.PACKAGE_INSTALLER))
+            } catch (e: Exception) {
+                callback.onResult(InstallResult(false, "FileProvider error: ${e.message}", InstallStep.PACKAGE_INSTALLER))
+            }
         }
 
         val strategy = WaterfallInstallStrategy(pine, shizuku, nativeAdb, localAdb, packageInstaller)

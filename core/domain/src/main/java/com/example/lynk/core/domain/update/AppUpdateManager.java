@@ -40,10 +40,14 @@ public class AppUpdateManager {
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            connection.setRequestProperty("User-Agent", "Lynk-Android-App");
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
 
-            if (connection.getResponseCode() == 200) {
+            int responseCode = connection.getResponseCode();
+            System.out.println("AppUpdateManager: Response code: " + responseCode + " for repo: " + repoPath);
+
+            if (responseCode == 200) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
                 String inputLine;
                 StringBuilder content = new StringBuilder();
@@ -69,11 +73,15 @@ public class AppUpdateManager {
                     return new UpdateInfo(currentVersion, "No changes", null, UpdateInfo.UpdateState.UP_TO_DATE);
                 }
             } else {
-                return new UpdateInfo(currentVersion, "Error checking updates", null, UpdateInfo.UpdateState.ERROR);
+                String errorMsg = "Error checking updates: HTTP " + responseCode;
+                System.err.println("AppUpdateManager: " + errorMsg);
+                return new UpdateInfo(currentVersion, errorMsg, null, UpdateInfo.UpdateState.ERROR);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return new UpdateInfo(currentVersion, "Exception checking updates: " + e.getMessage(), null, UpdateInfo.UpdateState.ERROR);
+            String errorMsg = "Exception checking updates: " + e.getMessage();
+            System.err.println("AppUpdateManager: " + errorMsg);
+            return new UpdateInfo(currentVersion, errorMsg, null, UpdateInfo.UpdateState.ERROR);
         }
     }
 
@@ -88,30 +96,43 @@ public class AppUpdateManager {
     }
 
     private String extractBrowserDownloadUrl(String json) {
-        String pattern = "\"browser_download_url\":\"";
-        int start = json.indexOf(pattern);
-        if (start == -1) return null;
-        start += pattern.length();
-        int end = json.indexOf("\"", start);
-        if (end == -1) return null;
-        String url = json.substring(start, end);
-        if (url.endsWith(".apk")) {
-            return url;
-        }
-        
-        // Find next if not apk
-        int nextStart = json.indexOf(pattern, end);
-        while (nextStart != -1) {
-            nextStart += pattern.length();
-            int nextEnd = json.indexOf("\"", nextStart);
-            if (nextEnd == -1) return null;
-            String nextUrl = json.substring(nextStart, nextEnd);
-            if (nextUrl.endsWith(".apk")) {
-                return nextUrl;
+        // 1. Search in assets array specifically
+        int assetsIndex = json.indexOf("\"assets\"");
+        if (assetsIndex != -1) {
+            int arrayStart = json.indexOf("[", assetsIndex);
+            int arrayEnd = json.indexOf("]", assetsIndex);
+            if (arrayStart != -1 && arrayEnd != -1 && arrayEnd > arrayStart) {
+                String assetsContent = json.substring(arrayStart, arrayEnd + 1);
+                String[] objects = assetsContent.split("\\},\\s*\\{");
+                for (String obj : objects) {
+                    String name = extractJsonField(obj, "name");
+                    String downloadUrl = extractJsonField(obj, "browser_download_url");
+                    if (downloadUrl != null && (downloadUrl.toLowerCase().endsWith(".apk") || (name != null && name.toLowerCase().endsWith(".apk")))) {
+                        System.out.println("AppUpdateManager: Found APK asset: name=" + name + ", url=" + downloadUrl);
+                        return downloadUrl;
+                    }
+                }
             }
-            nextStart = json.indexOf(pattern, nextEnd);
         }
-        
+
+        // 2. Fallback: Search all browser_download_url entries in JSON
+        String pattern = "\"browser_download_url\":\"";
+        int start = 0;
+        while (true) {
+            start = json.indexOf(pattern, start);
+            if (start == -1) break;
+            start += pattern.length();
+            int end = json.indexOf("\"", start);
+            if (end == -1) break;
+            String url = json.substring(start, end);
+            if (url.toLowerCase().endsWith(".apk")) {
+                System.out.println("AppUpdateManager: Found APK URL via fallback: " + url);
+                return url;
+            }
+            start = end;
+        }
+
+        System.err.println("AppUpdateManager: No valid .apk asset found in release JSON.");
         return null;
     }
 
