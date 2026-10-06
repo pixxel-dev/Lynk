@@ -776,6 +776,29 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun saveLogsToFile(context: Context) {
+        val currentLogs = _state.value.systemInfoState.logsText
+        if (currentLogs.isEmpty()) {
+            android.widget.Toast.makeText(context, "No logs to save", android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        try {
+            val fileName = "logcat_${System.currentTimeMillis()}.txt"
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val appDir = File(downloadsDir, "Lynk")
+            if (!appDir.exists()) {
+                appDir.mkdirs()
+            }
+            val file = File(appDir, fileName)
+            file.writeText(currentLogs)
+            android.widget.Toast.makeText(context, "Logs saved to Downloads/Lynk/$fileName", android.widget.Toast.LENGTH_LONG).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            android.widget.Toast.makeText(context, "Failed to save logs: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun getSystemProperty(key: String): String? {
         return try {
             val clazz = Class.forName("android.os.SystemProperties")

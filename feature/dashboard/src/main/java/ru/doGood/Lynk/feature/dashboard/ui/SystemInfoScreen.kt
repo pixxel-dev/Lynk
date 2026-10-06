@@ -89,14 +89,18 @@ fun SystemInfoScreen(
                 currentLanguage = currentLanguage,
                 onLanguageSelected = { lang -> viewModel?.setAppLanguage(lang) }
             )
-            1 -> SystemLogsTab(
-                isRecording = isRecordingLogs,
-                logsText = logsText,
-                onStartRecording = onStartRecording,
-                onStopRecording = onStopRecording,
-                onClearLogs = onClearLogs,
-                onCopyLogs = { clipboardManager.setText(AnnotatedString(logsText)) }
-            )
+            1 -> {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                SystemLogsTab(
+                    isRecording = isRecordingLogs,
+                    logsText = logsText,
+                    onStartRecording = onStartRecording,
+                    onStopRecording = onStopRecording,
+                    onClearLogs = onClearLogs,
+                    onCopyLogs = { clipboardManager.setText(AnnotatedString(logsText)) },
+                    onSaveLogs = { viewModel?.saveLogsToFile(context) }
+                )
+            }
             2 -> PermissionsInfoTab(
                 viewModel = viewModel,
                 onRefreshPermissions = onRefreshPermissions
@@ -332,7 +336,8 @@ fun SystemLogsTab(
     onStartRecording: () -> Unit,
     onStopRecording: () -> Unit,
     onClearLogs: () -> Unit,
-    onCopyLogs: () -> Unit
+    onCopyLogs: () -> Unit,
+    onSaveLogs: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -372,12 +377,6 @@ fun SystemLogsTab(
                             overflow = TextOverflow.Ellipsis
                         )
                     } else {
-                        Icon(
-                            Icons.Rounded.RadioButtonChecked,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.logcat_idle),
                             maxLines = 1,
@@ -427,6 +426,9 @@ fun SystemLogsTab(
                         }
                     }
 
+                    IconButton(onClick = onSaveLogs) {
+                        Icon(Icons.Rounded.Save, stringResource(R.string.btn_save))
+                    }
                     IconButton(onClick = onCopyLogs) {
                         Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy_logs))
                     }
