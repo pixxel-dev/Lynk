@@ -97,12 +97,12 @@
     <string name="quick_launch_btn_subtitle">Quick menu with favorite apps list</string>
     <string name="quick_launch_apps_label">Menu apps (%1$d):</string>
     <string name="add_application">Add application</string>
-    <string name="no_apps_added">No apps added. Tap \'+\' to add.</string>
+    <string name="no_apps_added">No apps added. Tap "+" to add.</string>
     <string name="btn_remove">Remove</string>
     <string name="fullscreen_overlay_title">Auto-Fullscreen Overlay</string>
     <string name="fullscreen_overlay_subtitle">Fullscreen overlay button over selected apps</string>
     <string name="target_apps_label">Target apps (%1$d):</string>
-    <string name="no_target_apps">No apps added. Tap \'+\' to select.</string>
+    <string name="no_target_apps">No apps added. Tap "+" to select.</string>
     <string name="home_navigator_title">Home Navigator</string>
     <string name="home_navigator_subtitle">Floating button for quick return to home screen</string>
     <string name="back_navigator_title">Back Navigator</string>
@@ -157,7 +157,7 @@
     <string name="btn_download_install">Download &amp; Install</string>
     <string name="download_progress_format">Progress: %1$d%%</string>
     <string name="changelog_title">Changelog</string>
-    <string name="changelog_placeholder">• Tap \'Check\' to load the latest changelog.</string>
+    <string name="changelog_placeholder">• Tap "Check" to load the latest changelog.</string>
 
     <!-- DashboardMainScreen / File Properties Dialog -->
     <string name="file_properties_title">File Properties</string>

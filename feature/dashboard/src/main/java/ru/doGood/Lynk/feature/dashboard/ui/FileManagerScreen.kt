@@ -1,6 +1,7 @@
 package ru.doGood.Lynk.feature.dashboard.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import android.os.Environment
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -61,6 +62,7 @@ fun FileManagerScreen(
     var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val isAtRoot = currentPath == (Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -76,16 +78,20 @@ fun FileManagerScreen(
                     .padding(horizontal = 8.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onNavigateUp,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                        contentDescription = stringResource(R.string.file_up_dir)
-                    )
+                if (!isAtRoot) {
+                    IconButton(
+                        onClick = onNavigateUp,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = stringResource(R.string.file_up_dir)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                } else {
+                    Spacer(modifier = Modifier.width(12.dp))
                 }
-                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = currentPath,
                     style = MaterialTheme.typography.bodyMedium,

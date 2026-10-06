@@ -278,10 +278,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
             val filesList = mutableListOf<FileItem>()
 
-            // Parent folder navigation ".."
-            dir.parentFile?.let { parent ->
-                filesList.add(FileItem("..", parent.absolutePath, 0L, 0L, true))
-            }
+            // Parent folder navigation ".." removed because TopAppBar handles it
 
             val childFiles = dir.listFiles()
             if (childFiles != null) {
@@ -324,6 +321,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun navigateUp() {
         val currentPath = _state.value.fileManagerState.currentPath
+        val rootPath = Environment.getExternalStorageDirectory()?.absolutePath ?: "/"
+        if (currentPath == rootPath) return
+        
         val parent = File(currentPath).parentFile
         if (parent?.exists() == true) {
             loadDirectory(parent.absolutePath)
