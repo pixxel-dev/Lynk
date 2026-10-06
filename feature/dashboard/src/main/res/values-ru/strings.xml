@@ -217,4 +217,13 @@
     <string name="freeform_close_window">Закрыть окно</string>
     <string name="freeform_select_app">Выберите приложение</string>
 
+    <!-- ADB Cheat Sheet -->
+    <string name="adb_cheat_sheet_title">Справка по выдаче прав (ADB)</string>
+    <string name="adb_cheat_sheet_desc">Если права не получается выдать через системные настройки (особенно на Android 13/14 или ГУ авто), их можно выдать через компьютер с помощью ADB.</string>
+    <string name="adb_cmd_overlay_title">Отображение поверх других окон (SYSTEM_ALERT_WINDOW)</string>
+    <string name="adb_cmd_usage_stats_title">Статистика использования (PACKAGE_USAGE_STATS)</string>
+    <string name="adb_cmd_install_title">Установка приложений (REQUEST_INSTALL_PACKAGES)</string>
+    <string name="adb_copied_to_clipboard">Скопировано в буфер обмена</string>
+    <string name="adb_copy">Скопировать</string>
+
 </resources>

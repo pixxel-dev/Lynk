@@ -217,4 +217,13 @@
     <string name="freeform_close_window">Close window</string>
     <string name="freeform_select_app">Select Application</string>
 
+    <!-- ADB Cheat Sheet -->
+    <string name="adb_cheat_sheet_title">ADB Permissions Reference</string>
+    <string name="adb_cheat_sheet_desc">If you cannot grant permissions through system settings (especially on Android 13/14 or car head units), you can grant them via a computer using ADB.</string>
+    <string name="adb_cmd_overlay_title">Draw over other apps (SYSTEM_ALERT_WINDOW)</string>
+    <string name="adb_cmd_usage_stats_title">Usage Access (PACKAGE_USAGE_STATS)</string>
+    <string name="adb_cmd_install_title">Install Unknown Apps (REQUEST_INSTALL_PACKAGES)</string>
+    <string name="adb_copied_to_clipboard">Copied to clipboard</string>
+    <string name="adb_copy">Copy</string>
+
 </resources>

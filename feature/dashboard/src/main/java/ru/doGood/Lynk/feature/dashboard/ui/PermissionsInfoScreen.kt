@@ -30,6 +30,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import ru.doGood.Lynk.feature.dashboard.DashboardViewModel
 import ru.doGood.Lynk.feature.dashboard.R
 
@@ -208,6 +211,9 @@ fun PermissionsInfoTab(
                     }
                 )
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                AdbCheatSheetCard(packageName = context.packageName)
+            }
         }
     }
 }
@@ -335,6 +341,150 @@ fun PermissionCard(
                     },
                     style = MaterialTheme.typography.labelMedium
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun AdbCheatSheetCard(packageName: String) {
+    val clipboardManager = LocalClipboardManager.current
+    var copiedMessageVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(copiedMessageVisible) {
+        if (copiedMessageVisible) {
+            kotlinx.coroutines.delay(2000)
+            copiedMessageVisible = false
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.adb_cheat_sheet_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = stringResource(R.string.adb_cheat_sheet_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (copiedMessageVisible) {
+                Text(
+                    text = stringResource(R.string.adb_copied_to_clipboard),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            AdbCommandItem(
+                title = stringResource(R.string.adb_cmd_overlay_title),
+                command = "adb shell appops set $packageName SYSTEM_ALERT_WINDOW allow",
+                onCopy = { 
+                    clipboardManager.setText(AnnotatedString(it))
+                    copiedMessageVisible = true 
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            AdbCommandItem(
+                title = stringResource(R.string.adb_cmd_usage_stats_title),
+                command = "adb shell pm grant $packageName android.permission.PACKAGE_USAGE_STATS",
+                onCopy = { 
+                    clipboardManager.setText(AnnotatedString(it))
+                    copiedMessageVisible = true 
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            AdbCommandItem(
+                title = stringResource(R.string.adb_cmd_install_title),
+                command = "adb shell appops set $packageName REQUEST_INSTALL_PACKAGES allow",
+                onCopy = { 
+                    clipboardManager.setText(AnnotatedString(it))
+                    copiedMessageVisible = true 
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun AdbCommandItem(
+    title: String,
+    command: String,
+    onCopy: (String) -> Unit
+) {
+    Column {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Surface(
+            color = androidx.compose.ui.graphics.Color(0xFF2B2B2B),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = command,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    color = androidx.compose.ui.graphics.Color(0xFFA9B7C6),
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { onCopy(command) },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ContentCopy,
+                        contentDescription = stringResource(R.string.adb_copy),
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
         }
     }
