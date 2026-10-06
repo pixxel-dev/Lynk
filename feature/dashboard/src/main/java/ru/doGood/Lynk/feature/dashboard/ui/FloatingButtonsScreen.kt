@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.lynk.core.domain.agent.OverlayProfile
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.floating.FloatingButtonConfig
 import ru.doGood.Lynk.feature.dashboard.FloatingButtonsState
@@ -48,6 +49,8 @@ import ru.doGood.Lynk.feature.dashboard.R
 @Composable
 fun FloatingButtonsScreen(
     state: FloatingButtonsState,
+    onSelectProfile: (Int) -> Unit = {},
+    onToggleProfileEnabled: (Int, Boolean) -> Unit = { _, _ -> },
     onToggleQuickLaunch: (Boolean) -> Unit,
     onSetQuickLaunchSize: (Int) -> Unit,
     onSetQuickLaunchOpacity: (Int) -> Unit,
@@ -155,10 +158,51 @@ fun FloatingButtonsScreen(
             )
         }
 
-        // All floating button configuration cards wrapped in AnimatedVisibility
+        // Overlay Profiles TabRow (Spans full width)
+        item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
+            TabRow(
+                selectedTabIndex = (state.selectedProfileId - 1).coerceIn(0, 2),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                val profileTabs = listOf(
+                    1 to stringResource(R.string.overlay_profile_1),
+                    2 to stringResource(R.string.overlay_profile_2),
+                    3 to stringResource(R.string.overlay_profile_3)
+                )
+                profileTabs.forEach { (profileId, label) ->
+                    val isSelected = state.selectedProfileId == profileId
+                    Tab(
+                        selected = isSelected,
+                        onClick = { onSelectProfile(profileId) },
+                        text = {
+                            Text(
+                                text = label,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 14.sp
+                            )
+                        }
+                    )
+                }
+            }
+        }
+
+        // Active Profile Status Card & Button Configuration Cards
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
             AnimatedVisibility(visible = isServiceRunning && hasOverlayPermission) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProfileStatusCard(
+                        profile = state.activeProfile,
+                        onToggleProfileEnabled = { enabled ->
+                            onToggleProfileEnabled(state.selectedProfileId, enabled)
+                        }
+                    )
+
+                    AnimatedVisibility(visible = state.activeProfile.isEnabled) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (isLandscape) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -311,6 +355,8 @@ fun FloatingButtonsScreen(
             }
         }
     }
+}
+}
 
     // Add App to Quick Launch Dialog
     if (showAddQuickLaunchDialog) {
@@ -1277,4 +1323,47 @@ private fun SelectAppDialog(
             }
         }
     )
+}
+
+@Composable
+private fun ProfileStatusCard(
+    profile: OverlayProfile,
+    onToggleProfileEnabled: (Boolean) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (profile.isEnabled)
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            else
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "${profile.name}: ${stringResource(R.string.enable_overlay_profile)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = stringResource(R.string.overlay_profile_status_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(
+                checked = profile.isEnabled,
+                onCheckedChange = onToggleProfileEnabled
+            )
+        }
+    }
 }

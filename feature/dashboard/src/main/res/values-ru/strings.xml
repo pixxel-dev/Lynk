@@ -254,4 +254,11 @@
     <string name="cloud_download_success_install">Файл «%1$s» скачан. Запуск установки...</string>
     <string name="cloud_download_failed">Ошибка скачивания: %1$s</string>
 
+    <!-- Multi-Overlay Manager -->
+    <string name="overlay_profile_1">Оверлей 1</string>
+    <string name="overlay_profile_2">Оверлей 2</string>
+    <string name="overlay_profile_3">Оверлей 3</string>
+    <string name="enable_overlay_profile">Включить этот оверлей</string>
+    <string name="overlay_profile_status_desc">Управляет отображением плавающих кнопок этого профиля на экране</string>
+
 </resources>

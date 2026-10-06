@@ -1,41 +1,26 @@
 package ru.doGood.Lynk.service
 
-import android.app.ActivityOptions
-import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
-import android.content.pm.PackageManager
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.ColorFilter
-import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.PixelFormat
-import android.graphics.Rect
-import android.graphics.Typeface
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.text.TextUtils
 import android.util.TypedValue
 import android.view.Gravity
-import android.widget.HorizontalScrollView
 import android.view.HapticFeedbackConstants
-import android.view.KeyEvent
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -65,43 +50,47 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     private lateinit var prefs: SharedPreferences
 
-    private var quickLaunchView: View? = null
-    private var quickLaunchParams: WindowManager.LayoutParams? = null
-    private var quickLaunchViewSecondary: View? = null
-    private var quickLaunchParamsSecondary: WindowManager.LayoutParams? = null
+    private class ProfileOverlayViews(val profileId: Int) {
+        var quickLaunchView: View? = null
+        var quickLaunchParams: WindowManager.LayoutParams? = null
+        var quickLaunchViewSecondary: View? = null
+        var quickLaunchParamsSecondary: WindowManager.LayoutParams? = null
 
-    private var fullscreenToggleView: View? = null
-    private var fullscreenToggleParams: WindowManager.LayoutParams? = null
-    private var fullscreenToggleViewSecondary: View? = null
-    private var fullscreenToggleParamsSecondary: WindowManager.LayoutParams? = null
+        var fullscreenToggleView: View? = null
+        var fullscreenToggleParams: WindowManager.LayoutParams? = null
+        var fullscreenToggleViewSecondary: View? = null
+        var fullscreenToggleParamsSecondary: WindowManager.LayoutParams? = null
 
-    private var homeView: View? = null
-    private var homeParams: WindowManager.LayoutParams? = null
-    private var homeViewSecondary: View? = null
-    private var homeParamsSecondary: WindowManager.LayoutParams? = null
+        var homeView: View? = null
+        var homeParams: WindowManager.LayoutParams? = null
+        var homeViewSecondary: View? = null
+        var homeParamsSecondary: WindowManager.LayoutParams? = null
 
-    private var backView: View? = null
-    private var backParams: WindowManager.LayoutParams? = null
-    private var backViewSecondary: View? = null
-    private var backParamsSecondary: WindowManager.LayoutParams? = null
+        var backView: View? = null
+        var backParams: WindowManager.LayoutParams? = null
+        var backViewSecondary: View? = null
+        var backParamsSecondary: WindowManager.LayoutParams? = null
 
-    private var refreshView: View? = null
-    private var refreshParams: WindowManager.LayoutParams? = null
-    private var refreshViewSecondary: View? = null
-    private var refreshParamsSecondary: WindowManager.LayoutParams? = null
+        var refreshView: View? = null
+        var refreshParams: WindowManager.LayoutParams? = null
+        var refreshViewSecondary: View? = null
+        var refreshParamsSecondary: WindowManager.LayoutParams? = null
 
-    private var freeformView: View? = null
-    private var freeformParams: WindowManager.LayoutParams? = null
-    private var freeformViewSecondary: View? = null
-    private var freeformParamsSecondary: WindowManager.LayoutParams? = null
+        var freeformView: View? = null
+        var freeformParams: WindowManager.LayoutParams? = null
+        var freeformViewSecondary: View? = null
+        var freeformParamsSecondary: WindowManager.LayoutParams? = null
+
+        var combinedView: LinearLayout? = null
+        var combinedParams: WindowManager.LayoutParams? = null
+        var combinedViewSecondary: LinearLayout? = null
+        var combinedParamsSecondary: WindowManager.LayoutParams? = null
+    }
+
+    private val profileViewsMap = HashMap<Int, ProfileOverlayViews>()
 
     private var freeformContainerView: View? = null
     private var freeformContainerParams: WindowManager.LayoutParams? = null
-
-    private var combinedView: LinearLayout? = null
-    private var combinedParams: WindowManager.LayoutParams? = null
-    private var combinedViewSecondary: LinearLayout? = null
-    private var combinedParamsSecondary: WindowManager.LayoutParams? = null
 
     private var isTargetAppFullscreen = false
     private var currentForegroundPackage = ""
@@ -110,6 +99,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     private var handler: Handler? = null
     private var packageCheckerRunnable: Runnable? = null
     private var usageStatsManager: UsageStatsManager? = null
+    private var activeSettingsDialogView: View? = null
 
     private fun dpToPx(dp: Int): Int = TypedValue.applyDimension(
         TypedValue.COMPLEX_UNIT_DIP, dp.toFloat(), resources.displayMetrics
@@ -200,124 +190,241 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     private fun checkForegroundApp() {
         val usm = usageStatsManager ?: return
-        val endTime = System.currentTimeMillis()
-        val beginTime = endTime - 2000
+        val time = System.currentTimeMillis()
+        val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, time - 3000, time)
+        val sortedStats = stats?.sortedByDescending { it.lastTimeUsed }
+        val newPackage = sortedStats?.firstOrNull()?.packageName ?: return
 
-        val usageEvents = usm.queryEvents(beginTime, endTime)
-        val event = UsageEvents.Event()
-        var currentApp = currentForegroundPackage
-
-        while (usageEvents.hasNextEvent()) {
-            usageEvents.getNextEvent(event)
-            if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                currentApp = event.packageName
+        if (newPackage != currentForegroundPackage) {
+            if (activeFullscreenPackage.isNotEmpty() && newPackage != activeFullscreenPackage) {
+                isTargetAppFullscreen = false
+                activeFullscreenPackage = ""
             }
-        }
-
-        if (currentApp != null && currentApp != currentForegroundPackage) {
-            handlePackageChange(currentApp)
+            currentForegroundPackage = newPackage
+            updateOverlayButtons()
         }
     }
 
-    private fun handlePackageChange(newPackage: String) {
-        if (isTargetAppFullscreen &&
-            newPackage != activeFullscreenPackage &&
-            newPackage != packageName &&
-            newPackage != "com.android.launcher3" &&
-            newPackage != "com.android.systemui"
-        ) {
-            isTargetAppFullscreen = false
-            activeFullscreenPackage = ""
-        }
+    // --- Profile Preferences Helper Methods ---
 
-        currentForegroundPackage = newPackage
-        updateOverlayButtons()
+    private fun getPrefKey(profileId: Int, key: String): String = "overlay_${profileId}_$key"
+
+    private fun isProfileEnabled(profileId: Int): Boolean {
+        val pKey = getPrefKey(profileId, "enabled")
+        if (prefs.contains(pKey)) {
+            return prefs.getBoolean(pKey, false)
+        }
+        if (profileId == 1) {
+            return prefs.getBoolean("quick_launch_enabled", false) ||
+                   prefs.getBoolean("fullscreen_overlay_enabled", false) ||
+                   prefs.getBoolean("home_navigator_enabled", false) ||
+                   prefs.getBoolean("back_navigator_enabled", false) ||
+                   prefs.getBoolean("refresh_navigator_enabled", false) ||
+                   prefs.getBoolean("freeform_window_enabled", false) ||
+                   prefs.getBoolean("separate_buttons_enabled", false)
+        }
+        return false
     }
+
+    private fun getProfileBool(profileId: Int, key: String, legacyKey: String, def: Boolean): Boolean {
+        val pKey = getPrefKey(profileId, key)
+        return if (prefs.contains(pKey)) prefs.getBoolean(pKey, def)
+               else if (profileId == 1) prefs.getBoolean(legacyKey, def)
+               else def
+    }
+
+    private fun getProfileInt(profileId: Int, key: String, legacyKey: String, def: Int): Int {
+        val pKey = getPrefKey(profileId, key)
+        return if (prefs.contains(pKey)) prefs.getInt(pKey, def)
+               else if (profileId == 1) prefs.getInt(legacyKey, def)
+               else def
+    }
+
+    private fun getProfileString(profileId: Int, key: String, legacyKey: String, def: String): String {
+        val pKey = getPrefKey(profileId, key)
+        return if (prefs.contains(pKey)) prefs.getString(pKey, def) ?: def
+               else if (profileId == 1) prefs.getString(legacyKey, def) ?: def
+               else def
+    }
+
+    private fun getProfileStringSet(profileId: Int, key: String, legacyKey: String): Set<String> {
+        val pKey = getPrefKey(profileId, key)
+        return if (prefs.contains(pKey)) prefs.getStringSet(pKey, Collections.emptySet()) ?: emptySet()
+               else if (profileId == 1) prefs.getStringSet(legacyKey, Collections.emptySet()) ?: emptySet()
+               else emptySet()
+    }
+
+    private fun getDefaultY(profileId: Int, buttonType: String): Int {
+        return when (profileId) {
+            1 -> when (buttonType) {
+                "combined", "ql" -> 200
+                "fs" -> 100
+                "home" -> 300
+                "back" -> 400
+                "refresh" -> 500
+                "freeform" -> 600
+                else -> 200
+            }
+            2 -> when (buttonType) {
+                "combined", "ql" -> 400
+                "fs" -> 250
+                "home" -> 500
+                "back" -> 600
+                "refresh" -> 700
+                "freeform" -> 800
+                else -> 400
+            }
+            3 -> when (buttonType) {
+                "combined", "ql" -> 600
+                "fs" -> 400
+                "home" -> 700
+                "back" -> 800
+                "refresh" -> 900
+                "freeform" -> 1000
+                else -> 600
+            }
+            else -> 200
+        }
+    }
+
+    // --- Main Overlay Update Loop ---
 
     fun updateOverlayButtons() {
-        val separateEnabled = prefs.getBoolean("separate_buttons_enabled", false)
-
-        if (separateEnabled) {
-            hideCombinedOverlay()
-            updateQuickLaunchButton()
-            checkFullscreenCondition()
-            updateHomeButton()
-            updateBackButton()
-            updateRefreshButton()
-            updateFreeformButton()
-        } else {
-            hideSeparateButtons()
-            updateCombinedOverlay()
+        for (profileId in 1..3) {
+            if (isProfileEnabled(profileId)) {
+                updateProfileOverlayButtons(profileId)
+            } else {
+                removeProfileOverlayButtons(profileId)
+            }
         }
     }
 
-    private fun hideSeparateButtons() {
-        quickLaunchView?.let { defaultWindowManager.removeView(it) }
-        quickLaunchView = null
-        quickLaunchViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        quickLaunchViewSecondary = null
+    private fun removeProfileOverlayButtons(profileId: Int) {
+        val views = profileViewsMap[profileId] ?: return
 
-        fullscreenToggleView?.let { defaultWindowManager.removeView(it) }
-        fullscreenToggleView = null
-        fullscreenToggleViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        fullscreenToggleViewSecondary = null
+        views.quickLaunchView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.quickLaunchView = null
+        views.quickLaunchViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.quickLaunchViewSecondary = null
 
-        homeView?.let { defaultWindowManager.removeView(it) }
-        homeView = null
-        homeViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        homeViewSecondary = null
+        views.fullscreenToggleView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.fullscreenToggleView = null
+        views.fullscreenToggleViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.fullscreenToggleViewSecondary = null
 
-        backView?.let { defaultWindowManager.removeView(it) }
-        backView = null
-        backViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        backViewSecondary = null
+        views.homeView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.homeView = null
+        views.homeViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.homeViewSecondary = null
 
-        refreshView?.let { defaultWindowManager.removeView(it) }
-        refreshView = null
-        refreshViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        refreshViewSecondary = null
+        views.backView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.backView = null
+        views.backViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.backViewSecondary = null
 
-        freeformView?.let { defaultWindowManager.removeView(it) }
-        freeformView = null
-        freeformViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        freeformViewSecondary = null
+        views.refreshView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.refreshView = null
+        views.refreshViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.refreshViewSecondary = null
+
+        views.freeformView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.freeformView = null
+        views.freeformViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.freeformViewSecondary = null
+
+        views.combinedView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.combinedView = null
+        views.combinedViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.combinedViewSecondary = null
+
+        profileViewsMap.remove(profileId)
     }
 
-    private fun hideCombinedOverlay() {
-        combinedView?.let { defaultWindowManager.removeView(it) }
-        combinedView = null
+    private fun updateProfileOverlayButtons(profileId: Int) {
+        val separateEnabled = getProfileBool(profileId, "separate_buttons", "separate_buttons_enabled", false)
+        val views = profileViewsMap.getOrPut(profileId) { ProfileOverlayViews(profileId) }
 
-        combinedViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        combinedViewSecondary = null
+        if (separateEnabled) {
+            hideProfileCombinedOverlay(views)
+            updateProfileQuickLaunchButton(profileId, views)
+            updateProfileFullscreenButton(profileId, views)
+            updateProfileHomeButton(profileId, views)
+            updateProfileBackButton(profileId, views)
+            updateProfileRefreshButton(profileId, views)
+            updateProfileFreeformButton(profileId, views)
+        } else {
+            hideProfileSeparateButtons(views)
+            updateProfileCombinedOverlay(profileId, views)
+        }
     }
 
-    private fun updateCombinedOverlay() {
-        val showQuickLaunch = prefs.getBoolean("quick_launch_enabled", false)
-        val fullscreenApps = prefs.getStringSet("fullscreen_apps", Collections.emptySet()) ?: emptySet()
+    private fun hideProfileSeparateButtons(views: ProfileOverlayViews) {
+        views.quickLaunchView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.quickLaunchView = null
+        views.quickLaunchViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.quickLaunchViewSecondary = null
+
+        views.fullscreenToggleView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.fullscreenToggleView = null
+        views.fullscreenToggleViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.fullscreenToggleViewSecondary = null
+
+        views.homeView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.homeView = null
+        views.homeViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.homeViewSecondary = null
+
+        views.backView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.backView = null
+        views.backViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.backViewSecondary = null
+
+        views.refreshView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.refreshView = null
+        views.refreshViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.refreshViewSecondary = null
+
+        views.freeformView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.freeformView = null
+        views.freeformViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.freeformViewSecondary = null
+    }
+
+    private fun hideProfileCombinedOverlay(views: ProfileOverlayViews) {
+        views.combinedView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+        views.combinedView = null
+        views.combinedViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+        views.combinedViewSecondary = null
+    }
+
+    // --- Combined Overlay rendering per profile ---
+
+    private fun updateProfileCombinedOverlay(profileId: Int, views: ProfileOverlayViews) {
+        val showQuickLaunch = getProfileBool(profileId, "quick_launch_enabled", "quick_launch_enabled", false)
+        val fullscreenApps = getProfileStringSet(profileId, "fullscreen_apps", "fullscreen_apps")
         val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
-        val showFullscreen = (prefs.getBoolean("fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
-        val showHome = prefs.getBoolean("home_navigator_enabled", false)
-        val showBack = prefs.getBoolean("back_navigator_enabled", false)
-        val showRefresh = prefs.getBoolean("refresh_navigator_enabled", false)
-        val showFreeform = prefs.getBoolean("freeform_window_enabled", false)
+        val showFullscreen = (getProfileBool(profileId, "fullscreen_overlay_enabled", "fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
+        val showHome = getProfileBool(profileId, "home_navigator_enabled", "home_navigator_enabled", false)
+        val showBack = getProfileBool(profileId, "back_navigator_enabled", "back_navigator_enabled", false)
+        val showRefresh = getProfileBool(profileId, "refresh_navigator_enabled", "refresh_navigator_enabled", false)
+        val showFreeform = getProfileBool(profileId, "freeform_window_enabled", "freeform_window_enabled", false)
 
         if (!showQuickLaunch && !showFullscreen && !showHome && !showBack && !showRefresh && !showFreeform) {
-            hideCombinedOverlay()
+            hideProfileCombinedOverlay(views)
             return
         }
 
-        val opacityPercent = prefs.getInt("opacity_percent", 85)
+        val opacityPercent = getProfileInt(profileId, "opacity_percent", "opacity_percent", 85)
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
 
-        val sizeDp = prefs.getInt("combined_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val sizeDp = getProfileInt(profileId, "combined_button_size", "combined_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        hideCombinedOverlay()
+        hideProfileCombinedOverlay(views)
 
-        val x = prefs.getInt("combined_pos_x", 0)
-        val y = prefs.getInt("combined_pos_y", 200)
+        val defY = getDefaultY(profileId, "combined")
+        val x = getProfileInt(profileId, "combined_pos_x", "combined_pos_x", 0)
+        val y = getProfileInt(profileId, "combined_pos_y", "combined_pos_y", defY)
         val screenWidth = resources.displayMetrics.widthPixels
         val screenHeight = resources.displayMetrics.heightPixels
 
@@ -328,8 +435,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val minDist = min(min(distLeft, distRight), min(distTop, distBottom))
         val isHorizontal = (minDist == distTop || minDist == distBottom)
 
-        combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal)
-        combinedView?.alpha = alphaFloat
+        views.combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+        views.combinedView?.alpha = alphaFloat
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -343,16 +450,16 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             this.y = y
             this.alpha = alphaFloat
         }
-        combinedParams = params
+        views.combinedParams = params
 
-        defaultWindowManager.addView(combinedView, params)
+        defaultWindowManager.addView(views.combinedView, params)
 
         val secWM = secondaryWindowManager
         val secContext = secondaryContext
         if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            combinedViewSecondary = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal)
-            combinedViewSecondary?.alpha = alphaFloat
-            val marginPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4f, resources.displayMetrics).toInt()
+            views.combinedViewSecondary = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+            views.combinedViewSecondary?.alpha = alphaFloat
+            val marginPx = dpToPx(4)
             val numButtons = (if (showQuickLaunch) 1 else 0) + (if (showFullscreen) 1 else 0) + (if (showHome) 1 else 0) + (if (showBack) 1 else 0) + (if (showRefresh) 1 else 0) + (if (showFreeform) 1 else 0)
             val estWidth = if (isHorizontal) (sizePx + 2 * marginPx) * numButtons else (sizePx + 2 * marginPx)
             val estHeight = if (isHorizontal) (sizePx + 2 * marginPx) else (sizePx + 2 * marginPx) * numButtons
@@ -369,211 +476,52 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 this.y = screenHeight - y - estHeight
                 this.alpha = alphaFloat
             }
-            combinedParamsSecondary = paramsSec
-            secWM.addView(combinedViewSecondary, paramsSec)
+            views.combinedParamsSecondary = paramsSec
+            secWM.addView(views.combinedViewSecondary, paramsSec)
         }
 
-        setupCombinedTouches()
+        setupCombinedTouchesForProfile(profileId, views)
     }
 
-    private fun setupCombinedTouches() {
-        val cv = combinedView ?: return
-        val params = combinedParams ?: return
-        val showQuickLaunch = prefs.getBoolean("quick_launch_enabled", false)
-        val fullscreenApps = prefs.getStringSet("fullscreen_apps", Collections.emptySet()) ?: emptySet()
+    private fun setupCombinedTouchesForProfile(profileId: Int, views: ProfileOverlayViews) {
+        val cv = views.combinedView ?: return
+        val params = views.combinedParams ?: return
+        val showQuickLaunch = getProfileBool(profileId, "quick_launch_enabled", "quick_launch_enabled", false)
+        val fullscreenApps = getProfileStringSet(profileId, "fullscreen_apps", "fullscreen_apps")
         val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
-        val showFullscreen = (prefs.getBoolean("fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
-        val showHome = prefs.getBoolean("home_navigator_enabled", false)
-        val showBack = prefs.getBoolean("back_navigator_enabled", false)
-        val showRefresh = prefs.getBoolean("refresh_navigator_enabled", false)
-        val showFreeform = prefs.getBoolean("freeform_window_enabled", false)
+        val showFullscreen = (getProfileBool(profileId, "fullscreen_overlay_enabled", "fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
+        val showHome = getProfileBool(profileId, "home_navigator_enabled", "home_navigator_enabled", false)
+        val showBack = getProfileBool(profileId, "back_navigator_enabled", "back_navigator_enabled", false)
+        val showRefresh = getProfileBool(profileId, "refresh_navigator_enabled", "refresh_navigator_enabled", false)
+        val showFreeform = getProfileBool(profileId, "freeform_window_enabled", "freeform_window_enabled", false)
+
+        val prefPrefix = "overlay_${profileId}_combined"
 
         var index = 0
         if (showQuickLaunch && cv.childCount > index) {
             val qlItem = cv.getChildAt(index++)
-            setupDragAndSnapTouch(qlItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { showQuickLaunchMenu() }, "combined")
+            setupDragAndSnapTouch(qlItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { showQuickLaunchMenuForProfile(profileId) }, prefPrefix, profileId)
         }
         if (showFullscreen && cv.childCount > index) {
             val fsItem = cv.getChildAt(index++)
-            setupDragAndSnapTouch(fsItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { toggleFullscreen() }, "combined")
+            setupDragAndSnapTouch(fsItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { toggleFullscreen() }, prefPrefix, profileId)
         }
         if (showHome && cv.childCount > index) {
             val homeItem = cv.getChildAt(index++)
-            setupDragAndSnapTouch(homeItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { performHomeAction() }, "combined")
+            setupDragAndSnapTouch(homeItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { performHomeAction() }, prefPrefix, profileId)
         }
         if (showBack && cv.childCount > index) {
             val backItem = cv.getChildAt(index++)
-            setupDragAndSnapTouch(backItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { performBackAction() }, "combined")
+            setupDragAndSnapTouch(backItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { performBackAction() }, prefPrefix, profileId)
         }
         if (showRefresh && cv.childCount > index) {
             val refreshItem = cv.getChildAt(index++)
-            setupDragAndSnapTouch(refreshItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { performRefreshAction() }, "combined")
+            setupDragAndSnapTouch(refreshItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { performRefreshAction() }, prefPrefix, profileId)
         }
         if (showFreeform && cv.childCount > index) {
-            val freeformItem = cv.getChildAt(index)
-            setupDragAndSnapTouch(freeformItem, cv, params, combinedViewSecondary, combinedParamsSecondary, { showFreeformWindowContainer() }, "combined")
+            val freeformItem = cv.getChildAt(index++)
+            setupDragAndSnapTouch(freeformItem, cv, params, views.combinedViewSecondary, views.combinedParamsSecondary, { performFreeformAction() }, prefPrefix, profileId)
         }
-    }
-
-    private var activeSettingsDialogView: View? = null
-
-    private class PathDrawable(
-        private val shapeType: String,
-        private val fillColor: Int,
-        private val strokeColor: Int = Color.parseColor("#80FFFFFF"),
-        private val strokeWidthPx: Float = 3f
-    ) : Drawable() {
-
-        private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = fillColor
-        }
-
-        private val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
-            color = strokeColor
-            strokeWidth = strokeWidthPx
-        }
-
-        private val path = Path()
-
-        override fun onBoundsChange(bounds: Rect) {
-            super.onBoundsChange(bounds)
-            updatePath(bounds)
-        }
-
-        private fun updatePath(bounds: Rect) {
-            path.reset()
-            val w = bounds.width().toFloat()
-            val h = bounds.height().toFloat()
-            if (w <= 0f || h <= 0f) return
-
-            val cx = bounds.left + w / 2f
-            val cy = bounds.top + h / 2f
-            val pad = strokeWidthPx / 2f
-
-            when (shapeType) {
-                "STAR" -> {
-                    val outerR = (Math.min(w, h) / 2f) - pad
-                    val innerR = outerR * 0.4f
-                    for (i in 0 until 10) {
-                        val angle = -Math.PI / 2 + i * (Math.PI / 5)
-                        val r = if (i % 2 == 0) outerR else innerR
-                        val x = cx + (r * Math.cos(angle)).toFloat()
-                        val y = cy + (r * Math.sin(angle)).toFloat()
-                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                    }
-                    path.close()
-                }
-                "OCTAGON" -> {
-                    val r = (Math.min(w, h) / 2f) - pad
-                    for (i in 0 until 8) {
-                        val angle = -Math.PI / 2 + i * (Math.PI / 4) + (Math.PI / 8)
-                        val x = cx + (r * Math.cos(angle)).toFloat()
-                        val y = cy + (r * Math.sin(angle)).toFloat()
-                        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                    }
-                    path.close()
-                }
-                "HEART" -> {
-                    val l = bounds.left + pad
-                    val t = bounds.top + pad
-                    val rw = w - pad * 2
-                    val rh = h - pad * 2
-                    val r = l + rw
-
-                    path.moveTo(cx, t + rh * 0.28f)
-                    path.cubicTo(cx - rw * 0.25f, t, l, t + rh * 0.15f, l, t + rh * 0.45f)
-                    path.cubicTo(l, t + rh * 0.68f, cx - rw * 0.2f, t + rh * 0.85f, cx, t + rh * 0.95f)
-                    path.cubicTo(cx + rw * 0.2f, t + rh * 0.85f, r, t + rh * 0.68f, r, t + rh * 0.45f)
-                    path.cubicTo(r, t + rh * 0.15f, cx + rw * 0.25f, t, cx, t + rh * 0.28f)
-                    path.close()
-                }
-            }
-        }
-
-        override fun draw(canvas: Canvas) {
-            if (path.isEmpty) {
-                updatePath(bounds)
-            }
-            canvas.drawPath(path, fillPaint)
-            if (strokeWidthPx > 0) {
-                canvas.drawPath(path, strokePaint)
-            }
-        }
-
-        override fun setAlpha(alpha: Int) {
-            fillPaint.alpha = alpha
-            strokePaint.alpha = alpha
-            invalidateSelf()
-        }
-
-        override fun setColorFilter(colorFilter: ColorFilter?) {
-            fillPaint.colorFilter = colorFilter
-            strokePaint.colorFilter = colorFilter
-            invalidateSelf()
-        }
-
-        @Deprecated("Deprecated in Java")
-        override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
-    }
-
-    private fun applyButtonStyling(imageView: ImageView, buttonType: String = "") {
-        val (colorKey, shapeKey, defaultColor) = when (buttonType) {
-            "ql" -> Triple("ql_color_hex", "ql_shape", "#6750A4")
-            "fs" -> Triple("fs_color_hex", "fs_shape", "#1976D2")
-            "home" -> Triple("home_color_hex", "home_shape", "#388E3C")
-            "back" -> Triple("back_color_hex", "back_shape", "#D32F2F")
-            "refresh" -> Triple("refresh_color_hex", "refresh_shape", "#FFA000")
-            "freeform" -> Triple("freeform_color_hex", "freeform_shape", "#00897B")
-            else -> Triple("button_color", "button_shape", "#7C4DFF")
-        }
-
-        val colorHex = prefs.getString(colorKey, prefs.getString("button_color", defaultColor) ?: defaultColor) ?: defaultColor
-        val shapeStr = prefs.getString(shapeKey, prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE") ?: "CIRCLE"
-
-        val colorInt = try {
-            Color.parseColor(colorHex)
-        } catch (_: Exception) {
-            Color.parseColor(defaultColor)
-        }
-
-        val strokePx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1.5f, resources.displayMetrics)
-
-        val drawable: Drawable = when (shapeStr) {
-            "SQUARE" -> {
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP, 2f, resources.displayMetrics
-                    )
-                    setColor(colorInt)
-                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
-                }
-            }
-            "ROUNDED_SQUARE" -> {
-                GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP, 12f, resources.displayMetrics
-                    )
-                    setColor(colorInt)
-                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
-                }
-            }
-            "STAR", "OCTAGON", "HEART" -> {
-                PathDrawable(shapeStr, colorInt, Color.parseColor("#80FFFFFF"), strokePx)
-            }
-            else -> { // "CIRCLE"
-                GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(colorInt)
-                    setStroke(strokePx.toInt(), Color.parseColor("#80FFFFFF"))
-                }
-            }
-        }
-
-        imageView.background = drawable
     }
 
     private fun createCombinedLinearLayout(
@@ -585,132 +533,86 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         showRefresh: Boolean,
         showFreeform: Boolean,
         sizePx: Int,
-        isHorizontalMode: Boolean
+        isHorizontal: Boolean,
+        profileId: Int
     ): LinearLayout {
-        val layout = LinearLayout(context).apply {
-            orientation = if (isHorizontalMode) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-        }
+        val colorHex = getProfileString(profileId, "button_color", "button_color", "#7C4DFF")
+        val shapeStr = getProfileString(profileId, "button_shape", "button_shape", "CIRCLE")
 
-        val marginPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 4f, resources.displayMetrics).toInt()
+        val container = LinearLayout(context).apply {
+            orientation = if (isHorizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(16).toFloat()
+                setColor(Color.parseColor("#33000000"))
+            }
+        }
 
         if (showQuickLaunch) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_menu)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "ql")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val qlColor = getProfileString(profileId, "ql_color_hex", "ql_color_hex", colorHex)
+            val qlShape = getProfileString(profileId, "ql_shape", "ql_shape", shapeStr)
+            container.addView(createSingleOverlayButton(context, R.drawable.ic_menu, qlColor, qlShape, sizePx))
         }
-
         if (showFullscreen) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "fs")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val fsColor = getProfileString(profileId, "fs_color_hex", "fs_color_hex", colorHex)
+            val fsShape = getProfileString(profileId, "fs_shape", "fs_shape", shapeStr)
+            val icon = if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter
+            container.addView(createSingleOverlayButton(context, icon, fsColor, fsShape, sizePx))
         }
-
         if (showHome) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_home)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "home")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val homeColor = getProfileString(profileId, "home_color_hex", "home_color_hex", colorHex)
+            val homeShape = getProfileString(profileId, "home_shape", "home_shape", shapeStr)
+            container.addView(createSingleOverlayButton(context, R.drawable.ic_home, homeColor, homeShape, sizePx))
         }
-
         if (showBack) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_back)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "back")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val backColor = getProfileString(profileId, "back_color_hex", "back_color_hex", colorHex)
+            val backShape = getProfileString(profileId, "back_shape", "back_shape", shapeStr)
+            container.addView(createSingleOverlayButton(context, R.drawable.ic_back, backColor, backShape, sizePx))
         }
-
         if (showRefresh) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_refresh)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "refresh")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val refreshColor = getProfileString(profileId, "refresh_color_hex", "refresh_color_hex", colorHex)
+            val refreshShape = getProfileString(profileId, "refresh_shape", "refresh_shape", shapeStr)
+            container.addView(createSingleOverlayButton(context, R.drawable.ic_refresh, refreshColor, refreshShape, sizePx))
         }
-
         if (showFreeform) {
-            val item = LayoutInflater.from(context).inflate(R.layout.overlay_layout, layout, false)
-            val iv = item.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_freeform)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "freeform")
-
-            val lp = item.layoutParams as LinearLayout.LayoutParams
-            if (isHorizontalMode) lp.setMargins(marginPx, 0, marginPx, 0) else lp.setMargins(0, marginPx, 0, marginPx)
-            layout.addView(item)
+            val freeformColor = getProfileString(profileId, "freeform_color_hex", "freeform_color_hex", colorHex)
+            val freeformShape = getProfileString(profileId, "freeform_shape", "freeform_shape", shapeStr)
+            container.addView(createSingleOverlayButton(context, R.drawable.ic_freeform, freeformColor, freeformShape, sizePx))
         }
 
-        return layout
+        return container
     }
 
-    private fun checkFullscreenCondition() {
-        val fullscreenApps = prefs.getStringSet("fullscreen_apps", Collections.emptySet()) ?: emptySet()
-        val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
-        val shouldShowFullscreenBtn = prefs.getBoolean("fullscreen_overlay_enabled", false) && isCurrentAppTarget
+    // --- Separate Buttons rendering per profile ---
 
-        if (shouldShowFullscreenBtn || isTargetAppFullscreen) {
-            showFullscreenToggleButton()
-        } else {
-            hideFullscreenToggleButton()
-        }
-    }
-
-    fun updateQuickLaunchButton() {
-        val isEnabled = prefs.getBoolean("quick_launch_enabled", false)
+    private fun updateProfileQuickLaunchButton(profileId: Int, views: ProfileOverlayViews) {
+        val isEnabled = getProfileBool(profileId, "quick_launch_enabled", "quick_launch_enabled", false)
         if (!isEnabled) {
-            quickLaunchView?.let { defaultWindowManager.removeView(it) }
-            quickLaunchView = null
-            quickLaunchViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-            quickLaunchViewSecondary = null
+            views.quickLaunchView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.quickLaunchView = null
+            views.quickLaunchViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.quickLaunchViewSecondary = null
             return
         }
 
-        val opacityPercent = prefs.getInt("ql_opacity_percent", prefs.getInt("opacity_percent", 85))
+        val opacityPercent = getProfileInt(profileId, "ql_opacity_percent", "ql_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "ql_button_size", "ql_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("ql_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "ql_color_hex", "ql_color_hex", getProfileString(profileId, "button_color", "button_color", "#6750A4"))
+        val shapeStr = getProfileString(profileId, "ql_shape", "ql_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
-        if (quickLaunchView == null) {
-            val qv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
+        val defY = getDefaultY(profileId, "ql")
+        val x = getProfileInt(profileId, "ql_pos_x", "ql_pos_x", 0)
+        val y = getProfileInt(profileId, "ql_pos_y", "ql_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_ql"
+
+        if (views.quickLaunchView == null) {
+            val qv = createSingleOverlayButton(this, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
             qv.alpha = alphaFloat
-            val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_menu)
-            applyButtonStyling(iv, "ql")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -719,41 +621,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("ql_pos_x", 0)
-                y = prefs.getInt("ql_pos_y", 200)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            quickLaunchParams = params
-            quickLaunchView = qv
+            views.quickLaunchParams = params
+            views.quickLaunchView = qv
             defaultWindowManager.addView(qv, params)
-        } else {
-            val qv = quickLaunchView!!
-            qv.alpha = alphaFloat
-            val params = quickLaunchParams!!
-            params.alpha = alphaFloat
-            val iv = qv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "ql")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(qv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (quickLaunchViewSecondary == null) {
-                val qvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val qvSec = createSingleOverlayButton(secContext, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
                 qvSec.alpha = alphaFloat
-                val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(R.drawable.ic_menu)
-                applyButtonStyling(ivSec, "ql")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -761,64 +643,70 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (quickLaunchParams?.x ?: 0) - sizePx
-                    y = screenHeight - (quickLaunchParams?.y ?: 200) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                quickLaunchParamsSecondary = paramsSec
-                quickLaunchViewSecondary = qvSec
+                views.quickLaunchParamsSecondary = paramsSec
+                views.quickLaunchViewSecondary = qvSec
                 secWM.addView(qvSec, paramsSec)
-            } else {
-                val qvSec = quickLaunchViewSecondary!!
+            }
+
+            setupDragAndSnapTouch(qv, qv, params, views.quickLaunchViewSecondary, views.quickLaunchParamsSecondary, { showQuickLaunchMenuForProfile(profileId) }, prefPrefix, profileId)
+        } else {
+            val qv = views.quickLaunchView!!
+            val params = views.quickLaunchParams!!
+            updateSingleButtonVisuals(qv, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
+            qv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(qv, params)
+
+            val qvSec = views.quickLaunchViewSecondary
+            val paramsSec = views.quickLaunchParamsSecondary
+            if (qvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(qvSec, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
                 qvSec.alpha = alphaFloat
-                val paramsSec = quickLaunchParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = qvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "ql")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
-                secWM.updateViewLayout(qvSec, paramsSec)
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(qvSec, paramsSec)
             }
         }
-
-        setupDragAndSnapTouch(
-            quickLaunchView!!, quickLaunchView!!, quickLaunchParams!!,
-            quickLaunchViewSecondary, quickLaunchParamsSecondary,
-            { showQuickLaunchMenu() }, "ql"
-        )
     }
 
-    private fun showFullscreenToggleButton() {
-        val opacityPercent = prefs.getInt("fs_opacity_percent", prefs.getInt("opacity_percent", 85))
+    private fun updateProfileFullscreenButton(profileId: Int, views: ProfileOverlayViews) {
+        val fullscreenApps = getProfileStringSet(profileId, "fullscreen_apps", "fullscreen_apps")
+        val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
+        val shouldShow = (getProfileBool(profileId, "fullscreen_overlay_enabled", "fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
+
+        if (!shouldShow) {
+            views.fullscreenToggleView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.fullscreenToggleView = null
+            views.fullscreenToggleViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.fullscreenToggleViewSecondary = null
+            return
+        }
+
+        val opacityPercent = getProfileInt(profileId, "fs_opacity_percent", "fs_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "fs_button_size", "fs_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("fs_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "fs_color_hex", "fs_color_hex", getProfileString(profileId, "button_color", "button_color", "#1976D2"))
+        val shapeStr = getProfileString(profileId, "fs_shape", "fs_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
+        val iconRes = if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter
 
-        if (fullscreenToggleView != null) {
-            val fv = fullscreenToggleView!!
+        val defY = getDefaultY(profileId, "fs")
+        val x = getProfileInt(profileId, "fs_pos_x", "fs_pos_x", 100)
+        val y = getProfileInt(profileId, "fs_pos_y", "fs_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_fs"
+
+        if (views.fullscreenToggleView == null) {
+            val fv = createSingleOverlayButton(this, iconRes, colorHex, shapeStr, sizePx)
             fv.alpha = alphaFloat
-            val params = fullscreenToggleParams!!
-            params.alpha = alphaFloat
-            val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "fs")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(fv, params)
-        } else {
-            val fv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
-            fv.alpha = alphaFloat
-            val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-            applyButtonStyling(iv, "fs")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -827,42 +715,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("fs_pos_x", 100)
-                y = prefs.getInt("fs_pos_y", 100)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            fullscreenToggleParams = params
-            fullscreenToggleView = fv
+            views.fullscreenToggleParams = params
+            views.fullscreenToggleView = fv
             defaultWindowManager.addView(fv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (fullscreenToggleViewSecondary != null) {
-                val fvSec = fullscreenToggleViewSecondary!!
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val fvSec = createSingleOverlayButton(secContext, iconRes, colorHex, shapeStr, sizePx)
                 fvSec.alpha = alphaFloat
-                val paramsSec = fullscreenToggleParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "fs")
-                paramsSec.width = sizePx
-                paramsSec.height = sizePx
-                secWM.updateViewLayout(fvSec, paramsSec)
-            } else {
-                val fvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
-                fvSec.alpha = alphaFloat
-                val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter)
-                applyButtonStyling(ivSec, "fs")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -870,55 +737,66 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (fullscreenToggleParams?.x ?: 100) - sizePx
-                    y = screenHeight - (fullscreenToggleParams?.y ?: 100) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                fullscreenToggleParamsSecondary = paramsSec
-                fullscreenToggleViewSecondary = fvSec
+                views.fullscreenToggleParamsSecondary = paramsSec
+                views.fullscreenToggleViewSecondary = fvSec
                 secWM.addView(fvSec, paramsSec)
             }
+
+            setupDragAndSnapTouch(fv, fv, params, views.fullscreenToggleViewSecondary, views.fullscreenToggleParamsSecondary, { toggleFullscreen() }, prefPrefix, profileId)
+        } else {
+            val fv = views.fullscreenToggleView!!
+            val params = views.fullscreenToggleParams!!
+            updateSingleButtonVisuals(fv, iconRes, colorHex, shapeStr, sizePx)
+            fv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(fv, params)
+
+            val fvSec = views.fullscreenToggleViewSecondary
+            val paramsSec = views.fullscreenToggleParamsSecondary
+            if (fvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(fvSec, iconRes, colorHex, shapeStr, sizePx)
+                fvSec.alpha = alphaFloat
+                paramsSec.width = sizePx
+                paramsSec.height = sizePx
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(fvSec, paramsSec)
+            }
         }
-
-        setupDragAndSnapTouch(
-            fullscreenToggleView!!, fullscreenToggleView!!, fullscreenToggleParams!!,
-            fullscreenToggleViewSecondary, fullscreenToggleParamsSecondary,
-            { toggleFullscreen() }, "fs"
-        )
     }
 
-    private fun hideFullscreenToggleButton() {
-        fullscreenToggleView?.let { defaultWindowManager.removeView(it) }
-        fullscreenToggleView = null
-        fullscreenToggleViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-        fullscreenToggleViewSecondary = null
-    }
-
-    private fun updateHomeButton() {
-        val isEnabled = prefs.getBoolean("home_navigator_enabled", false)
+    private fun updateProfileHomeButton(profileId: Int, views: ProfileOverlayViews) {
+        val isEnabled = getProfileBool(profileId, "home_navigator_enabled", "home_navigator_enabled", false)
         if (!isEnabled) {
-            homeView?.let { defaultWindowManager.removeView(it) }
-            homeView = null
-            homeViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-            homeViewSecondary = null
+            views.homeView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.homeView = null
+            views.homeViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.homeViewSecondary = null
             return
         }
 
-        val opacityPercent = prefs.getInt("home_opacity_percent", prefs.getInt("opacity_percent", 85))
+        val opacityPercent = getProfileInt(profileId, "home_opacity_percent", "home_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "home_button_size", "home_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("home_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "home_color_hex", "home_color_hex", getProfileString(profileId, "button_color", "button_color", "#388E3C"))
+        val shapeStr = getProfileString(profileId, "home_shape", "home_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
-        if (homeView == null) {
-            val hv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
+        val defY = getDefaultY(profileId, "home")
+        val x = getProfileInt(profileId, "home_pos_x", "home_pos_x", 0)
+        val y = getProfileInt(profileId, "home_pos_y", "home_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_home"
+
+        if (views.homeView == null) {
+            val hv = createSingleOverlayButton(this, R.drawable.ic_home, colorHex, shapeStr, sizePx)
             hv.alpha = alphaFloat
-            val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_home)
-            applyButtonStyling(iv, "home")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -927,41 +805,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("home_pos_x", 0)
-                y = prefs.getInt("home_pos_y", 300)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            homeParams = params
-            homeView = hv
+            views.homeParams = params
+            views.homeView = hv
             defaultWindowManager.addView(hv, params)
-        } else {
-            val hv = homeView!!
-            hv.alpha = alphaFloat
-            val params = homeParams!!
-            params.alpha = alphaFloat
-            val iv = hv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "home")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(hv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (homeViewSecondary == null) {
-                val hvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val hvSec = createSingleOverlayButton(secContext, R.drawable.ic_home, colorHex, shapeStr, sizePx)
                 hvSec.alpha = alphaFloat
-                val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(R.drawable.ic_home)
-                applyButtonStyling(ivSec, "home")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -969,60 +827,66 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (homeParams?.x ?: 0) - sizePx
-                    y = screenHeight - (homeParams?.y ?: 300) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                homeParamsSecondary = paramsSec
-                homeViewSecondary = hvSec
+                views.homeParamsSecondary = paramsSec
+                views.homeViewSecondary = hvSec
                 secWM.addView(hvSec, paramsSec)
-            } else {
-                val hvSec = homeViewSecondary!!
+            }
+
+            setupDragAndSnapTouch(hv, hv, params, views.homeViewSecondary, views.homeParamsSecondary, { performHomeAction() }, prefPrefix, profileId)
+        } else {
+            val hv = views.homeView!!
+            val params = views.homeParams!!
+            updateSingleButtonVisuals(hv, R.drawable.ic_home, colorHex, shapeStr, sizePx)
+            hv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(hv, params)
+
+            val hvSec = views.homeViewSecondary
+            val paramsSec = views.homeParamsSecondary
+            if (hvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(hvSec, R.drawable.ic_home, colorHex, shapeStr, sizePx)
                 hvSec.alpha = alphaFloat
-                val paramsSec = homeParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = hvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "home")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
-                secWM.updateViewLayout(hvSec, paramsSec)
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(hvSec, paramsSec)
             }
         }
-
-        setupDragAndSnapTouch(
-            homeView!!, homeView!!, homeParams!!,
-            homeViewSecondary, homeParamsSecondary,
-            { performHomeAction() }, "home"
-        )
     }
 
-    private fun updateBackButton() {
-        val isEnabled = prefs.getBoolean("back_navigator_enabled", false)
+    private fun updateProfileBackButton(profileId: Int, views: ProfileOverlayViews) {
+        val isEnabled = getProfileBool(profileId, "back_navigator_enabled", "back_navigator_enabled", false)
         if (!isEnabled) {
-            backView?.let { defaultWindowManager.removeView(it) }
-            backView = null
-            backViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-            backViewSecondary = null
+            views.backView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.backView = null
+            views.backViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.backViewSecondary = null
             return
         }
 
-        val opacityPercent = prefs.getInt("back_opacity_percent", prefs.getInt("opacity_percent", 85))
+        val opacityPercent = getProfileInt(profileId, "back_opacity_percent", "back_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "back_button_size", "back_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("back_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "back_color_hex", "back_color_hex", getProfileString(profileId, "button_color", "button_color", "#D32F2F"))
+        val shapeStr = getProfileString(profileId, "back_shape", "back_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
-        if (backView == null) {
-            val bv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
+        val defY = getDefaultY(profileId, "back")
+        val x = getProfileInt(profileId, "back_pos_x", "back_pos_x", 0)
+        val y = getProfileInt(profileId, "back_pos_y", "back_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_back"
+
+        if (views.backView == null) {
+            val bv = createSingleOverlayButton(this, R.drawable.ic_back, colorHex, shapeStr, sizePx)
             bv.alpha = alphaFloat
-            val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_back)
-            applyButtonStyling(iv, "back")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -1031,41 +895,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("back_pos_x", 0)
-                y = prefs.getInt("back_pos_y", 400)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            backParams = params
-            backView = bv
+            views.backParams = params
+            views.backView = bv
             defaultWindowManager.addView(bv, params)
-        } else {
-            val bv = backView!!
-            bv.alpha = alphaFloat
-            val params = backParams!!
-            params.alpha = alphaFloat
-            val iv = bv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "back")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(bv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (backViewSecondary == null) {
-                val bvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val bvSec = createSingleOverlayButton(secContext, R.drawable.ic_back, colorHex, shapeStr, sizePx)
                 bvSec.alpha = alphaFloat
-                val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(R.drawable.ic_back)
-                applyButtonStyling(ivSec, "back")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -1073,60 +917,66 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (backParams?.x ?: 0) - sizePx
-                    y = screenHeight - (backParams?.y ?: 400) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                backParamsSecondary = paramsSec
-                backViewSecondary = bvSec
+                views.backParamsSecondary = paramsSec
+                views.backViewSecondary = bvSec
                 secWM.addView(bvSec, paramsSec)
-            } else {
-                val bvSec = backViewSecondary!!
+            }
+
+            setupDragAndSnapTouch(bv, bv, params, views.backViewSecondary, views.backParamsSecondary, { performBackAction() }, prefPrefix, profileId)
+        } else {
+            val bv = views.backView!!
+            val params = views.backParams!!
+            updateSingleButtonVisuals(bv, R.drawable.ic_back, colorHex, shapeStr, sizePx)
+            bv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(bv, params)
+
+            val bvSec = views.backViewSecondary
+            val paramsSec = views.backParamsSecondary
+            if (bvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(bvSec, R.drawable.ic_back, colorHex, shapeStr, sizePx)
                 bvSec.alpha = alphaFloat
-                val paramsSec = backParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = bvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "back")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
-                secWM.updateViewLayout(bvSec, paramsSec)
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(bvSec, paramsSec)
             }
         }
-
-        setupDragAndSnapTouch(
-            backView!!, backView!!, backParams!!,
-            backViewSecondary, backParamsSecondary,
-            { performBackAction() }, "back"
-        )
     }
 
-    private fun updateRefreshButton() {
-        val isEnabled = prefs.getBoolean("refresh_navigator_enabled", false)
+    private fun updateProfileRefreshButton(profileId: Int, views: ProfileOverlayViews) {
+        val isEnabled = getProfileBool(profileId, "refresh_navigator_enabled", "refresh_navigator_enabled", false)
         if (!isEnabled) {
-            refreshView?.let { defaultWindowManager.removeView(it) }
-            refreshView = null
-            refreshViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-            refreshViewSecondary = null
+            views.refreshView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.refreshView = null
+            views.refreshViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.refreshViewSecondary = null
             return
         }
 
-        val opacityPercent = prefs.getInt("refresh_opacity_percent", prefs.getInt("opacity_percent", 85))
+        val opacityPercent = getProfileInt(profileId, "refresh_opacity_percent", "refresh_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "refresh_button_size", "refresh_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("refresh_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "refresh_color_hex", "refresh_color_hex", getProfileString(profileId, "button_color", "button_color", "#FFA000"))
+        val shapeStr = getProfileString(profileId, "refresh_shape", "refresh_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
-        if (refreshView == null) {
-            val rv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
+        val defY = getDefaultY(profileId, "refresh")
+        val x = getProfileInt(profileId, "refresh_pos_x", "refresh_pos_x", 0)
+        val y = getProfileInt(profileId, "refresh_pos_y", "refresh_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_refresh"
+
+        if (views.refreshView == null) {
+            val rv = createSingleOverlayButton(this, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
             rv.alpha = alphaFloat
-            val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_refresh)
-            applyButtonStyling(iv, "refresh")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -1135,41 +985,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("refresh_pos_x", 0)
-                y = prefs.getInt("refresh_pos_y", 500)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            refreshParams = params
-            refreshView = rv
+            views.refreshParams = params
+            views.refreshView = rv
             defaultWindowManager.addView(rv, params)
-        } else {
-            val rv = refreshView!!
-            rv.alpha = alphaFloat
-            val params = refreshParams!!
-            params.alpha = alphaFloat
-            val iv = rv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "refresh")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(rv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (refreshViewSecondary == null) {
-                val rvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val rvSec = createSingleOverlayButton(secContext, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
                 rvSec.alpha = alphaFloat
-                val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(R.drawable.ic_refresh)
-                applyButtonStyling(ivSec, "refresh")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -1177,60 +1007,66 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (refreshParams?.x ?: 0) - sizePx
-                    y = screenHeight - (refreshParams?.y ?: 500) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                refreshParamsSecondary = paramsSec
-                refreshViewSecondary = rvSec
+                views.refreshParamsSecondary = paramsSec
+                views.refreshViewSecondary = rvSec
                 secWM.addView(rvSec, paramsSec)
-            } else {
-                val rvSec = refreshViewSecondary!!
+            }
+
+            setupDragAndSnapTouch(rv, rv, params, views.refreshViewSecondary, views.refreshParamsSecondary, { performRefreshAction() }, prefPrefix, profileId)
+        } else {
+            val rv = views.refreshView!!
+            val params = views.refreshParams!!
+            updateSingleButtonVisuals(rv, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
+            rv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(rv, params)
+
+            val rvSec = views.refreshViewSecondary
+            val paramsSec = views.refreshParamsSecondary
+            if (rvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(rvSec, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
                 rvSec.alpha = alphaFloat
-                val paramsSec = refreshParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = rvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "refresh")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
-                secWM.updateViewLayout(rvSec, paramsSec)
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(rvSec, paramsSec)
             }
         }
-
-        setupDragAndSnapTouch(
-            refreshView!!, refreshView!!, refreshParams!!,
-            refreshViewSecondary, refreshParamsSecondary,
-            { performRefreshAction() }, "refresh"
-        )
     }
 
-    private fun updateFreeformButton() {
-        val isEnabled = prefs.getBoolean("freeform_window_enabled", false)
+    private fun updateProfileFreeformButton(profileId: Int, views: ProfileOverlayViews) {
+        val isEnabled = getProfileBool(profileId, "freeform_window_enabled", "freeform_window_enabled", false)
         if (!isEnabled) {
-            freeformView?.let { defaultWindowManager.removeView(it) }
-            freeformView = null
-            freeformViewSecondary?.let { secondaryWindowManager?.removeView(it) }
-            freeformViewSecondary = null
+            views.freeformView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
+            views.freeformView = null
+            views.freeformViewSecondary?.let { try { secondaryWindowManager?.removeView(it) } catch (_: Exception) {} }
+            views.freeformViewSecondary = null
             return
         }
 
-        val opacityPercent = prefs.getInt("freeform_opacity_percent", prefs.getInt("opacity_percent", 85))
+        val opacityPercent = getProfileInt(profileId, "freeform_opacity_percent", "freeform_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
         val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val sizeDp = getProfileInt(profileId, "freeform_button_size", "freeform_button_size", 48)
+        val sizePx = dpToPx(sizeDp)
 
-        val sizeDp = prefs.getInt("freeform_button_size", 48)
-        val sizePx = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, sizeDp.toFloat(), resources.displayMetrics
-        ).toInt()
+        val colorHex = getProfileString(profileId, "freeform_color_hex", "freeform_color_hex", getProfileString(profileId, "button_color", "button_color", "#00897B"))
+        val shapeStr = getProfileString(profileId, "freeform_shape", "freeform_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
-        if (freeformView == null) {
-            val fv = LayoutInflater.from(this).inflate(R.layout.overlay_layout, null)
+        val defY = getDefaultY(profileId, "freeform")
+        val x = getProfileInt(profileId, "freeform_pos_x", "freeform_pos_x", 0)
+        val y = getProfileInt(profileId, "freeform_pos_y", "freeform_pos_y", defY)
+
+        val prefPrefix = "overlay_${profileId}_freeform"
+
+        if (views.freeformView == null) {
+            val fv = createSingleOverlayButton(this, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
             fv.alpha = alphaFloat
-            val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.setImageResource(R.drawable.ic_freeform)
-            applyButtonStyling(iv, "freeform")
 
             val params = WindowManager.LayoutParams(
                 sizePx, sizePx,
@@ -1239,41 +1075,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = prefs.getInt("freeform_pos_x", 0)
-                y = prefs.getInt("freeform_pos_y", 600)
-                alpha = alphaFloat
+                this.x = x
+                this.y = y
+                this.alpha = alphaFloat
             }
-
-            freeformParams = params
-            freeformView = fv
+            views.freeformParams = params
+            views.freeformView = fv
             defaultWindowManager.addView(fv, params)
-        } else {
-            val fv = freeformView!!
-            fv.alpha = alphaFloat
-            val params = freeformParams!!
-            params.alpha = alphaFloat
-            val iv = fv.findViewById<ImageView>(R.id.overlay_image_view)
-            iv.layoutParams.width = sizePx
-            iv.layoutParams.height = sizePx
-            applyButtonStyling(iv, "freeform")
-            params.width = sizePx
-            params.height = sizePx
-            defaultWindowManager.updateViewLayout(fv, params)
-        }
 
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            if (freeformViewSecondary == null) {
-                val fvSec = LayoutInflater.from(secContext).inflate(R.layout.overlay_layout, null)
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val fvSec = createSingleOverlayButton(secContext, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
                 fvSec.alpha = alphaFloat
-                val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.setImageResource(R.drawable.ic_freeform)
-                applyButtonStyling(ivSec, "freeform")
-
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
-
                 val paramsSec = WindowManager.LayoutParams(
                     sizePx, sizePx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -1281,517 +1097,316 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    x = screenWidth - (freeformParams?.x ?: 0) - sizePx
-                    y = screenHeight - (freeformParams?.y ?: 600) - sizePx
-                    alpha = alphaFloat
+                    this.x = screenWidth - x - sizePx
+                    this.y = screenHeight - y - sizePx
+                    this.alpha = alphaFloat
                 }
-
-                freeformParamsSecondary = paramsSec
-                freeformViewSecondary = fvSec
+                views.freeformParamsSecondary = paramsSec
+                views.freeformViewSecondary = fvSec
                 secWM.addView(fvSec, paramsSec)
-            } else {
-                val fvSec = freeformViewSecondary!!
+            }
+
+            setupDragAndSnapTouch(fv, fv, params, views.freeformViewSecondary, views.freeformParamsSecondary, { performFreeformAction() }, prefPrefix, profileId)
+        } else {
+            val fv = views.freeformView!!
+            val params = views.freeformParams!!
+            updateSingleButtonVisuals(fv, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
+            fv.alpha = alphaFloat
+            params.width = sizePx
+            params.height = sizePx
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(fv, params)
+
+            val fvSec = views.freeformViewSecondary
+            val paramsSec = views.freeformParamsSecondary
+            if (fvSec != null && paramsSec != null) {
+                updateSingleButtonVisuals(fvSec, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
                 fvSec.alpha = alphaFloat
-                val paramsSec = freeformParamsSecondary!!
-                paramsSec.alpha = alphaFloat
-                val ivSec = fvSec.findViewById<ImageView>(R.id.overlay_image_view)
-                ivSec.layoutParams.width = sizePx
-                ivSec.layoutParams.height = sizePx
-                applyButtonStyling(ivSec, "freeform")
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
-                secWM.updateViewLayout(fvSec, paramsSec)
+                paramsSec.alpha = alphaFloat
+                secondaryWindowManager?.updateViewLayout(fvSec, paramsSec)
             }
         }
-
-        setupDragAndSnapTouch(
-            freeformView!!, freeformView!!, freeformParams!!,
-            freeformViewSecondary, freeformParamsSecondary,
-            { showFreeformWindowContainer() }, "freeform"
-        )
     }
 
-    fun showFreeformWindowContainer(packageName: String = "", appName: String = "") {
-        freeformContainerView?.let {
-            try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
+    // --- Button Creation & Visual Helpers ---
+
+    private fun createSingleOverlayButton(
+        context: Context,
+        iconRes: Int,
+        colorHex: String,
+        shapeStr: String,
+        sizePx: Int
+    ): FrameLayout {
+        val frame = FrameLayout(context)
+        val img = ImageView(context).apply {
+            setImageResource(iconRes)
+            setColorFilter(Color.WHITE)
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
         }
-        freeformContainerView = null
+        val paddingPx = sizePx / 4
+        img.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
 
-        var targetPackage = packageName
-        if (targetPackage.isBlank()) {
-            if (currentForegroundPackage.isNotBlank() && currentForegroundPackage != this.packageName) {
-                targetPackage = currentForegroundPackage
-            }
-        }
-
-        val pm = packageManager
-        fun resolveAppName(pkg: String): String {
-            if (pkg.isBlank()) return getString(R.string.freeform_select_app)
-            return try {
-                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-            } catch (_: Exception) {
-                pkg
-            }
-        }
-
-        fun resolveAppIcon(pkg: String): Drawable? {
-            if (pkg.isBlank()) return null
-            return try {
-                pm.getApplicationIcon(pkg)
-            } catch (_: Exception) {
-                null
-            }
-        }
-
-        var currentPkg = targetPackage
-        var currentName = if (appName.isNotBlank()) appName else resolveAppName(currentPkg)
-
-        val dm = resources.displayMetrics
-        val initialWidth = min(dm.widthPixels - dpToPx(32), max(dpToPx(320), 800))
-        val initialHeight = min(dm.heightPixels - dpToPx(32), max(dpToPx(240), 600))
-        val initialX = (dm.widthPixels - initialWidth) / 2
-        val initialY = (dm.heightPixels - initialHeight) / 2
-
-        val params = WindowManager.LayoutParams(
-            initialWidth,
-            initialHeight,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = initialX
-            y = initialY
-        }
-        freeformContainerParams = params
-
-        val rootContainer = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                setColor(0xF01E1E2C.toInt())
-                cornerRadius = dpToPx(12).toFloat()
-                setStroke(dpToPx(2), 0x887C4DFF.toInt())
-            }
-            elevation = dpToPx(8).toFloat()
-        }
-
-        val mainLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        }
-
-        // Header Bar
-        val headerBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable().apply {
-                setColor(0xFF282836.toInt())
-                cornerRadii = floatArrayOf(
-                    dpToPx(12).toFloat(), dpToPx(12).toFloat(),
-                    dpToPx(12).toFloat(), dpToPx(12).toFloat(),
-                    0f, 0f, 0f, 0f
-                )
-            }
-            setPadding(dpToPx(10), dpToPx(8), dpToPx(10), dpToPx(8))
-        }
-
-        val iconView = ImageView(this).apply {
-            val size = dpToPx(24)
-            layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                setMargins(0, 0, dpToPx(8), 0)
-            }
-            val icon = resolveAppIcon(currentPkg)
-            if (icon != null) {
-                setImageDrawable(icon)
-            } else {
-                setImageResource(R.drawable.ic_freeform)
-            }
-        }
-        headerBar.addView(iconView)
-
-        val titleView = TextView(this).apply {
-            text = currentName
-            setTextColor(Color.WHITE)
-            textSize = 14f
-            setTypeface(null, Typeface.BOLD)
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        headerBar.addView(titleView)
-
-        fun showAppPicker(onSelected: (String, String) -> Unit) {
-            val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
-            val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
-            resolveInfos.sortBy { it.loadLabel(pm).toString().lowercase() }
-
-            val names = resolveInfos.map { it.loadLabel(pm).toString() }.toTypedArray()
-            val pkgs = resolveInfos.map { it.activityInfo.packageName }
-
-            AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-                .setTitle(getString(R.string.freeform_select_app))
-                .setItems(names) { _, index ->
-                    onSelected(pkgs[index], names[index])
-                }
-                .setNegativeButton(R.string.btn_cancel, null)
-                .create().apply {
-                    window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                    show()
-                }
-        }
-
-        val pickAppClickListener = View.OnClickListener {
-            showAppPicker { p, n ->
-                currentPkg = p
-                currentName = n
-                titleView.text = n
-                val ic = resolveAppIcon(p)
-                if (ic != null) iconView.setImageDrawable(ic)
-                else iconView.setImageResource(R.drawable.ic_freeform)
-            }
-        }
-        iconView.setOnClickListener(pickAppClickListener)
-        titleView.setOnClickListener(pickAppClickListener)
-
-        // "Launch in window" Button (🚀)
-        val launchBtn = TextView(this).apply {
-            text = "🚀"
-            textSize = 18f
-            setPadding(dpToPx(6), dpToPx(4), dpToPx(6), dpToPx(4))
-            contentDescription = getString(R.string.freeform_launch_app)
-            background = GradientDrawable().apply {
-                setColor(0x33FFFFFF.toInt())
-                cornerRadius = dpToPx(6).toFloat()
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, 0, dpToPx(8), 0)
-            }
-            setOnClickListener {
-                if (currentPkg.isBlank()) {
-                    showAppPicker { p, n ->
-                        currentPkg = p
-                        currentName = n
-                        titleView.text = n
-                        val ic = resolveAppIcon(p)
-                        if (ic != null) iconView.setImageDrawable(ic)
-                        launchFreeformApp(currentPkg, params)
-                    }
-                } else {
-                    launchFreeformApp(currentPkg, params)
-                }
-            }
-        }
-        headerBar.addView(launchBtn)
-
-        // "Close window" Button (❌)
-        val closeBtn = TextView(this).apply {
-            text = "❌"
-            textSize = 16f
-            setPadding(dpToPx(6), dpToPx(4), dpToPx(6), dpToPx(4))
-            contentDescription = getString(R.string.freeform_close_window)
-            background = GradientDrawable().apply {
-                setColor(0x33FFFFFF.toInt())
-                cornerRadius = dpToPx(6).toFloat()
-            }
-            setOnClickListener {
-                freeformContainerView?.let {
-                    try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
-                }
-                freeformContainerView = null
-            }
-        }
-        headerBar.addView(closeBtn)
-
-        // Header Drag Touch Listener
-        var startTouchX = 0f
-        var startTouchY = 0f
-        var startWindowX = 0
-        var startWindowY = 0
-
-        headerBar.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    startTouchX = event.rawX
-                    startTouchY = event.rawY
-                    startWindowX = params.x
-                    startWindowY = params.y
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - startTouchX).toInt()
-                    val dy = (event.rawY - startTouchY).toInt()
-                    params.x = startWindowX + dx
-                    params.y = startWindowY + dy
-                    try {
-                        defaultWindowManager.updateViewLayout(rootContainer, params)
-                    } catch (_: Exception) {}
-                    true
-                }
-                else -> false
-            }
-        }
-
-        mainLayout.addView(headerBar)
-
-        // Content Body
-        val bodyLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dpToPx(16), dpToPx(16), dpToPx(16), dpToPx(16))
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        }
-
-        val bodyIconView = ImageView(this).apply {
-            val size = dpToPx(64)
-            layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                setMargins(0, 0, 0, dpToPx(12))
-            }
-            val icon = resolveAppIcon(currentPkg)
-            if (icon != null) setImageDrawable(icon)
-            else setImageResource(R.drawable.ic_freeform)
-        }
-        bodyLayout.addView(bodyIconView)
-
-        val bodyTitleView = TextView(this).apply {
-            text = currentName
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            setTypeface(null, Typeface.BOLD)
-            gravity = Gravity.CENTER
-        }
-        bodyLayout.addView(bodyTitleView)
-
-        val bodyDescView = TextView(this).apply {
-            text = "Перетаскивайте окно за шапку, изменяйте размер за уголок ↘️, затем нажмите 🚀 для запуска в режиме Freeform."
-            setTextColor(0xBBFFFFFF.toInt())
-            textSize = 12f
-            gravity = Gravity.CENTER
-            setPadding(0, dpToPx(8), 0, dpToPx(12))
-        }
-        bodyLayout.addView(bodyDescView)
-
-        val changeAppBtn = TextView(this).apply {
-            text = getString(R.string.freeform_select_app)
-            setTextColor(0xFF7C4DFF.toInt())
-            textSize = 13f
-            setTypeface(null, Typeface.BOLD)
-            setPadding(dpToPx(12), dpToPx(8), dpToPx(12), dpToPx(8))
-            background = GradientDrawable().apply {
-                setColor(0x227C4DFF.toInt())
-                cornerRadius = dpToPx(8).toFloat()
-                setStroke(dpToPx(1), 0x887C4DFF.toInt())
-            }
-            setOnClickListener {
-                showAppPicker { p, n ->
-                    currentPkg = p
-                    currentName = n
-                    titleView.text = n
-                    bodyTitleView.text = n
-                    val ic = resolveAppIcon(p)
-                    if (ic != null) {
-                        iconView.setImageDrawable(ic)
-                        bodyIconView.setImageDrawable(ic)
-                    }
-                }
-            }
-        }
-        bodyLayout.addView(changeAppBtn)
-
-        mainLayout.addView(bodyLayout)
-        rootContainer.addView(mainLayout)
-
-        // Resize Handle (↘️)
-        val resizeHandle = TextView(this).apply {
-            text = "↘️"
-            textSize = 18f
-            gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(
-                dpToPx(32), dpToPx(32)
-            ).apply {
-                gravity = Gravity.BOTTOM or Gravity.END
-                setMargins(0, 0, dpToPx(4), dpToPx(4))
-            }
-        }
-
-        var startResizeX = 0f
-        var startResizeY = 0f
-        var startWidth = 0
-        var startHeight = 0
-
-        resizeHandle.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    startResizeX = event.rawX
-                    startResizeY = event.rawY
-                    startWidth = params.width
-                    startHeight = params.height
-                    true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dw = (event.rawX - startResizeX).toInt()
-                    val dh = (event.rawY - startResizeY).toInt()
-                    val minW = dpToPx(240)
-                    val minH = dpToPx(180)
-                    params.width = (startWidth + dw).coerceAtLeast(minW)
-                    params.height = (startHeight + dh).coerceAtLeast(minH)
-                    try {
-                        defaultWindowManager.updateViewLayout(rootContainer, params)
-                    } catch (_: Exception) {}
-                    true
-                }
-                else -> false
-            }
-        }
-
-        rootContainer.addView(resizeHandle)
-
-        freeformContainerView = rootContainer
-        defaultWindowManager.addView(rootContainer, params)
+        frame.addView(img, FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ))
+        applyButtonBackground(frame, colorHex, shapeStr)
+        return frame
     }
 
-    private fun launchFreeformApp(pkgName: String, params: WindowManager.LayoutParams) {
-        if (pkgName.isBlank()) return
-        val x = params.x
-        val y = params.y
-        val width = params.width
-        val height = params.height
-        val bounds = Rect(x, y, x + width, y + height)
-
-        val launchIntent = packageManager.getLaunchIntentForPackage(pkgName)?.apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK)
-        } ?: return
-
-        try {
-            val options = ActivityOptions.makeBasic().apply {
-                setLaunchBounds(bounds)
+    private fun updateSingleButtonVisuals(
+        frame: View,
+        iconRes: Int,
+        colorHex: String,
+        shapeStr: String,
+        sizePx: Int
+    ) {
+        if (frame is FrameLayout && frame.childCount > 0) {
+            val img = frame.getChildAt(0) as? ImageView
+            img?.let {
+                it.setImageResource(iconRes)
+                val paddingPx = sizePx / 4
+                it.setPadding(paddingPx, paddingPx, paddingPx, paddingPx)
             }
-            startActivity(launchIntent, options.toBundle())
+        }
+        applyButtonBackground(frame, colorHex, shapeStr)
+    }
+
+    private fun applyButtonBackground(view: View, colorHex: String, shapeStr: String) {
+        val parsedColor = try {
+            Color.parseColor(colorHex)
         } catch (_: Exception) {
-            startActivity(launchIntent)
+            Color.parseColor("#7C4DFF")
         }
+
+        val bg = GradientDrawable()
+        bg.setColor(parsedColor)
+
+        when (shapeStr.uppercase()) {
+            "ROUNDED_SQUARE" -> {
+                bg.shape = GradientDrawable.RECTANGLE
+                bg.cornerRadius = dpToPx(12).toFloat()
+            }
+            "SQUARE" -> {
+                bg.shape = GradientDrawable.RECTANGLE
+                bg.cornerRadius = 0f
+            }
+            "STAR", "OCTAGON", "HEART" -> {
+                bg.shape = GradientDrawable.RECTANGLE
+                bg.cornerRadius = dpToPx(16).toFloat()
+            }
+            else -> { // CIRCLE
+                bg.shape = GradientDrawable.OVAL
+            }
+        }
+        view.background = bg
+    }
+
+    // --- Button Actions ---
+
+    private fun toggleFullscreen() {
+        val app = applicationContext
+        isTargetAppFullscreen = !isTargetAppFullscreen
+        if (isTargetAppFullscreen) {
+            activeFullscreenPackage = currentForegroundPackage
+        } else {
+            activeFullscreenPackage = ""
+        }
+        updateOverlayButtons()
     }
 
     private fun performHomeAction() {
         try {
-            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            startActivity(homeIntent)
-        } catch (_: Exception) {
-        }
+            startActivity(intent)
+        } catch (_: Exception) {}
     }
 
     private fun performBackAction() {
-        Thread {
-            try {
-                val inst = android.app.Instrumentation()
-                inst.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-            } catch (e: Exception) {
-                try {
-                    Runtime.getRuntime().exec("input keyevent 4")
-                } catch (_: Exception) {
-                }
-            }
-        }.start()
+        try {
+            val intent = Intent("ru.doGood.Lynk.ACTION_BACK_KEY")
+            sendBroadcast(intent)
+        } catch (_: Exception) {}
     }
 
     private fun performRefreshAction() {
-        val updateIntent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY").apply {
-            setPackage(packageName)
-        }
-        sendBroadcast(updateIntent)
-
-        val refreshUiIntent = Intent("ru.doGood.Lynk.ACTION_REFRESH_UI").apply {
-            setPackage(packageName)
-        }
-        sendBroadcast(refreshUiIntent)
-
         updateOverlayButtons()
     }
 
-    private fun toggleFullscreen() {
-        if (!isTargetAppFullscreen) {
-            activeFullscreenPackage = currentForegroundPackage
-        }
-
-        isTargetAppFullscreen = !isTargetAppFullscreen
-
-        fullscreenToggleView?.findViewById<ImageView>(R.id.overlay_image_view)?.setImageResource(
-            if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter
-        )
-        fullscreenToggleViewSecondary?.findViewById<ImageView>(R.id.overlay_image_view)?.setImageResource(
-            if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter
-        )
-
-        var targetPackage = if (isTargetAppFullscreen) currentForegroundPackage else activeFullscreenPackage
-        if (targetPackage.isEmpty()) {
-            targetPackage = currentForegroundPackage
-        }
-
-        val launchIntent = packageManager.getLaunchIntentForPackage(targetPackage)
-        if (launchIntent != null) {
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            try {
-                if (isTargetAppFullscreen) {
-                    val bundle = ActivityOptions.makeBasic()
-                        .setLaunchDisplayId(SECONDARY_DISPLAY_ID)
-                        .toBundle()
-                    startActivity(launchIntent, bundle)
-                } else {
-                    startActivity(launchIntent)
-                    activeFullscreenPackage = ""
-                }
-            } catch (e: Exception) {
-                startActivity(launchIntent)
-            }
-        }
-
-        updateOverlayButtons()
+    private fun performFreeformAction() {
+        toggleFreeformContainer()
     }
 
-    private fun showQuickLaunchMenu() {
-        val targetPackages = prefs.getStringSet("quick_launch_apps", Collections.emptySet()) ?: emptySet()
-        if (targetPackages.isEmpty()) {
+    private fun toggleFreeformContainer() {
+        if (freeformContainerView != null) {
+            try { defaultWindowManager.removeView(freeformContainerView) } catch (_: Exception) {}
+            freeformContainerView = null
             return
         }
 
-        val packages = ArrayList(targetPackages)
-        val pm = packageManager
-        val appNames = Array(packages.size) { i ->
-            try {
-                pm.getApplicationLabel(pm.getApplicationInfo(packages[i], 0)).toString()
-            } catch (e: PackageManager.NameNotFoundException) {
-                packages[i]
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dp(valDp: Int): Int = (valDp * density).toInt()
+
+        val rootContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(16).toFloat()
+                setColor(Color.parseColor("#1E1E2C"))
+                setStroke(dp(1), Color.parseColor("#3F3F56"))
+            }
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+        }
+
+        val headerLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, dp(8))
+        }
+
+        val titleTv = TextView(context).apply {
+            text = "Lynk Freeform Container"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val closeBtn = TextView(context).apply {
+            text = "✕"
+            setTextColor(Color.parseColor("#FF5252"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setPadding(dp(8), 0, dp(8), 0)
+            setOnClickListener {
+                toggleFreeformContainer()
             }
         }
 
-        val dialog = AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle("Быстрый запуск")
-            .setItems(appNames) { _, i ->
-                val launchIntent = packageManager.getLaunchIntentForPackage(packages[i])
-                if (launchIntent != null) {
-                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    startActivity(launchIntent)
-                }
-            }
-            .create()
+        headerLayout.addView(titleTv)
+        headerLayout.addView(closeBtn)
+        rootContainer.addView(headerLayout)
 
-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN)
-        dialog.show()
+        val contentTv = TextView(context).apply {
+            text = "Плавающее окно Lynk активна.\nВыберите действие или перетащите окно за заголовок."
+            setTextColor(Color.parseColor("#B0BEC5"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(0, dp(4), 0, dp(8))
+        }
+        rootContainer.addView(contentTv)
+
+        val params = WindowManager.LayoutParams(
+            dp(280),
+            dp(180),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+            x = 0
+            y = 0
+        }
+
+        headerLayout.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
+
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        defaultWindowManager.updateViewLayout(rootContainer, params)
+                        return true
+                    }
+                }
+                return false
+            }
+        })
+
+        freeformContainerParams = params
+        freeformContainerView = rootContainer
+        defaultWindowManager.addView(rootContainer, params)
     }
+
+    private fun showQuickLaunchMenuForProfile(profileId: Int) {
+        val appPkgs = getProfileStringSet(profileId, "quick_launch_apps", "quick_launch_apps")
+        val context = this
+        val density = resources.displayMetrics.density
+        fun dpToPx(dp: Int): Int = (dp * density).toInt()
+
+        val container = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(8), dpToPx(8), dpToPx(8), dpToPx(8))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dpToPx(16).toFloat()
+                setColor(Color.parseColor("#CC1E1E2C"))
+            }
+        }
+
+        val pm = packageManager
+        for (pkg in appPkgs) {
+            try {
+                val appInfo = pm.getApplicationInfo(pkg, 0)
+                val icon = pm.getApplicationIcon(appInfo)
+                val img = ImageView(context).apply {
+                    setImageDrawable(icon)
+                    val p = dpToPx(8)
+                    setPadding(p, p, p, p)
+                    setOnClickListener {
+                        val launchIntent = pm.getLaunchIntentForPackage(pkg)
+                        if (launchIntent != null) {
+                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            startActivity(launchIntent)
+                        }
+                    }
+                }
+                container.addView(img, LinearLayout.LayoutParams(dpToPx(48), dpToPx(48)))
+            } catch (_: Exception) {}
+        }
+
+        if (container.childCount == 0) {
+            val tv = TextView(context).apply {
+                text = "Нет выбранных ПО"
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
+            }
+            container.addView(tv)
+        }
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+
+        container.setOnClickListener {
+            try { defaultWindowManager.removeView(container) } catch (_: Exception) {}
+        }
+
+        defaultWindowManager.addView(container, params)
+    }
+
+    // --- Touch Drag and Snap Logic ---
 
     private fun setupDragAndSnapTouch(
         touchView: View,
@@ -1800,7 +1415,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         dragViewSecondary: View?,
         paramsSecondary: WindowManager.LayoutParams?,
         onClick: Runnable?,
-        prefPrefix: String
+        prefPrefix: String,
+        profileId: Int
     ) {
         touchView.isClickable = true
         if (onClick != null) {
@@ -1827,7 +1443,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isDragging = false
-                        return false // LET VIEW HANDLE CLICKS
+                        return false
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val deltaX = (event.rawX - initialTouchX).toInt()
@@ -1836,7 +1452,6 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
                         if (!isDragging && (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop)) {
                             isDragging = true
-                            // Send cancel to view so it doesn't trigger click/long-click
                             val cancelEvent = MotionEvent.obtain(event)
                             cancelEvent.action = MotionEvent.ACTION_CANCEL
                             v.onTouchEvent(cancelEvent)
@@ -1855,7 +1470,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                                 paramsSecondary.y = screenHeight - params.y - dragView.height
                                 secondaryWindowManager?.updateViewLayout(dragViewSecondary, paramsSecondary)
                             }
-                            return true // Intercept!
+                            return true
                         }
                         return false
                     }
@@ -1900,15 +1515,21 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                                 secondaryWindowManager?.updateViewLayout(dragViewSecondary, paramsSecondary)
                             }
 
-                            prefs.edit()
+                            val editor = prefs.edit()
                                 .putInt("${prefPrefix}_pos_x", params.x)
                                 .putInt("${prefPrefix}_pos_y", params.y)
-                                .apply()
-                            
+
+                            if (profileId == 1) {
+                                val legacyKey = prefPrefix.removePrefix("overlay_1_")
+                                editor.putInt("${legacyKey}_pos_x", params.x)
+                                    .putInt("${legacyKey}_pos_y", params.y)
+                            }
+
+                            editor.apply()
                             isDragging = false
-                            return true // Drag ended, do not fire click
+                            return true
                         }
-                        return false // Was not dragging, let click happen
+                        return false
                     }
                     MotionEvent.ACTION_CANCEL -> {
                         isDragging = false
@@ -1932,14 +1553,11 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val density = resources.displayMetrics.density
         fun dpToPx(dp: Int): Int = (dp * density).toInt()
 
-        val sizeKey = if (prefPrefix == "combined") "combined_button_size" else "${prefPrefix}_button_size"
-        val opacityKey = if (prefPrefix == "combined") "opacity_percent" else "${prefPrefix}_opacity_percent"
-        val colorKey = if (prefPrefix == "combined") "button_color" else "${prefPrefix}_color_hex"
-        val shapeKey = if (prefPrefix == "combined") "button_shape" else "${prefPrefix}_shape"
+        val sizeKey = if (prefPrefix.endsWith("combined")) "${prefPrefix}_button_size" else "${prefPrefix}_button_size"
+        val opacityKey = if (prefPrefix.endsWith("combined")) "${prefPrefix}_opacity_percent" else "${prefPrefix}_opacity_percent"
 
-        val currentSize = prefs.getInt(sizeKey, if (prefPrefix == "combined") 48 else prefs.getInt("combined_button_size", 48))
-        val currentOpacity = prefs.getInt(opacityKey, prefs.getInt("opacity_percent", 85))
-        val currentShape = prefs.getString(shapeKey, "CIRCLE") ?: "CIRCLE"
+        val currentSize = prefs.getInt(sizeKey, 48)
+        val currentOpacity = prefs.getInt(opacityKey, 85)
 
         val containerLayout = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -1948,64 +1566,35 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dpToPx(16).toFloat()
                 setColor(Color.parseColor("#1E1E2C"))
-                setStroke(dpToPx(1), Color.parseColor("#3A3A50"))
+                setStroke(dpToPx(1), Color.parseColor("#3F3F56"))
             }
         }
 
-        val headerRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val titleTv = TextView(context).apply {
-            text = "Настройки плавающей кнопки"
+        val headerText = TextView(context).apply {
+            text = "Быстрые настройки кнопки"
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dpToPx(8))
         }
-        val closeBtn = TextView(context).apply {
-            text = "✕"
-            setTextColor(Color.parseColor("#AAAAAA"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setPadding(dpToPx(8), dpToPx(4), dpToPx(8), dpToPx(4))
-            setOnClickListener {
-                activeSettingsDialogView?.let {
-                    try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
-                    activeSettingsDialogView = null
-                }
-            }
-        }
-        headerRow.addView(titleTv)
-        headerRow.addView(closeBtn)
-        containerLayout.addView(headerRow)
+        containerLayout.addView(headerText)
 
-        fun addSpacer(heightDp: Int) {
-            containerLayout.addView(View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(heightDp))
-            })
+        val sizeText = TextView(context).apply {
+            text = "Размер: ${currentSize}dp"
+            setTextColor(Color.parseColor("#B0BEC5"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         }
-
-        addSpacer(12)
-
-        // 1. Size Slider
-        val sizeLabel = TextView(context).apply {
-            text = "Размер: ${currentSize} dp"
-            setTextColor(Color.parseColor("#DDDDDD"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        }
-        containerLayout.addView(sizeLabel)
+        containerLayout.addView(sizeText)
 
         val sizeSeekBar = SeekBar(context).apply {
-            max = 96 - 24
-            progress = (currentSize - 24).coerceIn(0, max)
+            max = 120
+            progress = currentSize
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        val valDp = progress + 24
-                        sizeLabel.text = "Размер: ${valDp} dp"
-                        prefs.edit().putInt(sizeKey, valDp).apply()
-                        updateOverlayButtons()
-                    }
+                    val valDp = max(24, progress)
+                    sizeText.text = "Размер: ${valDp}dp"
+                    prefs.edit().putInt(sizeKey, valDp).apply()
+                    updateOverlayButtons()
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -2013,27 +1602,23 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         containerLayout.addView(sizeSeekBar)
 
-        addSpacer(8)
-
-        // 2. Opacity Slider
-        val opacityLabel = TextView(context).apply {
-            text = "Прозрачность: ${currentOpacity}%"
-            setTextColor(Color.parseColor("#DDDDDD"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        val opacityText = TextView(context).apply {
+            text = "Прозрачность: $currentOpacity%"
+            setTextColor(Color.parseColor("#B0BEC5"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(0, dpToPx(8), 0, 0)
         }
-        containerLayout.addView(opacityLabel)
+        containerLayout.addView(opacityText)
 
         val opacitySeekBar = SeekBar(context).apply {
-            max = 100 - 10
-            progress = (currentOpacity - 10).coerceIn(0, max)
+            max = 100
+            progress = currentOpacity
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        val valPercent = progress + 10
-                        opacityLabel.text = "Прозрачность: ${valPercent}%"
-                        prefs.edit().putInt(opacityKey, valPercent).apply()
-                        updateOverlayButtons()
-                    }
+                    val valPercent = max(10, progress)
+                    opacityText.text = "Прозрачность: $valPercent%"
+                    prefs.edit().putInt(opacityKey, valPercent).apply()
+                    updateOverlayButtons()
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
                 override fun onStopTrackingTouch(seekBar: SeekBar?) {}
@@ -2041,131 +1626,28 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         containerLayout.addView(opacitySeekBar)
 
-        addSpacer(8)
-
-        // 3. Shape Selection
-        val shapeLabel = TextView(context).apply {
-            text = "Форма"
-            setTextColor(Color.parseColor("#DDDDDD"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        }
-        containerLayout.addView(shapeLabel)
-
-        addSpacer(4)
-
-        val shapeRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val shapes = listOf(
-            "CIRCLE" to "●",
-            "ROUNDED_SQUARE" to "▢",
-            "SQUARE" to "■",
-            "STAR" to "★",
-            "OCTAGON" to "🛑",
-            "HEART" to "♥"
-        )
-        val shapeButtons = mutableListOf<TextView>()
-
-        fun updateShapeUi(selected: String) {
-            for (btn in shapeButtons) {
-                val tag = btn.tag as String
-                if (tag == selected) {
-                    btn.background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(10).toFloat()
-                        setColor(Color.parseColor("#7C4DFF"))
-                        setStroke(dpToPx(2), Color.parseColor("#B388FF"))
-                    }
-                    btn.setTextColor(Color.WHITE)
-                } else {
-                    btn.background = GradientDrawable().apply {
-                        shape = GradientDrawable.RECTANGLE
-                        cornerRadius = dpToPx(10).toFloat()
-                        setColor(Color.parseColor("#2A2A3C"))
-                        setStroke(dpToPx(1), Color.parseColor("#444466"))
-                    }
-                    btn.setTextColor(Color.parseColor("#AAAAAA"))
+        val closeBtn = TextView(context).apply {
+            text = "Закрыть"
+            setTextColor(Color.parseColor("#7C4DFF"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.CENTER
+            setPadding(0, dpToPx(12), 0, 0)
+            setOnClickListener {
+                activeSettingsDialogView?.let {
+                    try {
+                        defaultWindowManager.removeView(it)
+                    } catch (_: Exception) {}
+                    activeSettingsDialogView = null
                 }
             }
         }
-
-        val shapeScrollView = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(shapeRow)
-        }
-
-        val chipSize = dpToPx(44)
-        for ((shapeValue, shapeIcon) in shapes) {
-            val shapeBtn = TextView(context).apply {
-                text = shapeIcon
-                tag = shapeValue
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
-                includeFontPadding = false
-                gravity = Gravity.CENTER
-                layoutParams = LinearLayout.LayoutParams(chipSize, chipSize).apply {
-                    setMargins(dpToPx(3), 0, dpToPx(3), 0)
-                }
-                setOnClickListener {
-                    prefs.edit().putString(shapeKey, shapeValue).apply()
-                    updateShapeUi(shapeValue)
-                    updateOverlayButtons()
-                }
-            }
-            shapeButtons.add(shapeBtn)
-            shapeRow.addView(shapeBtn)
-        }
-        updateShapeUi(currentShape)
-        containerLayout.addView(shapeScrollView)
-
-        addSpacer(12)
-
-        // 4. Color Palette Presets
-        val colorLabel = TextView(context).apply {
-            text = "Цвет"
-            setTextColor(Color.parseColor("#DDDDDD"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        }
-        containerLayout.addView(colorLabel)
-
-        addSpacer(6)
-
-        val colorRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val colorPresets = listOf("#7C4DFF", "#2196F3", "#4CAF50", "#FF9800", "#E91E63", "#00BCD4", "#FFFFFF", "#000000")
-
-        for (colorHex in colorPresets) {
-            val colorCircle = View(context).apply {
-                val sizePx = dpToPx(28)
-                layoutParams = LinearLayout.LayoutParams(sizePx, sizePx).apply {
-                    setMargins(dpToPx(3), 0, dpToPx(3), 0)
-                }
-                val cInt = try { Color.parseColor(colorHex) } catch (_: Exception) { Color.MAGENTA }
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(cInt)
-                    setStroke(dpToPx(2), Color.parseColor("#80FFFFFF"))
-                }
-                setOnClickListener {
-                    prefs.edit().putString(colorKey, colorHex).apply()
-                    updateOverlayButtons()
-                }
-            }
-            colorRow.addView(colorCircle)
-        }
-        containerLayout.addView(colorRow)
-
-        val dialogWidth = (resources.displayMetrics.widthPixels * 0.85).toInt().coerceAtMost(dpToPx(340))
+        containerLayout.addView(closeBtn)
 
         val params = WindowManager.LayoutParams(
-            dialogWidth,
+            dpToPx(240),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.CENTER
@@ -2174,7 +1656,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         containerLayout.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_OUTSIDE) {
                 activeSettingsDialogView?.let {
-                    try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
+                    try {
+                        defaultWindowManager.removeView(it)
+                    } catch (_: Exception) {}
                     activeSettingsDialogView = null
                 }
                 true
@@ -2202,12 +1686,16 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     override fun onDestroy() {
         super.onDestroy()
         packageCheckerRunnable?.let { handler?.removeCallbacks(it) }
-        hideSeparateButtons()
-        hideCombinedOverlay()
+
+        for (profileId in 1..3) {
+            removeProfileOverlayButtons(profileId)
+        }
+
         freeformContainerView?.let {
             try { defaultWindowManager.removeView(it) } catch (_: Exception) {}
         }
         freeformContainerView = null
+
         if (::prefs.isInitialized) {
             prefs.unregisterOnSharedPreferenceChangeListener(this)
         }

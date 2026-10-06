@@ -312,6 +312,8 @@ fun DashboardMainScreen(
 
                         3 -> FloatingButtonsScreen(
                             state = state.floatingButtonsState,
+                            onSelectProfile = { viewModel.selectOverlayProfile(it) },
+                            onToggleProfileEnabled = { id, enabled -> viewModel.toggleOverlayProfileEnabled(id, enabled) },
                             onToggleQuickLaunch = { viewModel.toggleQuickLaunchEnabled(it) },
                             onSetQuickLaunchSize = { viewModel.setQuickLaunchSize(it) },
                             onSetQuickLaunchOpacity = { viewModel.setQuickLaunchOpacityPercent(it) },

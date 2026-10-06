@@ -254,4 +254,11 @@
     <string name="cloud_download_success_install">File \'%1$s\' downloaded. Starting installation...</string>
     <string name="cloud_download_failed">Download error: %1$s</string>
 
+    <!-- Multi-Overlay Manager -->
+    <string name="overlay_profile_1">Overlay 1</string>
+    <string name="overlay_profile_2">Overlay 2</string>
+    <string name="overlay_profile_3">Overlay 3</string>
+    <string name="enable_overlay_profile">Enable this overlay profile</string>
+    <string name="overlay_profile_status_desc">Controls whether this profile\'s floating buttons are displayed on screen</string>
+
 </resources>
