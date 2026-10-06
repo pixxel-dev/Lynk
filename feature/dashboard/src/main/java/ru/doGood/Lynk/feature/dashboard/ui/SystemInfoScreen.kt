@@ -56,29 +56,32 @@ fun SystemInfoScreen(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        TabRow(selectedTabIndex = activeTab) {
+        ScrollableTabRow(
+            selectedTabIndex = activeTab,
+            edgePadding = 12.dp
+        ) {
             Tab(
                 selected = activeTab == 0,
                 onClick = { activeTab = 0 },
-                text = { Text(stringResource(R.string.subtab_specs), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                text = { Text(stringResource(R.string.subtab_specs), maxLines = 1) },
                 icon = { Icon(Icons.Rounded.PhoneAndroid, null) }
             )
             Tab(
                 selected = activeTab == 1,
                 onClick = { activeTab = 1 },
-                text = { Text(stringResource(R.string.subtab_logs), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                text = { Text(stringResource(R.string.subtab_logs), maxLines = 1) },
                 icon = { Icon(Icons.Rounded.Terminal, null) }
             )
             Tab(
                 selected = activeTab == 2,
                 onClick = { activeTab = 2 },
-                text = { Text(stringResource(R.string.subtab_rights), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                text = { Text(stringResource(R.string.subtab_rights), maxLines = 1) },
                 icon = { Icon(Icons.Rounded.Security, null) }
             )
             Tab(
                 selected = activeTab == 3,
                 onClick = { activeTab = 3 },
-                text = { Text(stringResource(R.string.tab_update), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                text = { Text(stringResource(R.string.tab_update), maxLines = 1) },
                 icon = { Icon(Icons.Rounded.SystemUpdate, null) }
             )
         }
@@ -351,15 +354,14 @@ fun SystemLogsTab(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant
             )
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isRecording) {
@@ -373,23 +375,20 @@ fun SystemLogsTab(
                             text = stringResource(R.string.recording_logs),
                             color = MaterialTheme.colorScheme.error,
                             fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            softWrap = true
                         )
                     } else {
                         Text(
                             text = stringResource(R.string.logcat_idle),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            softWrap = true
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
-
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (isRecording) {
                         Button(
@@ -426,14 +425,19 @@ fun SystemLogsTab(
                         }
                     }
 
-                    IconButton(onClick = onSaveLogs) {
-                        Icon(Icons.Rounded.Save, stringResource(R.string.btn_save))
-                    }
-                    IconButton(onClick = onCopyLogs) {
-                        Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy_logs))
-                    }
-                    IconButton(onClick = onClearLogs) {
-                        Icon(Icons.Rounded.Delete, stringResource(R.string.btn_clear_logs))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        IconButton(onClick = onSaveLogs) {
+                            Icon(Icons.Rounded.Save, stringResource(R.string.btn_save))
+                        }
+                        IconButton(onClick = onCopyLogs) {
+                            Icon(Icons.Rounded.ContentCopy, stringResource(R.string.btn_copy_logs))
+                        }
+                        IconButton(onClick = onClearLogs) {
+                            Icon(Icons.Rounded.Delete, stringResource(R.string.btn_clear_logs))
+                        }
                     }
                 }
             }

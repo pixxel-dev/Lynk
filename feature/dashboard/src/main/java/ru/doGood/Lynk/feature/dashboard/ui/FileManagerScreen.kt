@@ -1154,7 +1154,12 @@ fun openFileWithIntent(context: Context, fileItem: FileItem) {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(Intent.createChooser(intent, context.getString(R.string.open_with)))
+        val chooserIntent = Intent.createChooser(intent, context.getString(R.string.open_with)).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        context.startActivity(chooserIntent)
     } catch (e: Exception) {
         Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_SHORT).show()
     }
