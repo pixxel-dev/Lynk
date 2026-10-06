@@ -46,6 +46,8 @@ This document defines the architectural guidelines and agent operating procedure
 
 ### 7. Token Consumption Efficiency
 - **Concise Responses:** Agent responses must be concise, precise, and free of redundant, lengthy introductory or concluding boilerplate.
+- **Strict Prohibition of Technical Spam & Code Listings:** Manager and agents must respond to the user strictly with a **concise final summary in simple plain language** without technical programming details (no code listings, class/function names, or internal intermediate steps).
+- **User Response Format:** State only what was accomplished for the user and what can be tested/verified.
 - **No Code Duplication:** Duplicating identical code snippets multiple times is strictly prohibited; keep responses focused and to the point.
 - **Batch Tool Invocation:** Tools must be invoked in parallel batches without unnecessary intermediate roundtrips.
 
@@ -98,6 +100,8 @@ This document defines the architectural guidelines and agent operating procedure
 
 ### 7. Эффективность расхода токенов
 - **Лаконичность и точность ответов:** Ответы агентов должны быть точными, лаконичными и не содержать избыточных вступлений или заключений.
+- **Запрет технического спама и листинга кода пользователю:** Менеджер и агенты обязаны писать пользователю строго **краткий итоговый результат на простом понятном языке** без технических подробностей программирования (без листингов кода, названий классов, функций и внутренних промежуточных шагов).
+- **Формат ответа пользователю:** Только что сделано для пользователя и что можно проверять.
 - **Запрет дублирования кода:** Запрещено дублировать фрагменты кода; отвечать строго по существу.
 - **Пакетный вызов инструментов:** Инструменты вызываются параллельными пакетами (batch calls) без лишних промежуточных итераций.
 
