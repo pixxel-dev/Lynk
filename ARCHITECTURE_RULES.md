@@ -27,7 +27,20 @@ The project follows a multi-module Clean Architecture approach:
 - **Full Interactive Controls Testing:** After every iteration or enhancement stage, the testing agent must verify the functionality of all buttons, tabs, and interactive UI controls across the application.
 - **Redundancy Elimination & Auto-Actions:** The agent must automatically identify and propose ways to eliminate manual or repetitive user actions (e.g., replacing manual "Refresh" buttons with automatic reactive subscriptions, auto-updates triggered on the `ON_RESUME` lifecycle event, or background synchronization).
 
-### 5. App Signing
+### 5. AI Agent Roles & Ecosystem
+The project is developed and maintained by a collaborative multi-agent AI system:
+
+**Active Agents:**
+1. **Engineering Manager Agent:** Orchestration, user communication, backlog and implementation plan management, and task delegation.
+2. **Product Design Agent (`product_design_agent`):** Generation of project briefs, product requirements (PRD), architecture documentation, and UI/UX design specifications.
+3. **Coder Agent (`coder_agent`):** Development of pure Java business logic in `:core:domain`, Kotlin Jetpack Compose UI in feature/app modules, Gradle configuration, and Git version control management.
+4. **Critic Agent (`critic_agent` / QA):** Automated emulator deployment, end-to-end interactive testing of all UI controls, system log monitoring, and bug fix verification.
+
+**Proposed Future Agents (Full Automation Cycle):**
+5. **Code Review & Security Auditor Agent:** Automated static code analysis (Checkstyle/ktlint), security vulnerability scanning, dependency auditing, and strict enforcement of the pure Java architectural boundary in `:core:domain`.
+6. **Localization Agent:** Automatic translation of new string resources in `strings.xml` to all supported languages (RU/EN) while preserving UI context and terminology consistency.
+
+### 6. App Signing
 - **Single Keystore Requirement:** All builds (both Release and Debug) MUST be signed with the unified `lynk_release.keystore` to ensure seamless updates and avoid "App not installed" errors for the end user when transitioning between development and production versions.
 
 ---
@@ -56,5 +69,18 @@ The project follows a multi-module Clean Architecture approach:
 - **Обязательное сквозное тестирование кнопок (Full Interactive Controls Testing):** После каждого этапа доработки агент тестирования должен проверять работоспособность всех кнопок, вкладок и интерактивных элементов интерфейса приложения.
 - **Исключение лишних действий пользователя (Redundancy Elimination & Auto-Actions):** Агент должен автоматически выявлять и предлагать способы устранения ручных/повторяющихся действий пользователя (например, заменять ручные кнопки «Обновить»/«Refresh» на автоматическую реактивную подписку, авто-обновление по событию `ON_RESUME` жизненного цикла или фоновую синхронизацию).
 
-### 5. Подпись приложения
+### 5. Экосистема и роли ИИ-агентов
+Поддержка и разработка проекта осуществляется совместной экосистемой специализированных ИИ-агентов:
+
+**Активные агенты:**
+1. **Engineering Manager Agent (Менеджер проекта):** Оркестрация процесса разработки, прямое общение с пользователем, ведение плана реализации и бэклога, делегирование задач.
+2. **Product Design Agent (`product_design_agent` / Проектировщик продукта):** Генерация проектного брифа, спецификаций требований (PRD), архитектурной документации и рекомендаций по UI/UX.
+3. **Coder Agent (`coder_agent` / Программист):** Разработка бизнес-логики на чистой Java в `:core:domain`, создание Compose UI на Kotlin в модулях фич и приложения, настройка Gradle и работа с Git.
+4. **Critic Agent (`critic_agent` / QA-тестировщик):** Автоматическое развертывание приложения на эмуляторе, сквозное интерактивное тестирование всех элементов UI, анализ логов и верификация исправлений ошибок.
+
+**Предлагаемые концептуальные агенты (для полного цикла автоматизации):**
+5. **Code Review & Security Auditor Agent (Агент статического анализа и безопасности):** Автоматическая проверка кода на соответствие стандартам Checkstyle/ktlint, аудит безопасности и уязвимостей зависимостей, а также строгое соблюдение границы «чистого Java» в модуле `:core:domain`.
+6. **Localization Agent (Агент локализации):** Автоматически отслеживает строковые ресурсы, добавленные на одном языке, и безупречно переводит их на все поддерживаемые языки (RU/EN) с сохранением контекстного смысла.
+
+### 6. Подпись приложения
 - **Единый ключ подписи (Keystore):** Все сборки (как Release, так и Debug) ДОЛЖНЫ подписываться единым ключом `lynk_release.keystore`, чтобы гарантировать бесшовные обновления и избежать ошибки «Приложение не установлено» у конечного пользователя при переходе между тестовыми и рабочими версиями.

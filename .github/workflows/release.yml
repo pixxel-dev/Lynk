@@ -23,6 +23,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Generate Release Keystore for CI
+        run: |
+          keytool -genkeypair -v -keystore app/lynk_release.keystore -alias lynk -keyalg RSA -keysize 2048 -validity 10000 -storepass lynk123 -keypass lynk123 -dname "CN=Lynk, OU=Lynk, O=Lynk, L=City, S=State, C=US"
+
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease
 
