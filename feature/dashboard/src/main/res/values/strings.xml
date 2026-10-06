@@ -264,8 +264,8 @@
     <string name="rename_overlay">Rename Overlay</string>
     <string name="delete_overlay">Delete Overlay</string>
     <string name="overlay_name_label">Overlay Name</string>
-    <string name="delete_overlay_confirm_title">Delete Overlay?</string>
-    <string name="delete_overlay_confirm_msg">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="delete_overlay_confirm_title">Delete Overlay</string>
+    <string name="delete_overlay_confirm_msg">Are you sure you want to delete overlay %1$s?</string>
     <string name="button_settings">⚙️ Button Settings</string>
     <string name="hide_button_settings">⚙️ Hide Settings</string>
     <string name="chip_quick_launch">🚀 Quick Launch</string>

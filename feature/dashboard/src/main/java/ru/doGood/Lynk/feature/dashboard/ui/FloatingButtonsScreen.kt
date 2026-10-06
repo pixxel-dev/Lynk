@@ -1,9 +1,6 @@
 package ru.doGood.Lynk.feature.dashboard.ui
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -101,14 +98,11 @@ fun FloatingButtonsScreen(
     onRemoveFullscreenApp: (String) -> Unit,
     onSetFullscreenApps: (List<String>) -> Unit = {},
     onCheckPermissions: (Context) -> Unit,
-    onToggleOverlayService: (Context) -> Unit
+    onToggleOverlayService: (Context) -> Unit = {}
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-
-    val isServiceRunning = state.isServiceRunning
-    val hasOverlayPermission = state.isOverlayPermissionGranted
 
     var showAddQuickLaunchDialog by remember { mutableStateOf(false) }
     var showAddFullscreenDialog by remember { mutableStateOf(false) }
@@ -136,49 +130,6 @@ fun FloatingButtonsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // Service Status Card (Spans full width)
-        item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
-            ServiceStatusCard(
-                state = state,
-                onToggleService = { onToggleOverlayService(context) },
-                onOpenOverlaySettings = {
-                    try {
-                        val intent = Intent(
-                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                            Uri.parse("package:${context.packageName}")
-                        ).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        val fallback = Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}")
-                        ).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(fallback)
-                    }
-                },
-                onOpenUsageStatsSettings = {
-                    try {
-                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        val fallback = Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}")
-                        ).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(fallback)
-                    }
-                }
-            )
-        }
-
         // Overlay Profiles TabRow (Spans full width)
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
             val selectedIndex = state.profiles.indexOfFirst { it.id == state.selectedProfileId }.coerceAtLeast(0)
@@ -272,8 +223,7 @@ fun FloatingButtonsScreen(
 
         // Active Profile Status Card & Button Configuration Cards
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
-            AnimatedVisibility(visible = isServiceRunning && hasOverlayPermission) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     ProfileStatusCard(
                         profile = state.activeProfile,
                         canDelete = state.profiles.size > 1,
@@ -447,7 +397,6 @@ fun FloatingButtonsScreen(
             }
         }
     }
-}
 }
 
     // Add App to Quick Launch Dialog
@@ -845,101 +794,7 @@ private fun FreeformWindowCard(
     )
 }
 
-@Composable
-private fun ServiceStatusCard(
-    state: FloatingButtonsState,
-    onToggleService: () -> Unit,
-    onOpenOverlaySettings: () -> Unit,
-    onOpenUsageStatsSettings: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clipToBounds(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (state.isServiceRunning)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = if (state.isServiceRunning) Icons.Rounded.PlayArrow else Icons.Rounded.Stop,
-                        contentDescription = null,
-                        tint = if (state.isServiceRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (state.isServiceRunning) stringResource(R.string.service_running) else stringResource(R.string.service_stopped),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = if (state.isServiceRunning) stringResource(R.string.service_running_desc) else stringResource(R.string.service_stopped_desc),
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onToggleService) {
-                    Text(if (state.isServiceRunning) stringResource(R.string.btn_stop_service) else stringResource(R.string.btn_start_service))
-                }
-            }
 
-            if (!state.isOverlayPermissionGranted || !state.isUsageStatsPermissionGranted) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                Text(
-                    text = stringResource(R.string.system_permissions_required),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.error,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (!state.isOverlayPermissionGranted) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = stringResource(R.string.perm_overlay_display), style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = onOpenOverlaySettings) {
-                            Text(stringResource(R.string.btn_allow))
-                        }
-                    }
-                }
-
-                if (!state.isUsageStatsPermissionGranted) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = stringResource(R.string.perm_usage_history), style = MaterialTheme.typography.bodySmall)
-                        TextButton(onClick = onOpenUsageStatsSettings) {
-                            Text(stringResource(R.string.btn_allow))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun FloatingButtonCard(
