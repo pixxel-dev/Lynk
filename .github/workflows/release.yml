@@ -59,7 +59,7 @@ jobs:
         with:
           tag_name: v${{ steps.extract_version.outputs.version }}
           name: Release v${{ steps.extract_version.outputs.version }}
-          files: app/build/outputs/apk/release/Lynk_*.apk
+          files: app/build/outputs/apk/release/*.apk
           allowUpdates: true
           overwrite: true
           draft: false

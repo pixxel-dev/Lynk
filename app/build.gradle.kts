@@ -58,12 +58,7 @@ android {
         }
     }
 
-    (this as? com.android.build.gradle.AppExtension)?.applicationVariants?.all {
-        outputs.all {
-            val outputImpl = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            outputImpl?.outputFileName = "Lynk_${fullVersionName}.apk"
-        }
-    }
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -72,12 +67,23 @@ android {
     buildFeatures {
         compose = true
     }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+            isUniversalApk = true
+        }
+    }
 }
 
 androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
-            output.outputFileName.set("Lynk_${fullVersionName}.apk")
+            val name = output.outputFileName.get()
+            // name typically looks like "app-arm64-v8a-release.apk" or "app-universal-release.apk"
+            output.outputFileName.set(name.replace("app-", "Lynk_${fullVersionName}-"))
         }
     }
 }
