@@ -2,12 +2,18 @@ package ru.doGood.Lynk.feature.dashboard.ui
 
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Path
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.min
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -757,7 +763,94 @@ private fun FreeformWindowCard(
     )
 }
 
+private fun createComposeStarPath(width: Float, height: Float): Path {
+    val path = Path()
+    val cx = width / 2f
+    val cy = height / 2f
+    val outerRadius = min(width, height) / 2f * 0.95f
+    val innerRadius = outerRadius * 0.42f
+    val points = 5
+    val angleStep = Math.PI / points
 
+    for (i in 0 until (points * 2)) {
+        val r = if (i % 2 == 0) outerRadius else innerRadius
+        val angle = -Math.PI / 2 + i * angleStep
+        val x = (cx + r * cos(angle)).toFloat()
+        val y = (cy + r * sin(angle)).toFloat()
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    path.close()
+    return path
+}
+
+private fun createComposeOctagonPath(width: Float, height: Float): Path {
+    val path = Path()
+    val corner = min(width, height) * 0.28f
+    path.moveTo(corner, 0f)
+    path.lineTo(width - corner, 0f)
+    path.lineTo(width, corner)
+    path.lineTo(width, height - corner)
+    path.lineTo(width - corner, height)
+    path.lineTo(corner, height)
+    path.lineTo(0f, height - corner)
+    path.lineTo(0f, corner)
+    path.close()
+    return path
+}
+
+private fun createComposeHeartPath(width: Float, height: Float): Path {
+    val path = Path()
+    val cx = width / 2f
+    val topY = height * 0.25f
+    val bottomY = height * 0.88f
+
+    path.moveTo(cx, bottomY)
+    path.cubicTo(
+        cx - width * 0.55f, height * 0.55f,
+        cx - width * 0.55f, height * 0.08f,
+        cx - width * 0.26f, height * 0.08f
+    )
+    path.cubicTo(
+        cx - width * 0.08f, height * 0.08f,
+        cx, topY,
+        cx, topY
+    )
+    path.cubicTo(
+        cx, topY,
+        cx + width * 0.08f, height * 0.08f,
+        cx + width * 0.26f, height * 0.08f
+    )
+    path.cubicTo(
+        cx + width * 0.55f, height * 0.08f,
+        cx + width * 0.55f, height * 0.55f,
+        cx, bottomY
+    )
+    path.close()
+    return path
+}
+
+@Composable
+private fun ShapePreview(
+    shapeKey: String,
+    color: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        when (shapeKey.uppercase()) {
+            "STAR" -> drawPath(createComposeStarPath(w, h), color = color)
+            "OCTAGON" -> drawPath(createComposeOctagonPath(w, h), color = color)
+            "HEART" -> drawPath(createComposeHeartPath(w, h), color = color)
+            "ROUNDED_SQUARE" -> drawRoundRect(
+                color = color,
+                cornerRadius = CornerRadius(w * 0.22f)
+            )
+            "SQUARE" -> drawRect(color = color)
+            else -> drawCircle(color = color)
+        }
+    }
+}
 
 @Composable
 private fun FloatingButtonCard(
@@ -901,12 +994,12 @@ private fun FloatingButtonCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     val shapes = remember {
                         listOf(
-                            "CIRCLE" to ("●" to R.string.shape_circle),
-                            "ROUNDED_SQUARE" to ("▢" to R.string.shape_rounded_square),
-                            "SQUARE" to ("■" to R.string.shape_square),
-                            "STAR" to ("★" to R.string.shape_star),
-                            "OCTAGON" to ("🛑" to R.string.shape_octagon),
-                            "HEART" to ("♥" to R.string.shape_heart)
+                            "CIRCLE" to R.string.shape_circle,
+                            "ROUNDED_SQUARE" to R.string.shape_rounded_square,
+                            "SQUARE" to R.string.shape_square,
+                            "STAR" to R.string.shape_star,
+                            "OCTAGON" to R.string.shape_octagon,
+                            "HEART" to R.string.shape_heart
                         )
                     }
                     Row(
@@ -917,8 +1010,7 @@ private fun FloatingButtonCard(
                             .horizontalScroll(rememberScrollState())
                             .padding(vertical = 4.dp)
                     ) {
-                        shapes.forEach { (shapeKey, iconAndRes) ->
-                            val (symbol, stringRes) = iconAndRes
+                        shapes.forEach { (shapeKey, stringRes) ->
                             val isSelected = selectedShape == shapeKey
                             val labelDescription = stringResource(stringRes)
 
@@ -941,24 +1033,23 @@ private fun FloatingButtonCard(
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(48.dp)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(backgroundColor)
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
                                         color = borderColor,
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable { onSetShape(shapeKey) }
                                     .semantics {
                                         contentDescription = labelDescription
                                     }
                             ) {
-                                Text(
-                                    text = symbol,
-                                    fontSize = 26.sp,
+                                ShapePreview(
+                                    shapeKey = shapeKey,
                                     color = contentColor,
-                                    textAlign = TextAlign.Center
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }

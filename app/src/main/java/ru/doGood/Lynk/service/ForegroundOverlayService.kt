@@ -34,6 +34,7 @@ import android.view.ViewConfiguration
 import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -1822,6 +1823,136 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             })
         }
         containerLayout.addView(opacitySeekBar)
+
+        // Shape Selector
+        val shapeLabelText = TextView(context).apply {
+            text = "Форма кнопки"
+            setTextColor(Color.parseColor("#B0BEC5"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setPadding(0, dpToPx(8), 0, dpToPx(6))
+        }
+        containerLayout.addView(shapeLabelText)
+
+        val profileId = try {
+            prefPrefix.split("_").getOrNull(1)?.toIntOrNull() ?: 1
+        } catch (_: Exception) {
+            1
+        }
+
+        val shapePrefKey = "${prefPrefix}_shape"
+        val legacyShapeKey = when {
+            prefPrefix.contains("_ql") -> "ql_shape"
+            prefPrefix.contains("_fs") -> "fs_shape"
+            prefPrefix.contains("_home") -> "home_shape"
+            prefPrefix.contains("_back") -> "back_shape"
+            prefPrefix.contains("_refresh") -> "refresh_shape"
+            prefPrefix.contains("_freeform") -> "freeform_shape"
+            else -> "button_shape"
+        }
+
+        var currentShape = getProfileString(
+            profileId,
+            legacyShapeKey,
+            legacyShapeKey,
+            getProfileString(profileId, "button_shape", "button_shape", "CIRCLE")
+        )
+
+        val availableShapes = listOf(
+            "CIRCLE",
+            "ROUNDED_SQUARE",
+            "SQUARE",
+            "STAR",
+            "OCTAGON",
+            "HEART"
+        )
+
+        val shapeScroll = HorizontalScrollView(context).apply {
+            isFillViewport = true
+            isHorizontalScrollBarEnabled = false
+        }
+
+        val shapeLayout = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val shapeViews = mutableMapOf<String, FrameLayout>()
+
+        fun updateShapeSelectionVisuals(selectedKey: String) {
+            availableShapes.forEach { key ->
+                val frame = shapeViews[key] ?: return@forEach
+                val isSelected = key.equals(selectedKey, ignoreCase = true)
+
+                val bgDrawable = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dpToPx(8).toFloat()
+                    setColor(if (isSelected) Color.parseColor("#3F3F56") else Color.parseColor("#2A2A3C"))
+                    setStroke(
+                        if (isSelected) dpToPx(2) else dpToPx(1),
+                        if (isSelected) Color.parseColor("#7C4DFF") else Color.parseColor("#3F3F56")
+                    )
+                }
+                frame.background = bgDrawable
+
+                val innerView = frame.getChildAt(0)
+                val tintColor = if (isSelected) Color.WHITE else Color.parseColor("#A0A0A0")
+
+                innerView?.background = when (key.uppercase()) {
+                    "STAR" -> PathDrawable(::createStarPath, tintColor)
+                    "OCTAGON" -> PathDrawable(::createOctagonPath, tintColor)
+                    "HEART" -> PathDrawable(::createHeartPath, tintColor)
+                    "ROUNDED_SQUARE" -> GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = dpToPx(4).toFloat()
+                        setColor(tintColor)
+                    }
+                    "SQUARE" -> GradientDrawable().apply {
+                        shape = GradientDrawable.RECTANGLE
+                        cornerRadius = 0f
+                        setColor(tintColor)
+                    }
+                    else -> GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(tintColor)
+                    }
+                }
+            }
+        }
+
+        availableShapes.forEach { key ->
+            val frame = FrameLayout(context).apply {
+                val params = LinearLayout.LayoutParams(dpToPx(36), dpToPx(36)).apply {
+                    setMargins(0, 0, dpToPx(6), 0)
+                }
+                layoutParams = params
+            }
+
+            val innerView = View(context).apply {
+                val innerParams = FrameLayout.LayoutParams(dpToPx(18), dpToPx(18)).apply {
+                    gravity = Gravity.CENTER
+                }
+                layoutParams = innerParams
+            }
+            frame.addView(innerView)
+
+            frame.setOnClickListener {
+                currentShape = key
+                prefs.edit()
+                    .putString(shapePrefKey, key)
+                    .putString(legacyShapeKey, key)
+                    .putString(getPrefKey(profileId, legacyShapeKey), key)
+                    .apply()
+
+                updateShapeSelectionVisuals(key)
+                updateOverlayButtons()
+            }
+
+            shapeViews[key] = frame
+            shapeLayout.addView(frame)
+        }
+
+        updateShapeSelectionVisuals(currentShape)
+        shapeScroll.addView(shapeLayout)
+        containerLayout.addView(shapeScroll)
 
         val closeBtn = TextView(context).apply {
             text = "Закрыть"
