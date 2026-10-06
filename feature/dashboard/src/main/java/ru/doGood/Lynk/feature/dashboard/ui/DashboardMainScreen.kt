@@ -232,6 +232,9 @@ fun DashboardMainScreen(
                                 1f - (state.fileManagerState.freeSpaceBytes.toFloat() / state.fileManagerState.totalSpaceBytes.toFloat())
                             } else 0f,
                             inlineInstallState = state.fileManagerState.inlineInstallState,
+                            isLoading = state.fileManagerState.isLoading,
+                            cloudConnections = state.fileManagerState.cloudConnections,
+                            activeCloudConnection = state.fileManagerState.activeCloudConnection,
                             onPathClick = { path -> viewModel.loadDirectory(path) },
                             onNavigateUp = { viewModel.navigateUp() },
                             onFileClick = { file ->
@@ -262,7 +265,18 @@ fun DashboardMainScreen(
                             onShowProperties = { file -> filePropertiesToShow = file },
                             onRenameFile = { oldPath, newName -> viewModel.renameFile(oldPath, newName) },
                             onStartInlineWaterfallInstall = { file -> viewModel.startInlineWaterfallInstall(file) },
-                            onDismissInlineInstall = { viewModel.dismissInlineInstall() }
+                            onDismissInlineInstall = { viewModel.dismissInlineInstall() },
+                            onSaveCloudConnection = { name, url, username, password ->
+                                val id = java.util.UUID.randomUUID().toString()
+                                val conn = com.example.lynk.core.domain.cloud.CloudConnection(id, name, url, username, password)
+                                viewModel.saveCloudConnection(conn)
+                            },
+                            onSelectCloudConnection = { conn ->
+                                viewModel.selectCloudConnection(conn)
+                            },
+                            onRemoveCloudConnection = { id ->
+                                viewModel.removeCloudConnection(id)
+                            }
                         )
 
                         1 -> ApkInstallerScreen(

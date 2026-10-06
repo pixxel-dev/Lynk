@@ -48,7 +48,7 @@
   * *RU:* Модульная архитектура (Modular Architecture).
 
 ## Implementation Steps
-**Total Duration:** 1h 2m 6s
+**Total Duration:** 1h 8m 51s
 
 ### Task_1_Setup_And_Architecture: Fetch project from GitHub (user to provide details), set up Modular Architecture separating Java logic and Kotlin UI, and initialize documentation and backlog tracking files.
 - **Status:** COMPLETED
@@ -141,19 +141,21 @@
 - **Duration:** 11m 18s
 
 ### Task_11_WebDAV_Domain_And_Integration: Domain Models & Client Setup: Implement CloudConnection model and Java CloudStorageClient for WebDAV operations in :core:domain. Integration: Update DashboardViewModel in :feature:dashboard to support switching storage paths and credential storage.
-- **Status:** IN_PROGRESS
+- **Status:** COMPLETED
+- **Updates:** Successfully implemented CloudConnection and WebDavClient in Java. Integrated with DashboardViewModel to dynamically switch between local IO and WebDAV PROPFIND requests based on path schema. Updated FileItem to support cloud properties. Committed and pushed successfully.
 - **Acceptance Criteria:**
   - CloudConnection and CloudStorageClient implemented in pure Java
   - DashboardViewModel handles cloud/local path switching and credentials
   - API_KEY/Token integration supported as a critical acceptance criteria
-- **StartTime:** 2026-10-06 23:00:08 MSK
+- **Duration:** 6m 45s
 
 ### Task_12_WebDAV_UI_And_Verify: UI Enhancements: Add 'Add Cloud Connection' modal and storage selector dropdown to FileManagerScreen.kt. Map WebDAV items to FileItem. Run and Verify: Instruct critic_agent to verify app stability, confirm WebDAV UI alignment, and ensure no crashes.
-- **Status:** PENDING
+- **Status:** IN_PROGRESS
 - **Acceptance Criteria:**
   - FileManagerScreen shows Cloud Connection dialog and storage dropdown
   - WebDAV items render as FileItems seamlessly
   - make sure all existing tests pass
   - build pass
   - app does not crash
+- **StartTime:** 2026-10-06 23:06:53 MSK
 

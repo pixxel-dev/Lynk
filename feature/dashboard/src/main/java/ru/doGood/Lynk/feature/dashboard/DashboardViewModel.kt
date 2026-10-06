@@ -56,7 +56,10 @@ data class FileManagerState(
     val freeSpaceBytes: Long = 0L,
     val totalSpaceBytes: Long = 0L,
     val message: String? = null,
-    val inlineInstallState: InlineInstallState? = null
+    val inlineInstallState: InlineInstallState? = null,
+    val isLoading: Boolean = false,
+    val cloudConnections: List<com.example.lynk.core.domain.cloud.CloudConnection> = emptyList(),
+    val activeCloudConnection: com.example.lynk.core.domain.cloud.CloudConnection? = null
 )
 
 data class ApkInstallerState(
@@ -149,14 +152,65 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
         
-        // MVP: if we have any, just set the first one as active for testing
-        if (savedCloudConnections.isNotEmpty()) {
-            activeCloudConnection = savedCloudConnections.first()
+        _state.update {
+            it.copy(
+                fileManagerState = it.fileManagerState.copy(
+                    cloudConnections = savedCloudConnections.toList(),
+                    activeCloudConnection = activeCloudConnection
+                )
+            )
         }
     }
     
     fun saveCloudConnection(connection: com.example.lynk.core.domain.cloud.CloudConnection) {
-        savedCloudConnections.add(connection)
+        val existingIndex = savedCloudConnections.indexOfFirst { it.id == connection.id }
+        if (existingIndex >= 0) {
+            savedCloudConnections[existingIndex] = connection
+        } else {
+            savedCloudConnections.add(connection)
+        }
+        saveCloudConnectionsToPrefs()
+        selectCloudConnection(connection)
+    }
+
+    fun removeCloudConnection(id: String) {
+        savedCloudConnections.removeAll { it.id == id }
+        saveCloudConnectionsToPrefs()
+        if (activeCloudConnection?.id == id) {
+            activeCloudConnection = null
+            _state.update {
+                it.copy(
+                    fileManagerState = it.fileManagerState.copy(
+                        cloudConnections = savedCloudConnections.toList(),
+                        activeCloudConnection = null
+                    )
+                )
+            }
+            loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
+        } else {
+            _state.update {
+                it.copy(
+                    fileManagerState = it.fileManagerState.copy(
+                        cloudConnections = savedCloudConnections.toList()
+                    )
+                )
+            }
+        }
+    }
+
+    fun selectCloudConnection(connection: com.example.lynk.core.domain.cloud.CloudConnection) {
+        activeCloudConnection = connection
+        _state.update {
+            it.copy(
+                fileManagerState = it.fileManagerState.copy(
+                    activeCloudConnection = connection
+                )
+            )
+        }
+        loadDirectory("webdav:///")
+    }
+
+    private fun saveCloudConnectionsToPrefs() {
         val prefs = getApplication<Application>().getSharedPreferences("lynk_prefs", Context.MODE_PRIVATE)
         prefs.edit().apply {
             putInt("cloud_connections_count", savedCloudConnections.size)
@@ -168,7 +222,14 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 putString("cloud_token_$index", conn.passwordToken)
             }
         }.apply()
-        activeCloudConnection = connection
+        _state.update {
+            it.copy(
+                fileManagerState = it.fileManagerState.copy(
+                    cloudConnections = savedCloudConnections.toList(),
+                    activeCloudConnection = activeCloudConnection
+                )
+            )
+        }
     }
 
     fun setSelectedTab(tabIndex: Int) {
@@ -288,42 +349,51 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     // --- File Explorer ---
     fun loadDirectory(path: String) {
         viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(fileManagerState = it.fileManagerState.copy(isLoading = true, message = null))
+            }
             val filesList = mutableListOf<FileItem>()
             var freeBytes = 0L
             var totalBytes = 0L
-            val currentPath: String
+            var currentPath = path
             
-            if (path.startsWith("webdav://") && activeCloudConnection != null) {
-                currentPath = path
-                try {
-                    val client = com.example.lynk.core.domain.cloud.WebDavClient(activeCloudConnection)
-                    filesList.addAll(client.listFiles(path))
-                } catch (e: Exception) {
-                    e.printStackTrace()
+            if (path.startsWith("webdav://")) {
+                if (activeCloudConnection == null && savedCloudConnections.isNotEmpty()) {
+                    activeCloudConnection = savedCloudConnections.first()
+                }
+                val activeConn = activeCloudConnection
+                if (activeConn != null) {
+                    try {
+                        val client = com.example.lynk.core.domain.cloud.WebDavClient(activeConn)
+                        filesList.addAll(client.listFiles(path))
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             } else {
+                activeCloudConnection = null
                 val dir = File(path)
-                if (!dir.exists() || !dir.isDirectory) return@launch
-
-                val childFiles = dir.listFiles() ?: emptyArray()
-                for (file in childFiles) {
-                    filesList.add(
-                        FileItem(
-                            file.name,
-                            file.absolutePath,
-                            file.length(),
-                            file.lastModified(),
-                            file.isDirectory
+                if (dir.exists() && dir.isDirectory) {
+                    val childFiles = dir.listFiles() ?: emptyArray()
+                    for (file in childFiles) {
+                        filesList.add(
+                            FileItem(
+                                file.name,
+                                file.absolutePath,
+                                file.length(),
+                                file.lastModified(),
+                                file.isDirectory
+                            )
                         )
-                    )
-                }
+                    }
 
-                try {
-                    val stat = StatFs(dir.absolutePath)
-                    freeBytes = stat.availableBytes
-                    totalBytes = stat.totalBytes
-                } catch (ignored: Exception) { }
-                currentPath = dir.absolutePath
+                    try {
+                        val stat = StatFs(dir.absolutePath)
+                        freeBytes = stat.availableBytes
+                        totalBytes = stat.totalBytes
+                    } catch (ignored: Exception) { }
+                    currentPath = dir.absolutePath
+                }
             }
 
             withContext(Dispatchers.Main) {
@@ -334,7 +404,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                         rawFiles = filesList,
                         freeSpaceBytes = freeBytes,
                         totalSpaceBytes = totalBytes,
-                        selectedFiles = emptySet()
+                        selectedFiles = emptySet(),
+                        isLoading = false,
+                        activeCloudConnection = activeCloudConnection
                     )
                     it.copy(fileManagerState = applyFilterAndSort(newFm))
                 }

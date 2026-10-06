@@ -40,8 +40,14 @@ public class WebDavClient implements CloudStorageClient {
         }
         
         String fullUrl = connection.getWebDavUrl();
+        if (fullUrl == null) {
+            fullUrl = "";
+        }
+        fullUrl = fullUrl.trim();
         if (fullUrl.endsWith("/") && urlPath.startsWith("/")) {
             fullUrl += urlPath.substring(1);
+        } else if (!fullUrl.endsWith("/") && !urlPath.startsWith("/")) {
+            fullUrl += "/" + urlPath;
         } else {
             fullUrl += urlPath;
         }
@@ -51,9 +57,17 @@ public class WebDavClient implements CloudStorageClient {
         conn.setRequestMethod("PROPFIND");
         conn.setRequestProperty("Depth", "1");
         
-        String auth = connection.getUsername() + ":" + connection.getPasswordToken();
-        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
-        conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
+        String username = connection.getUsername();
+        String passwordToken = connection.getPasswordToken();
+        boolean hasUsername = username != null && !username.trim().isEmpty();
+        boolean hasPassword = passwordToken != null && !passwordToken.trim().isEmpty();
+        if (hasUsername || hasPassword) {
+            String u = hasUsername ? username.trim() : "";
+            String p = hasPassword ? passwordToken.trim() : "";
+            String auth = u + ":" + p;
+            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+            conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
+        }
         
         int responseCode = conn.getResponseCode();
         if (responseCode >= 200 && responseCode < 300) {
@@ -76,9 +90,6 @@ public class WebDavClient implements CloudStorageClient {
                 if (href == null) continue;
                 
                 String decodedHref = java.net.URLDecoder.decode(href, "UTF-8");
-                
-                // Skip the root folder itself if it matches the requested path exactly
-                // Href could be absolute or relative path, so we check carefully
                 
                 NodeList propstatList = responseNode.getElementsByTagNameNS("*", "propstat");
                 if (propstatList.getLength() > 0) {
@@ -117,7 +128,14 @@ public class WebDavClient implements CloudStorageClient {
                             }
                         }
                         
-                        String itemName = decodedHref;
+                        String pathPart = decodedHref;
+                        if (pathPart.startsWith("http://") || pathPart.startsWith("https://")) {
+                            try {
+                                pathPart = new URL(pathPart).getPath();
+                            } catch (Exception ignored) { }
+                        }
+                        
+                        String itemName = pathPart;
                         if (itemName.endsWith("/")) {
                             itemName = itemName.substring(0, itemName.length() - 1);
                         }
@@ -125,20 +143,17 @@ public class WebDavClient implements CloudStorageClient {
                         if (lastSlash >= 0) {
                             itemName = itemName.substring(lastSlash + 1);
                         }
-                        
-                        // construct webdav:// path
-                        String itemPath = "webdav://" + decodedHref;
-                        if (!decodedHref.startsWith("/")) {
-                            itemPath = "webdav://" + connection.getWebDavUrl() + "/" + decodedHref;
-                        } else {
-                            // decodedHref is e.g. /disk/folder/
-                            // we probably want to maintain the host? 
-                            // Actually, let's just make it webdav:/ + decodedHref
-                            itemPath = "webdav:/" + decodedHref;
+
+                        if (!pathPart.startsWith("/")) {
+                            pathPart = "/" + pathPart;
                         }
                         
-                        // Skip if it's the requested folder
-                        if (itemPath.equals(path) || (itemPath.equals(path + "/")) || (itemPath + "/").equals(path)) {
+                        String itemPath = "webdav://" + pathPart;
+                        
+                        String normItemPath = itemPath.endsWith("/") && itemPath.length() > 10 ? itemPath.substring(0, itemPath.length() - 1) : itemPath;
+                        String normReqPath = path.endsWith("/") && path.length() > 10 ? path.substring(0, path.length() - 1) : path;
+                        
+                        if (normItemPath.equalsIgnoreCase(normReqPath) || itemName.isEmpty()) {
                             continue;
                         }
 

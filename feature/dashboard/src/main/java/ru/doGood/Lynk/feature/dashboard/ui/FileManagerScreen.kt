@@ -12,7 +12,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -51,6 +54,9 @@ fun FileManagerScreen(
     totalSpaceFormatted: String,
     usedPercentage: Float,
     inlineInstallState: InlineInstallState? = null,
+    isLoading: Boolean = false,
+    cloudConnections: List<com.example.lynk.core.domain.cloud.CloudConnection> = emptyList(),
+    activeCloudConnection: com.example.lynk.core.domain.cloud.CloudConnection? = null,
     onPathClick: (String) -> Unit,
     onNavigateUp: () -> Unit,
     onFileClick: (FileItem) -> Unit,
@@ -68,12 +74,16 @@ fun FileManagerScreen(
     onRenameFile: (String, String) -> Unit = { _, _ -> },
     onStartInlineWaterfallInstall: (FileItem) -> Unit = {},
     onDismissInlineInstall: () -> Unit = {},
+    onSaveCloudConnection: (name: String, url: String, username: String, passwordToken: String) -> Unit = { _, _, _, _ -> },
+    onSelectCloudConnection: (com.example.lynk.core.domain.cloud.CloudConnection) -> Unit = {},
+    onRemoveCloudConnection: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var showSortMenu by remember { mutableStateOf(false) }
     var showStorageMenu by remember { mutableStateOf(false) }
     var showCloudModal by remember { mutableStateOf(false) }
+    var showAddCloudDialog by remember { mutableStateOf(false) }
 
     var selectedItemForMenu by remember { mutableStateOf<FileItem?>(null) }
     var filePropertiesToShow by remember { mutableStateOf<FileItem?>(null) }
@@ -86,7 +96,11 @@ fun FileManagerScreen(
     val rootPath = Environment.getExternalStorageDirectory().absolutePath
     val isAtRoot = currentPath == rootPath
 
-    val displayPath = if (currentPath == rootPath) {
+    val displayPath = if (currentPath.startsWith("webdav://")) {
+        val cloudName = activeCloudConnection?.name ?: "WebDAV Cloud"
+        val subPath = currentPath.substring(9)
+        "☁️ $cloudName$subPath"
+    } else if (currentPath == rootPath) {
         stringResource(R.string.internal_storage)
     } else if (currentPath.startsWith(rootPath)) {
         stringResource(R.string.internal_storage) + currentPath.removePrefix(rootPath)
@@ -200,12 +214,17 @@ fun FileManagerScreen(
                     totalSpaceFormatted = totalSpaceFormatted,
                     usedPercentage = usedPercentage,
                     showStorageMenu = showStorageMenu,
+                    currentPath = currentPath,
+                    activeCloudConnection = activeCloudConnection,
+                    cloudConnections = cloudConnections,
                     onToggleStorageMenu = { showStorageMenu = !showStorageMenu },
                     onDismissStorageMenu = { showStorageMenu = false },
                     onSelectInternal = { onPathClick(Environment.getExternalStorageDirectory().absolutePath) },
                     onSelectRoot = { onPathClick("/") },
                     onSelectExternal = { onPathClick("/storage") },
-                    onSelectCloud = { showCloudModal = true },
+                    onAddCloudClick = { showAddCloudDialog = true },
+                    onSelectCloudConnection = { conn -> onSelectCloudConnection(conn) },
+                    onRemoveCloudConnection = { id -> onRemoveCloudConnection(id) },
                     modifier = Modifier.weight(1f)
                 )
 
@@ -234,12 +253,17 @@ fun FileManagerScreen(
                 totalSpaceFormatted = totalSpaceFormatted,
                 usedPercentage = usedPercentage,
                 showStorageMenu = showStorageMenu,
+                currentPath = currentPath,
+                activeCloudConnection = activeCloudConnection,
+                cloudConnections = cloudConnections,
                 onToggleStorageMenu = { showStorageMenu = !showStorageMenu },
                 onDismissStorageMenu = { showStorageMenu = false },
                 onSelectInternal = { onPathClick(Environment.getExternalStorageDirectory().absolutePath) },
                 onSelectRoot = { onPathClick("/") },
                 onSelectExternal = { onPathClick("/storage") },
-                onSelectCloud = { showCloudModal = true },
+                onAddCloudClick = { showAddCloudDialog = true },
+                onSelectCloudConnection = { conn -> onSelectCloudConnection(conn) },
+                onRemoveCloudConnection = { id -> onRemoveCloudConnection(id) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -315,43 +339,82 @@ fun FileManagerScreen(
             }
         }
 
-        // File List
-        LazyColumn(
+        // File List Area
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 8.dp)
+                .weight(1f)
         ) {
-            items(files, key = { it.path }) { item ->
-                FileItemRow(
-                    item = item,
-                    isSelected = selectedFiles.contains(item.path),
-                    onClick = {
-                        // 1.3 Selection mode check: if items selected, single tap toggles check
-                        if (selectedFiles.isNotEmpty() && !item.isUpNavigation) {
-                            onFileLongClick(item)
-                        } else if (item.isUpNavigation) {
-                            onNavigateUp()
-                        } else if (item.isDirectory) {
-                            onPathClick(item.path)
-                        } else if (item.name.endsWith(".apk", ignoreCase = true)) {
-                            // 1.5 Inline Waterfall APK Installation
-                            onStartInlineWaterfallInstall(item)
-                        } else {
-                            // 1.2 Open file with Intent ACTION_VIEW
-                            openFileWithIntent(context, item)
-                        }
-                    },
-                    onLongClick = {
-                        if (!item.isUpNavigation) {
-                            onFileLongClick(item)
-                        }
-                    },
-                    onMoreClick = { selectedItemForMenu = item }
-                )
+            if (isLoading) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.loading_files),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (files.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.directory_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    items(files, key = { it.path }) { item ->
+                        FileItemRow(
+                            item = item,
+                            isSelected = selectedFiles.contains(item.path),
+                            onClick = {
+                                if (selectedFiles.isNotEmpty() && !item.isUpNavigation) {
+                                    onFileLongClick(item)
+                                } else if (item.isUpNavigation) {
+                                    onNavigateUp()
+                                } else if (item.isDirectory) {
+                                    onPathClick(item.path)
+                                } else if (item.name.endsWith(".apk", ignoreCase = true)) {
+                                    onStartInlineWaterfallInstall(item)
+                                } else {
+                                    openFileWithIntent(context, item)
+                                }
+                            },
+                            onLongClick = {
+                                if (!item.isUpNavigation) {
+                                    onFileLongClick(item)
+                                }
+                            },
+                            onMoreClick = { selectedItemForMenu = item }
+                        )
+                    }
+                }
             }
         }
 
         // --- Dialogs ---
+
+        if (showAddCloudDialog) {
+            AddCloudConnectionDialog(
+                onDismissRequest = { showAddCloudDialog = false },
+                onConnect = { name, url, username, password ->
+                    onSaveCloudConnection(name, url, username, password)
+                    showAddCloudDialog = false
+                }
+            )
+        }
 
         // Cloud Storage Info Modal
         if (showCloudModal) {
@@ -690,14 +753,21 @@ private fun StorageCard(
     totalSpaceFormatted: String,
     usedPercentage: Float,
     showStorageMenu: Boolean,
+    currentPath: String,
+    activeCloudConnection: com.example.lynk.core.domain.cloud.CloudConnection?,
+    cloudConnections: List<com.example.lynk.core.domain.cloud.CloudConnection>,
     onToggleStorageMenu: () -> Unit,
     onDismissStorageMenu: () -> Unit,
     onSelectInternal: () -> Unit,
     onSelectRoot: () -> Unit,
     onSelectExternal: () -> Unit,
-    onSelectCloud: () -> Unit,
+    onAddCloudClick: () -> Unit,
+    onSelectCloudConnection: (com.example.lynk.core.domain.cloud.CloudConnection) -> Unit,
+    onRemoveCloudConnection: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isCloudActive = currentPath.startsWith("webdav://") || activeCloudConnection != null
+
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
@@ -717,16 +787,22 @@ private fun StorageCard(
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                     ) {
                         Icon(
-                            Icons.Rounded.Storage,
+                            if (isCloudActive) Icons.Rounded.Cloud else Icons.Rounded.Storage,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.storage_title),
+                            text = if (isCloudActive) {
+                                activeCloudConnection?.name ?: "WebDAV Cloud"
+                            } else {
+                                stringResource(R.string.storage_title)
+                            },
                             style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Icon(
                             Icons.Rounded.ArrowDropDown,
@@ -755,41 +831,190 @@ private fun StorageCard(
                             onClick = { onSelectExternal(); onDismissStorageMenu() },
                             leadingIcon = { Icon(Icons.Rounded.Usb, null) }
                         )
+                        
+                        if (cloudConnections.isNotEmpty()) {
+                            HorizontalDivider()
+                            cloudConnections.forEach { cloudConn ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = "☁️ ${cloudConn.name}",
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(
+                                                onClick = { onRemoveCloudConnection(cloudConn.id) },
+                                                modifier = Modifier.size(24.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Rounded.Close,
+                                                    contentDescription = stringResource(R.string.delete_cloud),
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onClick = { onSelectCloudConnection(cloudConn); onDismissStorageMenu() }
+                                )
+                            }
+                        }
+
                         HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.storage_cloud)) },
-                            onClick = { onSelectCloud(); onDismissStorageMenu() },
-                            leadingIcon = { Icon(Icons.Rounded.Cloud, null) }
+                            text = { Text(stringResource(R.string.storage_add_cloud)) },
+                            onClick = { onAddCloudClick(); onDismissStorageMenu() },
+                            leadingIcon = { Icon(Icons.Rounded.AddCircleOutline, null, tint = MaterialTheme.colorScheme.primary) }
                         )
                     }
                 }
 
-                // 1. Memory Info into 2 clean lines
-                Column(horizontalAlignment = Alignment.End) {
+                if (isCloudActive) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "WebDAV",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = activeCloudConnection?.webDavUrl ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = stringResource(R.string.storage_free, freeSpaceFormatted),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = stringResource(R.string.storage_total, totalSpaceFormatted),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
+            if (!isCloudActive) {
+                Spacer(modifier = Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { usedPercentage },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp),
+                    color = if (usedPercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AddCloudConnectionDialog(
+    onDismissRequest: () -> Unit,
+    onConnect: (name: String, url: String, username: String, passwordToken: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var isAnonymous by remember { mutableStateOf(false) }
+    var username by remember { mutableStateOf("") }
+    var passwordToken by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.add_cloud_title)) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.cloud_name_label)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.cloud_url_label)) },
+                    placeholder = { Text("https://webdav.yandex.ru/") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(
-                        text = stringResource(R.string.storage_free, freeSpaceFormatted),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = stringResource(R.string.cloud_anonymous_label),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = stringResource(R.string.storage_total, totalSpaceFormatted),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    Switch(
+                        checked = isAnonymous,
+                        onCheckedChange = { isAnonymous = it }
+                    )
+                }
+                if (!isAnonymous) {
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text(stringResource(R.string.cloud_username_label)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = passwordToken,
+                        onValueChange = { passwordToken = it },
+                        label = { Text(stringResource(R.string.cloud_password_label)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { usedPercentage },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp),
-                color = if (usedPercentage > 0.9f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalName = if (name.isBlank()) "WebDAV Cloud" else name.trim()
+                    var finalUrl = url.trim()
+                    if (!finalUrl.startsWith("http://") && !finalUrl.startsWith("https://")) {
+                        finalUrl = "https://$finalUrl"
+                    }
+                    val finalUsername = if (isAnonymous) "" else username.trim()
+                    val finalPassword = if (isAnonymous) "" else passwordToken.trim()
+                    onConnect(finalName, finalUrl, finalUsername, finalPassword)
+                },
+                enabled = url.isNotBlank()
+            ) {
+                Text(stringResource(R.string.cloud_btn_connect))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.btn_cancel))
+            }
         }
-    }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
