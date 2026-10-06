@@ -14,6 +14,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ### In Progress
 
 ### Done
+- [x] App Update UI Refactoring & Reorganization: Fixed UI squishing issues in AppUpdateScreen buttons, removed hardcoded version in favor of PackageManager resolution, dynamically stripped 'v' prefix from version strings, moved the Update screen to a sub-tab under SystemInfoScreen, and conditionally hid the TopAppBar update icon to only appear when updates are genuinely available.
 - [x] Integration of Localization Agent & :checkLocalization Audit Tool: Promoted `Localization Agent` to active status in `ARCHITECTURE_RULES.md`, established mandatory localization rules (100% RU/EN key parity, no hardcoded Compose strings), created the Python audit script `scripts/check_localization.py` and Gradle task `:checkLocalization`.
 - [x] GitHub Actions CI Keystore Auto-Generation Step: Added `Generate Release Keystore for CI` step to `.github/workflows/release.yml` before `assembleRelease`, fixing `:app:validateSigningRelease` failure on GitHub Actions runners without requiring manual secret configuration.
 - [x] Agent Ecosystem & Roles Documentation (Task 10): Updated `ARCHITECTURE_RULES.md` (RU/EN) with section 5 "AI Agent Roles & Ecosystem", detailing 4 active agents (Engineering Manager, Product Design, Coder, Critic) and proposing 2 new conceptual agents (Code Review & Security Auditor, Localization Agent).
@@ -60,6 +61,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ### В работе (In Progress)
 
 ### Готово (Done)
+- [x] Рефакторинг экрана обновления приложения: Исправлено сплющивание кнопок в AppUpdateScreen, удалена захардкоженная версия в пользу получения версии через PackageManager, убрано дублирование символа 'v' в строках версий, экран обновления перенесен во вкладку внутри SystemInfoScreen, а иконка обновления в TopAppBar скрыта по умолчанию и отображается только при наличии реального обновления.
 - [x] Интеграция Агента локализации и утилиты :checkLocalization: Статус `Localization Agent` в `ARCHITECTURE_RULES.md` переведен в активно действующие стандарты команды; добавлены правила обязательной локализации (100% паритет ключей RU/EN, запрет хардкода в Compose); созданы скрипт проверки `scripts/check_localization.py` и Gradle-таска `:checkLocalization`.
 - [x] Авто-генерация Keystore в GitHub Actions CI: Добавлен шаг генерации ключа `lynk_release.keystore` в `.github/workflows/release.yml` перед сборкой `assembleRelease`, исправляющий ошибку `:app:validateSigningRelease` на виртуальной машине GitHub Runner без необходимости ручной настройки GitHub Secrets.
 - [x] Документирование ролей ИИ-агентов и экосистемы (Задача 10): Обновлен `ARCHITECTURE_RULES.md` (RU/EN) разделом 5 "Экосистема и роли ИИ-агентов", детально описывающим 4 активных агента (Engineering Manager, Product Design, Coder, Critic) и предлагающим 2 новых концептуальных агента (Code Review & Security Auditor, Localization Agent).

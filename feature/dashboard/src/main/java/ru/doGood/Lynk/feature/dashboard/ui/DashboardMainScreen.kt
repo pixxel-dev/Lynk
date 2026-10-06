@@ -81,7 +81,6 @@ fun DashboardMainScreen(
                                 1 -> stringResource(R.string.title_installer)
                                 2 -> stringResource(R.string.title_system)
                                 3 -> stringResource(R.string.title_buttons)
-                                4 -> stringResource(R.string.title_update)
                                 else -> ""
                             },
                             style = MaterialTheme.typography.bodyMedium,
@@ -91,16 +90,16 @@ fun DashboardMainScreen(
                 },
                 actions = {
                     // Quick App Update Shortcut
-                    IconButton(onClick = { viewModel.setSelectedTab(4) }) {
-                        if (state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
+                    if (state.updateState.updateInfo?.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
+                        IconButton(onClick = { viewModel.setSelectedTab(2) }) {
                             Badge(containerColor = MaterialTheme.colorScheme.error) {
                                 Text("!")
                             }
+                            Icon(
+                                imageVector = Icons.Rounded.SystemUpdate,
+                                contentDescription = stringResource(R.string.tab_update)
+                            )
                         }
-                        Icon(
-                            imageVector = Icons.Rounded.SystemUpdate,
-                            contentDescription = stringResource(R.string.tab_update)
-                        )
                     }
 
                     // Theme Mode Switcher
@@ -136,8 +135,7 @@ fun DashboardMainScreen(
                             Triple(0, R.string.tab_files, Icons.Rounded.Folder),
                             Triple(1, R.string.tab_installer, Icons.Rounded.Android),
                             Triple(2, R.string.tab_system, Icons.Rounded.Info),
-                            Triple(3, R.string.tab_buttons, Icons.Rounded.Widgets),
-                            Triple(4, R.string.tab_update, Icons.Rounded.SystemUpdate)
+                            Triple(3, R.string.tab_buttons, Icons.Rounded.Widgets)
                         )
 
                         railItems.forEach { (tabIndex, stringResId, iconVector) ->
@@ -208,12 +206,6 @@ fun DashboardMainScreen(
                                 onClick = { viewModel.setSelectedTab(3) },
                                 icon = { Icon(Icons.Rounded.Widgets, contentDescription = stringResource(R.string.tab_buttons)) },
                                 label = { Text(stringResource(R.string.tab_buttons)) }
-                            )
-                            NavigationBarItem(
-                                selected = state.selectedTab == 4,
-                                onClick = { viewModel.setSelectedTab(4) },
-                                icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = stringResource(R.string.tab_update)) },
-                                label = { Text(stringResource(R.string.tab_update)) }
                             )
                         }
                     }
@@ -288,7 +280,10 @@ fun DashboardMainScreen(
                             onStopRecording = { viewModel.stopRecordingLogs() },
                             onClearLogs = { viewModel.clearLogs() },
                             viewModel = viewModel,
-                            onRefreshPermissions = { viewModel.refreshPermissions() }
+                            onRefreshPermissions = { viewModel.refreshPermissions() },
+                            updateState = state.updateState,
+                            onCheckForUpdates = { viewModel.checkForUpdates() },
+                            onStartDownload = { viewModel.startDownloadUpdate() }
                         )
 
                         3 -> FloatingButtonsScreen(
@@ -318,17 +313,6 @@ fun DashboardMainScreen(
                             onRemoveFullscreenApp = { viewModel.removeFullscreenApp(it) },
                             onCheckPermissions = { context -> viewModel.checkFloatingPermissions(context) },
                             onToggleOverlayService = { context -> viewModel.toggleOverlayService(context) }
-                        )
-
-                        4 -> AppUpdateScreen(
-                            currentVersion = "1.0.0",
-                            updateInfo = state.updateState.updateInfo,
-                            isChecking = state.updateState.isChecking,
-                            isDownloading = state.updateState.isDownloading,
-                            downloadProgress = state.updateState.downloadProgress,
-                            statusMessage = state.updateState.statusMessage,
-                            onCheckForUpdates = { viewModel.checkForUpdates() },
-                            onStartDownload = { viewModel.startDownloadUpdate() }
                         )
                     }
                 }

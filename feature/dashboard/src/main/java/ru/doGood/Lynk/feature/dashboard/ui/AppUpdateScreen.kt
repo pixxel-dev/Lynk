@@ -157,16 +157,15 @@ private fun CurrentVersionCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = when {
                         isChecking -> stringResource(R.string.checking_updates)
                         updateInfo == null -> stringResource(R.string.version_status_unchecked)
-                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.new_version_available_format, updateInfo.latestVersion)
+                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.new_version_available_format, updateInfo.latestVersion.removePrefix("v"))
                         else -> stringResource(R.string.latest_version_installed)
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -175,7 +174,8 @@ private fun CurrentVersionCard(
 
                 Button(
                     onClick = onCheckForUpdates,
-                    enabled = !isChecking
+                    enabled = !isChecking,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     if (isChecking) {
                         CircularProgressIndicator(
@@ -216,14 +216,13 @@ private fun LatestVersionCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column {
                     Text(
-                        text = stringResource(R.string.latest_release_format, updateInfo.latestVersion),
+                        text = stringResource(R.string.latest_release_format, updateInfo.latestVersion.removePrefix("v")),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -237,7 +236,8 @@ private fun LatestVersionCard(
                 if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                     Button(
                         onClick = onStartDownload,
-                        enabled = !isDownloading
+                        enabled = !isDownloading,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))

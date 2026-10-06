@@ -34,10 +34,13 @@ fun SystemInfoScreen(
     onClearLogs: () -> Unit,
     viewModel: DashboardViewModel? = null,
     onRefreshPermissions: () -> Unit = {},
+    updateState: ru.doGood.Lynk.feature.dashboard.AppUpdateUiState? = null,
+    onCheckForUpdates: () -> Unit = {},
+    onStartDownload: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
-    var activeTab by remember { mutableStateOf(0) } // 0: Specs, 1: System Logs, 2: Rights
+    var activeTab by remember { mutableIntStateOf(0) } // 0: Specs, 1: System Logs, 2: Rights, 3: Update
 
     val dashboardState by viewModel?.state?.collectAsState() ?: remember { mutableStateOf(null) }
     val currentLanguage = dashboardState?.appLanguage ?: AppLanguage.RU
@@ -71,6 +74,12 @@ fun SystemInfoScreen(
                 text = { Text(stringResource(R.string.subtab_rights), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 icon = { Icon(Icons.Rounded.Security, null) }
             )
+            Tab(
+                selected = activeTab == 3,
+                onClick = { activeTab = 3 },
+                text = { Text(stringResource(R.string.tab_update), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                icon = { Icon(Icons.Rounded.SystemUpdate, null) }
+            )
         }
 
         when (activeTab) {
@@ -91,6 +100,29 @@ fun SystemInfoScreen(
                 viewModel = viewModel,
                 onRefreshPermissions = onRefreshPermissions
             )
+            3 -> {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val packageInfo = try {
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                } catch (e: Exception) {
+                    null
+                }
+                val versionName = packageInfo?.versionName ?: "1.0.0"
+
+                if (updateState != null) {
+                    AppUpdateScreen(
+                        currentVersion = versionName,
+                        updateInfo = updateState.updateInfo,
+                        isChecking = updateState.isChecking,
+                        isDownloading = updateState.isDownloading,
+                        downloadProgress = updateState.downloadProgress,
+                        statusMessage = updateState.statusMessage,
+                        onCheckForUpdates = onCheckForUpdates,
+                        onStartDownload = onStartDownload,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
         }
     }
 }
