@@ -49,7 +49,7 @@ fun FileManagerScreen(
     onCopySelected: () -> Unit,
     onCutSelected: () -> Unit,
     onPaste: () -> Unit,
-    onDeleteSelected: () -> Unit,
+    onDeleteFiles: (List<String>) -> Unit,
     onClearSelection: () -> Unit,
     onInstallApk: (FileItem) -> Unit,
     onShowProperties: (FileItem) -> Unit,
@@ -57,6 +57,8 @@ fun FileManagerScreen(
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
     var selectedItemForMenu by remember { mutableStateOf<FileItem?>(null) }
+    var fileToDelete by remember { mutableStateOf<FileItem?>(null) }
+    var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -319,7 +321,12 @@ fun FileManagerScreen(
                             IconButton(onClick = onCutSelected) {
                                 Icon(Icons.Rounded.ContentCut, stringResource(R.string.btn_cut))
                             }
-                            IconButton(onClick = onDeleteSelected) {
+                            IconButton(onClick = {
+                                val selectedItems = files.filter { selectedFiles.contains(it.path) }
+                                if (selectedItems.isNotEmpty()) {
+                                    filesPendingDelete = selectedItems
+                                }
+                            }) {
                                 Icon(
                                     Icons.Rounded.Delete,
                                     stringResource(R.string.btn_delete),
@@ -383,10 +390,73 @@ fun FileManagerScreen(
                                     onShowProperties(file)
                                 }
                             )
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.btn_delete)) },
+                                leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                modifier = Modifier.combinedClickable {
+                                    selectedItemForMenu = null
+                                    fileToDelete = file
+                                }
+                            )
                         }
                     },
                     confirmButton = {
                         TextButton(onClick = { selectedItemForMenu = null }) {
+                            Text(stringResource(R.string.btn_cancel))
+                        }
+                    }
+                )
+            }
+
+            // Delete Confirmation Dialog for single file
+            fileToDelete?.let { file ->
+                AlertDialog(
+                    onDismissRequest = { fileToDelete = null },
+                    title = { Text(stringResource(R.string.delete_file_title)) },
+                    text = { Text(stringResource(R.string.delete_file_message, file.name)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val path = file.path
+                                fileToDelete = null
+                                onDeleteFiles(listOf(path))
+                            }
+                        ) {
+                            Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { fileToDelete = null }) {
+                            Text(stringResource(R.string.btn_cancel))
+                        }
+                    }
+                )
+            }
+
+            // Delete Confirmation Dialog for multiple files
+            if (filesPendingDelete.isNotEmpty()) {
+                val titleText = stringResource(R.string.delete_file_title)
+                val messageText = stringResource(R.string.delete_file_message, "${filesPendingDelete.size} items")
+
+                AlertDialog(
+                    onDismissRequest = { filesPendingDelete = emptyList() },
+                    title = { Text(titleText) },
+                    text = { Text(messageText) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val pathsToDelete = filesPendingDelete.map { it.path }
+                                filesPendingDelete = emptyList()
+                                onDeleteFiles(pathsToDelete)
+                            }
+                        ) {
+                            Text(stringResource(R.string.btn_delete), color = MaterialTheme.colorScheme.error)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { filesPendingDelete = emptyList() }
+                        ) {
                             Text(stringResource(R.string.btn_cancel))
                         }
                     }

@@ -277,7 +277,7 @@ fun DashboardMainScreen(
                             onCopySelected = { viewModel.copySelectedFiles() },
                             onCutSelected = { viewModel.cutSelectedFiles() },
                             onPaste = { viewModel.pasteFiles() },
-                            onDeleteSelected = { viewModel.deleteSelectedFiles() },
+                            onDeleteFiles = { paths -> viewModel.deleteFiles(paths) },
                             onClearSelection = { viewModel.clearSelection() },
                             onInstallApk = { file -> viewModel.selectApkForInstallation(file.path) },
                             onShowProperties = { file -> filePropertiesToShow = file }

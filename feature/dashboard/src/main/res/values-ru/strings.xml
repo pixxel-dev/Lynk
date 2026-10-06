@@ -81,6 +81,8 @@
     <string name="btn_copy">Копировать</string>
     <string name="btn_cut">Вырезать</string>
     <string name="btn_delete">Удалить</string>
+    <string name="delete_file_title">Удаление файла</string>
+    <string name="delete_file_message">Вы уверены, что хотите удалить %1$s?</string>
     <string name="btn_deselect">Снять выделение</string>
     <string name="install_apk">Установить APK</string>
     <string name="file_properties">Свойства</string>

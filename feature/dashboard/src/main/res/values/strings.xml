@@ -81,6 +81,8 @@
     <string name="btn_copy">Copy</string>
     <string name="btn_cut">Cut</string>
     <string name="btn_delete">Delete</string>
+    <string name="delete_file_title">Delete File</string>
+    <string name="delete_file_message">Are you sure you want to delete %1$s?</string>
     <string name="btn_deselect">Deselect</string>
     <string name="install_apk">Install APK</string>
     <string name="file_properties">Properties</string>

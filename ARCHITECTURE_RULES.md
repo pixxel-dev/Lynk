@@ -49,6 +49,12 @@ This document defines the architectural guidelines and agent operating procedure
 - **No Code Duplication:** Duplicating identical code snippets multiple times is strictly prohibited; keep responses focused and to the point.
 - **Batch Tool Invocation:** Tools must be invoked in parallel batches without unnecessary intermediate roundtrips.
 
+### 8. Versioning Algorithm (Semantic Versioning)
+- **MAJOR**: Full UI redesign, incompatible architectural changes (e.g., from 0.x.x to 1.0.0).
+- **MINOR**: Adding new major features (e.g., new section, overlay) without breaking backward compatibility (e.g., from 0.0.1 to 0.1.0).
+- **PATCH**: Bug fixes, minor UI tweaks, localization (e.g., from 0.0.1 to 0.0.2).
+- **BUILD**: Automatically incremented in CI/CD (GitHub Actions) on every commit.
+
 ---
 
 ## 🇷🇺 Русский
@@ -94,3 +100,9 @@ This document defines the architectural guidelines and agent operating procedure
 - **Лаконичность и точность ответов:** Ответы агентов должны быть точными, лаконичными и не содержать избыточных вступлений или заключений.
 - **Запрет дублирования кода:** Запрещено дублировать фрагменты кода; отвечать строго по существу.
 - **Пакетный вызов инструментов:** Инструменты вызываются параллельными пакетами (batch calls) без лишних промежуточных итераций.
+
+### 8. Алгоритм изменения версий (Semantic Versioning)
+- **MAJOR (Мажорная)**: Полная переработка UI, несовместимые архитектурные изменения (например, с 0.x.x на 1.0.0).
+- **MINOR (Минорная)**: Добавление новых крупных функций (например, новый раздел, оверлей) без нарушения старой работы (с 0.0.1 на 0.1.0).
+- **PATCH (Патч)**: Исправление багов, мелкие правки UI, локализация (с 0.0.1 на 0.0.2).
+- **BUILD (Сборка)**: Увеличивается автоматически в CI/CD (GitHub Actions) при каждом коммите.

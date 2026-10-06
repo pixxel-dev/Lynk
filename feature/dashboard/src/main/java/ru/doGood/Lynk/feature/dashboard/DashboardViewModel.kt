@@ -415,15 +415,27 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun deleteSelectedFiles() {
-        val selected = _state.value.fileManagerState.selectedFiles.toList()
+    fun deleteFiles(paths: List<String>) {
         val currentPath = _state.value.fileManagerState.currentPath
         viewModelScope.launch(Dispatchers.IO) {
-            for (filePath in selected) {
+            for (filePath in paths) {
                 File(filePath).deleteRecursively()
+            }
+            _state.update { state ->
+                val newSelected = state.fileManagerState.selectedFiles - paths.toSet()
+                state.copy(
+                    fileManagerState = state.fileManagerState.copy(
+                        selectedFiles = newSelected
+                    )
+                )
             }
             loadDirectory(currentPath)
         }
+    }
+
+    fun deleteSelectedFiles() {
+        val selected = _state.value.fileManagerState.selectedFiles.toList()
+        deleteFiles(selected)
     }
 
     private fun applyFilterAndSort(fmState: FileManagerState): FileManagerState {
