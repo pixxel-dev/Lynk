@@ -276,6 +276,9 @@ fun DashboardMainScreen(
                             },
                             onRemoveCloudConnection = { id ->
                                 viewModel.removeCloudConnection(id)
+                            },
+                            onDownloadCloudFile = { fileItem, installAfterDownload ->
+                                viewModel.downloadCloudFile(fileItem, installAfterDownload)
                             }
                         )
 

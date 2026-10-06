@@ -241,4 +241,17 @@
     <string name="adb_copied_to_clipboard">Copied to clipboard</string>
     <string name="adb_copy">Copy</string>
 
+    <!-- Cloud File Context Menu -->
+    <string name="download_to_device">Download to device</string>
+    <string name="download_to_device_desc">Save file to local Downloads/Lynk folder</string>
+    <string name="download_and_install">Download &amp; Install</string>
+    <string name="download_and_install_desc">Download APK to cache and launch installation immediately</string>
+    <string name="cloud_file_badge">Cloud File</string>
+    <string name="local_file_badge">Local File</string>
+    <string name="file_direct_link">Direct link / Path: %1$s</string>
+    <string name="cloud_storage_location">Cloud Storage</string>
+    <string name="cloud_download_success">File \'%1$s\' saved to Downloads/Lynk</string>
+    <string name="cloud_download_success_install">File \'%1$s\' downloaded. Starting installation...</string>
+    <string name="cloud_download_failed">Download error: %1$s</string>
+
 </resources>

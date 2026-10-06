@@ -77,6 +77,7 @@ fun FileManagerScreen(
     onSaveCloudConnection: (name: String, url: String, username: String, passwordToken: String) -> Unit = { _, _, _, _ -> },
     onSelectCloudConnection: (com.example.lynk.core.domain.cloud.CloudConnection) -> Unit = {},
     onRemoveCloudConnection: (String) -> Unit = {},
+    onDownloadCloudFile: (FileItem, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -386,6 +387,8 @@ fun FileManagerScreen(
                                     onNavigateUp()
                                 } else if (item.isDirectory) {
                                     onPathClick(item.path)
+                                } else if (item.isCloud || item.path.startsWith("webdav://")) {
+                                    selectedItemForMenu = item
                                 } else if (item.name.endsWith(".apk", ignoreCase = true)) {
                                     onStartInlineWaterfallInstall(item)
                                 } else {
@@ -432,94 +435,326 @@ fun FileManagerScreen(
 
         // 1.4 Context Menu / Actions Dialog for an item
         selectedItemForMenu?.let { file ->
+            val isCloud = file.isCloud || file.path.startsWith("webdav://")
             val isApk = file.name.endsWith(".apk", ignoreCase = true)
+
             AlertDialog(
                 onDismissRequest = { selectedItemForMenu = null },
-                title = {
-                    Text(
-                        text = file.name,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
+                title = null,
                 text = {
-                    Column {
-                        if (isApk) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Header card with file type icon and name
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (isCloud) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        val fileIcon = when {
+                                            file.isDirectory -> Icons.Rounded.Folder
+                                            isApk -> Icons.Rounded.Android
+                                            file.name.endsWith(".zip", ignoreCase = true) || file.name.endsWith(".rar", ignoreCase = true) -> Icons.Rounded.FolderZip
+                                            file.name.endsWith(".jpg", ignoreCase = true) || file.name.endsWith(".png", ignoreCase = true) -> Icons.Rounded.Image
+                                            file.name.endsWith(".mp4", ignoreCase = true) || file.name.endsWith(".mkv", ignoreCase = true) -> Icons.Rounded.Movie
+                                            file.name.endsWith(".mp3", ignoreCase = true) || file.name.endsWith(".wav", ignoreCase = true) -> Icons.Rounded.AudioFile
+                                            else -> Icons.Rounded.InsertDriveFile
+                                        }
+                                        Icon(
+                                            imageVector = fileIcon,
+                                            contentDescription = null,
+                                            tint = if (isCloud) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                            modifier = Modifier.size(28.dp)
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = file.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isCloud) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant
+                                        ) {
+                                            Text(
+                                                text = if (isCloud) "☁️ " + stringResource(R.string.cloud_file_badge) else "📁 " + stringResource(R.string.local_file_badge),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                        if (!file.isDirectory) {
+                                            Text(
+                                                text = formatFileSize(file.size),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                        if (isCloud) {
+                            // --- CLOUD FILE ACTIONS ---
+                            if (isApk) {
+                                // Highlighted Card 1: "Скачать и установить"
+                                Card(
+                                    onClick = {
+                                        val target = selectedItemForMenu
+                                        selectedItemForMenu = null
+                                        if (target != null) {
+                                            onDownloadCloudFile(target, true)
+                                        }
+                                    },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.RocketLaunch,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = stringResource(R.string.download_and_install),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.download_and_install_desc),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Highlighted Card 2: "Скачать на устройство"
+                            Card(
+                                onClick = {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    if (target != null) {
+                                        onDownloadCloudFile(target, false)
+                                    }
+                                },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isApk) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isApk) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Download,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onPrimary,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = stringResource(R.string.download_to_device),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isApk) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.download_to_device_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = (if (isApk) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer).copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Properties
                             ListItem(
-                                headlineContent = { Text(stringResource(R.string.install_apk)) },
-                                leadingContent = { Icon(Icons.Rounded.Android, null, tint = MaterialTheme.colorScheme.primary) },
+                                headlineContent = { Text(stringResource(R.string.file_properties)) },
+                                leadingContent = { Icon(Icons.Rounded.Info, null) },
+                                modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    filePropertiesToShow = target
+                                }
+                            )
+                        } else {
+                            // --- LOCAL FILE ACTIONS ---
+                            if (isApk) {
+                                Card(
+                                    onClick = {
+                                        val target = selectedItemForMenu
+                                        selectedItemForMenu = null
+                                        if (target != null) {
+                                            onStartInlineWaterfallInstall(target)
+                                        }
+                                    },
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    ),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Rounded.Android,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = stringResource(R.string.install_apk),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.file_properties)) },
+                                leadingContent = { Icon(Icons.Rounded.Info, null) },
+                                modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    filePropertiesToShow = target
+                                }
+                            )
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.rename_file)) },
+                                leadingContent = { Icon(Icons.Rounded.Edit, null) },
+                                modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    fileToRename = target
+                                }
+                            )
+                            HorizontalDivider()
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.btn_copy)) },
+                                leadingContent = { Icon(Icons.Rounded.ContentCopy, null) },
                                 modifier = Modifier.combinedClickable {
                                     val target = selectedItemForMenu
                                     selectedItemForMenu = null
                                     if (target != null) {
-                                        onStartInlineWaterfallInstall(target)
+                                        onFileLongClick(target)
+                                        onCopySelected()
                                     }
                                 }
                             )
-                        }
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.file_properties)) },
-                            leadingContent = { Icon(Icons.Rounded.Info, null) },
-                            modifier = Modifier.combinedClickable {
-                                val target = selectedItemForMenu
-                                selectedItemForMenu = null
-                                filePropertiesToShow = target
-                            }
-                        )
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.rename_file)) },
-                            leadingContent = { Icon(Icons.Rounded.Edit, null) },
-                            modifier = Modifier.combinedClickable {
-                                val target = selectedItemForMenu
-                                selectedItemForMenu = null
-                                fileToRename = target
-                            }
-                        )
-                        HorizontalDivider()
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.btn_copy)) },
-                            leadingContent = { Icon(Icons.Rounded.ContentCopy, null) },
-                            modifier = Modifier.combinedClickable {
-                                val target = selectedItemForMenu
-                                selectedItemForMenu = null
-                                if (target != null) {
-                                    onFileLongClick(target)
-                                    onCopySelected()
-                                }
-                            }
-                        )
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.btn_cut)) },
-                            leadingContent = { Icon(Icons.Rounded.ContentCut, null) },
-                            modifier = Modifier.combinedClickable {
-                                val target = selectedItemForMenu
-                                selectedItemForMenu = null
-                                if (target != null) {
-                                    onFileLongClick(target)
-                                    onCutSelected()
-                                }
-                            }
-                        )
-                        if (clipboardCount > 0) {
                             ListItem(
-                                headlineContent = { Text(stringResource(R.string.file_paste)) },
-                                leadingContent = { Icon(Icons.Rounded.ContentPaste, null) },
+                                headlineContent = { Text(stringResource(R.string.btn_cut)) },
+                                leadingContent = { Icon(Icons.Rounded.ContentCut, null) },
                                 modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
                                     selectedItemForMenu = null
-                                    onPaste()
+                                    if (target != null) {
+                                        onFileLongClick(target)
+                                        onCutSelected()
+                                    }
+                                }
+                            )
+                            if (clipboardCount > 0) {
+                                ListItem(
+                                    headlineContent = { Text(stringResource(R.string.file_paste)) },
+                                    leadingContent = { Icon(Icons.Rounded.ContentPaste, null) },
+                                    modifier = Modifier.combinedClickable {
+                                        selectedItemForMenu = null
+                                        onPaste()
+                                    }
+                                )
+                            }
+                            HorizontalDivider()
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.btn_delete)) },
+                                leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                modifier = Modifier.combinedClickable {
+                                    val target = selectedItemForMenu
+                                    selectedItemForMenu = null
+                                    fileToDelete = target
                                 }
                             )
                         }
-                        HorizontalDivider()
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.btn_delete)) },
-                            leadingContent = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                            modifier = Modifier.combinedClickable {
-                                val target = selectedItemForMenu
-                                selectedItemForMenu = null
-                                fileToDelete = target
-                            }
-                        )
                     }
                 },
                 confirmButton = {
@@ -572,12 +807,7 @@ fun FileManagerScreen(
         // File Detailed Properties Dialog
         filePropertiesToShow?.let { fileItem ->
             val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
-            val javaFile = remember(fileItem.path) { File(fileItem.path) }
-
-            val readable = if (javaFile.canRead()) "r" else "-"
-            val writable = if (javaFile.canWrite()) "w" else "-"
-            val executable = if (javaFile.canExecute()) "x" else "-"
-            val permsString = "$readable$writable$executable"
+            val isCloud = fileItem.isCloud || fileItem.path.startsWith("webdav://")
 
             AlertDialog(
                 onDismissRequest = { filePropertiesToShow = null },
@@ -585,12 +815,37 @@ fun FileManagerScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(stringResource(R.string.file_prop_name, fileItem.name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text(stringResource(R.string.file_prop_path, fileItem.path), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(stringResource(R.string.file_prop_size, if (fileItem.isDirectory) stringResource(R.string.file_type_folder) else formatFileSize(fileItem.size)), style = MaterialTheme.typography.bodySmall)
+
+                        if (isCloud) {
+                            val directUrl = fileItem.downloadUrl?.ifBlank { null } ?: fileItem.path
+                            Text(
+                                text = stringResource(R.string.file_direct_link, directUrl),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            Text(stringResource(R.string.file_prop_path, fileItem.path), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+
+                        Text(
+                            text = stringResource(R.string.file_prop_size, if (fileItem.isDirectory) stringResource(R.string.file_type_folder) else formatFileSize(fileItem.size)),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+
                         if (fileItem.lastModified > 0) {
                             Text(stringResource(R.string.file_prop_date, dateFormat.format(Date(fileItem.lastModified))), style = MaterialTheme.typography.bodySmall)
                         }
-                        Text(stringResource(R.string.file_permissions) + ": $permsString", style = MaterialTheme.typography.bodySmall)
+
+                        if (isCloud) {
+                            Text(stringResource(R.string.file_permissions) + ": " + stringResource(R.string.cloud_storage_location), style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            val javaFile = remember(fileItem.path) { File(fileItem.path) }
+                            val readable = if (javaFile.canRead()) "r" else "-"
+                            val writable = if (javaFile.canWrite()) "w" else "-"
+                            val executable = if (javaFile.canExecute()) "x" else "-"
+                            val permsString = "$readable$writable$executable"
+                            Text(stringResource(R.string.file_permissions) + ": $permsString", style = MaterialTheme.typography.bodySmall)
+                        }
                     }
                 },
                 confirmButton = {

@@ -241,4 +241,17 @@
     <string name="adb_copied_to_clipboard">Скопировано в буфер обмена</string>
     <string name="adb_copy">Скопировать</string>
 
+    <!-- Cloud File Context Menu -->
+    <string name="download_to_device">Скачать на устройство</string>
+    <string name="download_to_device_desc">Скачать файл в локальную папку Downloads/Lynk</string>
+    <string name="download_and_install">Скачать и установить</string>
+    <string name="download_and_install_desc">Скачать APK во временный кэш и сразу запустить установку</string>
+    <string name="cloud_file_badge">Облачный файл</string>
+    <string name="local_file_badge">Локальный файл</string>
+    <string name="file_direct_link">Прямая ссылка / Путь: %1$s</string>
+    <string name="cloud_storage_location">Облачное хранилище</string>
+    <string name="cloud_download_success">Файл «%1$s» сохранен в Downloads/Lynk</string>
+    <string name="cloud_download_success_install">Файл «%1$s» скачан. Запуск установки...</string>
+    <string name="cloud_download_failed">Ошибка скачивания: %1$s</string>
+
 </resources>

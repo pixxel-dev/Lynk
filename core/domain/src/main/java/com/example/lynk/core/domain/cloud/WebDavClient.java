@@ -6,6 +6,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
+import java.io.File;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -192,6 +193,110 @@ public class WebDavClient implements CloudStorageClient {
         } else {
             conn.disconnect();
             throw new Exception("WebDAV request failed with code: " + responseCode);
+        }
+    }
+
+    @Override
+    public void downloadFile(FileItem item, File targetFile) throws Exception {
+        if (item == null || targetFile == null) {
+            throw new IllegalArgumentException("FileItem and targetFile cannot be null");
+        }
+
+        String downloadUrl = item.getDownloadUrl();
+        String fullUrl;
+        boolean needAuth = false;
+
+        if (downloadUrl != null && (downloadUrl.startsWith("http://") || downloadUrl.startsWith("https://"))) {
+            fullUrl = downloadUrl;
+        } else {
+            String baseUrl = connection != null ? connection.getWebDavUrl() : "";
+            if (baseUrl == null) {
+                baseUrl = "";
+            }
+            baseUrl = baseUrl.trim();
+
+            String urlPath = item.getPath();
+            if (urlPath.startsWith("webdav://")) {
+                urlPath = urlPath.substring(9);
+            }
+            if (!urlPath.startsWith("/")) {
+                urlPath = "/" + urlPath;
+            }
+
+            if (baseUrl.endsWith("/") && urlPath.startsWith("/")) {
+                fullUrl = baseUrl + urlPath.substring(1);
+            } else if (!baseUrl.endsWith("/") && !urlPath.startsWith("/")) {
+                fullUrl = baseUrl + "/" + urlPath;
+            } else {
+                fullUrl = baseUrl + urlPath;
+            }
+            needAuth = true;
+        }
+
+        URL url = new URL(fullUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setInstanceFollowRedirects(true);
+        conn.setConnectTimeout(15000);
+        conn.setReadTimeout(30000);
+
+        if (needAuth && connection != null) {
+            String username = connection.getUsername();
+            String passwordToken = connection.getPasswordToken();
+            boolean hasUsername = username != null && !username.trim().isEmpty();
+            boolean hasPassword = passwordToken != null && !passwordToken.trim().isEmpty();
+            if (hasUsername || hasPassword) {
+                String u = hasUsername ? username.trim() : "";
+                String p = hasPassword ? passwordToken.trim() : "";
+                String auth = u + ":" + p;
+                String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+                conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
+            }
+        }
+
+        int responseCode = conn.getResponseCode();
+
+        if (responseCode == HttpURLConnection.HTTP_MOVED_PERM || responseCode == HttpURLConnection.HTTP_MOVED_TEMP || responseCode == 307 || responseCode == 308) {
+            String redirectUrl = conn.getHeaderField("Location");
+            conn.disconnect();
+            if (redirectUrl != null && !redirectUrl.isEmpty()) {
+                conn = (HttpURLConnection) new URL(redirectUrl).openConnection();
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(30000);
+                if (needAuth && connection != null) {
+                    String username = connection.getUsername();
+                    String passwordToken = connection.getPasswordToken();
+                    boolean hasUsername = username != null && !username.trim().isEmpty();
+                    boolean hasPassword = passwordToken != null && !passwordToken.trim().isEmpty();
+                    if (hasUsername || hasPassword) {
+                        String u = hasUsername ? username.trim() : "";
+                        String p = hasPassword ? passwordToken.trim() : "";
+                        String auth = u + ":" + p;
+                        String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+                        conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
+                    }
+                }
+                responseCode = conn.getResponseCode();
+            }
+        }
+
+        if (responseCode >= 200 && responseCode < 300) {
+            File parent = targetFile.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            try (InputStream in = conn.getInputStream();
+                 java.io.FileOutputStream out = new java.io.FileOutputStream(targetFile)) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                while ((bytesRead = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            } finally {
+                conn.disconnect();
+            }
+        } else {
+            conn.disconnect();
+            throw new Exception("HTTP " + responseCode);
         }
     }
 

@@ -449,6 +449,71 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun downloadCloudFile(
+        fileItem: FileItem,
+        installAfterDownload: Boolean = false
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(fileManagerState = it.fileManagerState.copy(isLoading = true))
+            }
+            val activeConn = activeCloudConnection
+            val client = com.example.lynk.core.domain.cloud.WebDavClient(activeConn)
+            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val lynkDir = File(downloadsDir, "Lynk")
+            if (!lynkDir.exists()) {
+                lynkDir.mkdirs()
+            }
+            val destFile = File(lynkDir, fileItem.name)
+
+            try {
+                client.downloadFile(fileItem, destFile)
+
+                withContext(Dispatchers.Main) {
+                    _state.update {
+                        it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false))
+                    }
+                    val localFileItem = FileItem(
+                        destFile.name,
+                        destFile.absolutePath,
+                        destFile.length(),
+                        destFile.lastModified(),
+                        false
+                    )
+
+                    val app = getApplication<Application>()
+                    if (installAfterDownload) {
+                        android.widget.Toast.makeText(
+                            app,
+                            app.getString(R.string.cloud_download_success_install, fileItem.name),
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                        startInlineWaterfallInstall(localFileItem)
+                    } else {
+                        android.widget.Toast.makeText(
+                            app,
+                            app.getString(R.string.cloud_download_success, fileItem.name),
+                            android.widget.Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    val app = getApplication<Application>()
+                    _state.update {
+                        it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false))
+                    }
+                    android.widget.Toast.makeText(
+                        app,
+                        app.getString(R.string.cloud_download_failed, e.message ?: ""),
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
     fun setSearchQuery(query: String) {
         _state.update {
             val updatedFm = it.fileManagerState.copy(searchQuery = query)
