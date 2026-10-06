@@ -90,15 +90,31 @@ fun FloatingButtonsScreen(
                 state = state,
                 onToggleService = { onToggleOverlayService(context) },
                 onOpenOverlaySettings = {
-                    val intent = Intent(
-                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:${context.packageName}")
-                    )
-                    context.startActivity(intent)
+                    try {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                        context.startActivity(intent)
+                    } catch (_: Exception) {
+                        val fallback = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                        context.startActivity(fallback)
+                    }
                 },
                 onOpenUsageStatsSettings = {
-                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                    context.startActivity(intent)
+                    try {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+                        context.startActivity(intent)
+                    } catch (_: Exception) {
+                        val fallback = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                        context.startActivity(fallback)
+                    }
                 }
             )
         }
