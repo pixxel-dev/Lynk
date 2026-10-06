@@ -42,13 +42,19 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            optimization {
-                enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
-            }
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
         debug {
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    (this as? com.android.build.gradle.AppExtension)?.applicationVariants?.all {
+        outputs.all {
+            val outputImpl = this as? com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            val version = versionName ?: "0.0.1"
+            outputImpl?.outputFileName = "Lynk_$version.apk"
         }
     }
     compileOptions {
