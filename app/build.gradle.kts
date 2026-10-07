@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val baseVersion = "0.1.0"
+val baseVersion = "0.1.1"
 val buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "1"
 val fullVersionName = "$baseVersion.$buildNumber"
 
