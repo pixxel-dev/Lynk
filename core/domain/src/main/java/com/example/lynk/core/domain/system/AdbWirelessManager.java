@@ -179,6 +179,8 @@ public class AdbWirelessManager {
             }
             process.waitFor();
             return output.toString().trim();
+        } catch (java.io.IOException e) {
+            return "Ошибка: бинарный файл ADB не найден (нужен Root или ПК)";
         } catch (Exception e) {
             return "";
         }

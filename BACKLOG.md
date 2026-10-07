@@ -19,6 +19,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [/] Wireless ADB Manager (Wireless ADB over Wi-Fi).
 
 ### Done
+- [x] Implement end-to-end instrumented tests & UI automated verification.
 - [x] Multi-Overlay Manager (Custom Overlay Builder): Capability to create up to 3 independent overlays, where the user can add 1 or more customizable buttons with individual parameters (size, opacity, position, actions) to each overlay.
 - [x] App Update UI Refactoring & Reorganization: Fixed UI squishing issues in AppUpdateScreen buttons, removed hardcoded version in favor of PackageManager resolution, dynamically stripped 'v' prefix from version strings, moved the Update screen to a sub-tab under SystemInfoScreen, and conditionally hid the TopAppBar update icon to only appear when updates are genuinely available.
 - [x] Integration of Localization Agent & :checkLocalization Audit Tool: Promoted `Localization Agent` to active status in `ARCHITECTURE_RULES.md`, established mandatory localization rules (100% RU/EN key parity, no hardcoded Compose strings), created the Python audit script `scripts/check_localization.py` and Gradle task `:checkLocalization`.
@@ -72,6 +73,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [/] Беспроводной ADB по Wi-Fi (Wireless ADB Manager).
 
 ### Готово (Done)
+- [x] Реализовать сквозные (E2E) инструментальные тесты и автоматизированное тестирование UI.
 - [x] Конструктор кастомных оверлеев (Multi-Overlay Manager): Возможность создания до 3 независимых оверлеев, в каждый из которых пользователь сможет добавлять 1 или несколько настраиваемых кнопок со своими персональными параметрами (размер, прозрачность, позиция, действия).
 - [x] Рефакторинг экрана обновления приложения: Исправлено сплющивание кнопок в AppUpdateScreen, удалена захардкоженная версия в пользу получения версии через PackageManager, убрано дублирование символа 'v' в строках версий, экран обновления перенесен во вкладку внутри SystemInfoScreen, а иконка обновления в TopAppBar скрыта по умолчанию и отображается только при наличии реального обновления.
 - [x] Интеграция Агента локализации и утилиты :checkLocalization: Статус `Localization Agent` в `ARCHITECTURE_RULES.md` переведен в активно действующие стандарты команды; добавлены правила обязательной локализации (100% паритет ключей RU/EN, запрет хардкода в Compose); созданы скрипт проверки `scripts/check_localization.py` и Gradle-таска `:checkLocalization`.

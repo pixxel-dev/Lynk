@@ -287,4 +287,7 @@
     <string name="wireless_adb_status_connected">Подключено</string>
     <string name="wireless_adb_status_disconnected">Отключено</string>
 
+    <string name="wireless_adb_show_instructions">📖 Инструкция по подключению</string>
+    <string name="wireless_adb_hide_instructions">📖 Скрыть инструкцию</string>
+    <string name="wireless_adb_instructions_text">1. Зайдите в \"Настройки\" -> \"Для разработчиков\".\n2. Включите \"Отладка по Wi-Fi\" (Wireless Debugging).\n3. Введите IP и Порт, указанные в настройках.\n4. Внимание: на обычных смартфонах команды работают только через ПК или Root.</string>
 </resources>

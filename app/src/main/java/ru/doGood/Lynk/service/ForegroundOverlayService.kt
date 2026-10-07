@@ -1,4 +1,4 @@
-package ru.doGood.Lynk.service
+﻿package ru.doGood.Lynk.service
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -168,7 +168,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         createNotificationChannel()
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Lynk Floating Service")
-            .setContentText("Служба плавающих кнопок активна")
+            .setContentText("РЎР»СѓР¶Р±Р° РїР»Р°РІР°СЋС‰РёС… РєРЅРѕРїРѕРє Р°РєС‚РёРІРЅР°")
             .setSmallIcon(R.drawable.ic_menu)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
@@ -475,8 +475,6 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val sizeDp = getProfileInt(profileId, "combined_button_size", "combined_button_size", 48)
         val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
-        hideProfileCombinedOverlay(views)
-
         val defY = getDefaultY(profileId, "combined")
         val rawX = getProfileInt(profileId, "combined_pos_x", "combined_pos_x", 100)
         val rawY = getProfileInt(profileId, "combined_pos_y", "combined_pos_y", if (defY > 0) defY else 300)
@@ -496,37 +494,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val estWidth = if (isHorizontal) max(sizePx * numButtons, sizePx) else sizePx
         val estHeight = if (isHorizontal) sizePx else max(sizePx * numButtons, sizePx)
 
-        val combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
-        combinedView.visibility = View.VISIBLE
-        combinedView.alpha = alphaFloat
-        views.combinedView = combinedView
+        if (views.combinedView == null) {
+            val combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+            combinedView.visibility = View.VISIBLE
+            combinedView.alpha = alphaFloat
+            views.combinedView = combinedView
 
-        val params = WindowManager.LayoutParams(
-            estWidth,
-            estHeight,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            this.x = x
-            this.y = y
-            this.alpha = alphaFloat
-        }
-        views.combinedParams = params
-
-        Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
-        defaultWindowManager.addView(views.combinedView, params)
-
-        val secWM = secondaryWindowManager
-        val secContext = secondaryContext
-        if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            val secView = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
-            secView.visibility = View.VISIBLE
-            secView.alpha = alphaFloat
-            views.combinedViewSecondary = secView
-
-            val paramsSec = WindowManager.LayoutParams(
+            val params = WindowManager.LayoutParams(
                 estWidth,
                 estHeight,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -534,13 +508,77 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                this.x = max(100, screenWidth - x - estWidth)
-                this.y = max(300, screenHeight - y - estHeight)
+                this.x = x
+                this.y = y
                 this.alpha = alphaFloat
             }
-            views.combinedParamsSecondary = paramsSec
-            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
-            secWM.addView(views.combinedViewSecondary, paramsSec)
+            views.combinedParams = params
+            defaultWindowManager.addView(views.combinedView, params)
+
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            if (secWM != null && secWM != defaultWindowManager && secContext != null) {
+                val secView = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+                secView.visibility = View.VISIBLE
+                secView.alpha = alphaFloat
+                views.combinedViewSecondary = secView
+
+                val paramsSec = WindowManager.LayoutParams(
+                    estWidth,
+                    estHeight,
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    PixelFormat.TRANSLUCENT
+                ).apply {
+                    gravity = Gravity.TOP or Gravity.START
+                    this.x = max(100, screenWidth - x - estWidth)
+                    this.y = max(300, screenHeight - y - estHeight)
+                    this.alpha = alphaFloat
+                }
+                views.combinedParamsSecondary = paramsSec
+                secWM.addView(views.combinedViewSecondary, paramsSec)
+            }
+        } else {
+            val cv = views.combinedView!!
+            val tempCv = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+            cv.removeAllViews()
+            while (tempCv.childCount > 0) {
+                val child = tempCv.getChildAt(0)
+                tempCv.removeView(child)
+                cv.addView(child)
+            }
+            cv.orientation = tempCv.orientation
+            cv.alpha = alphaFloat
+
+            val params = views.combinedParams!!
+            params.width = estWidth
+            params.height = estHeight
+            params.x = x
+            params.y = y
+            params.alpha = alphaFloat
+            defaultWindowManager.updateViewLayout(cv, params)
+
+            val secWM = secondaryWindowManager
+            val secContext = secondaryContext
+            val secView = views.combinedViewSecondary
+            val paramsSec = views.combinedParamsSecondary
+            if (secWM != null && secContext != null && secView != null && paramsSec != null) {
+                val tempSecCv = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+                secView.removeAllViews()
+                while (tempSecCv.childCount > 0) {
+                    val child = tempSecCv.getChildAt(0)
+                    tempSecCv.removeView(child)
+                    secView.addView(child)
+                }
+                secView.orientation = tempSecCv.orientation
+                secView.alpha = alphaFloat
+                paramsSec.width = estWidth
+                paramsSec.height = estHeight
+                paramsSec.x = max(100, screenWidth - x - estWidth)
+                paramsSec.y = max(300, screenHeight - y - estHeight)
+                paramsSec.alpha = alphaFloat
+                secWM.updateViewLayout(secView, paramsSec)
+            }
         }
 
         setupCombinedTouchesForProfile(profileId, views)
@@ -1576,7 +1614,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val closeBtn = TextView(context).apply {
-            text = "✕"
+            text = "вњ•"
             setTextColor(Color.parseColor("#FF5252"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             setPadding(dp(8), 0, dp(8), 0)
@@ -1590,7 +1628,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         rootContainer.addView(headerLayout)
 
         val contentTv = TextView(context).apply {
-            text = "Плавающее окно Lynk активна.\nВыберите действие или перетащите окно за заголовок."
+            text = "РџР»Р°РІР°СЋС‰РµРµ РѕРєРЅРѕ Lynk Р°РєС‚РёРІРЅР°.\nР’С‹Р±РµСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ РёР»Рё РїРµСЂРµС‚Р°С‰РёС‚Рµ РѕРєРЅРѕ Р·Р° Р·Р°РіРѕР»РѕРІРѕРє."
             setTextColor(Color.parseColor("#B0BEC5"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(0, dp(4), 0, dp(8))
@@ -1687,7 +1725,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
         if (container.childCount == 0) {
             val tv = TextView(context).apply {
-                text = "Нет выбранных ПО"
+                text = "РќРµС‚ РІС‹Р±СЂР°РЅРЅС‹С… РџРћ"
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 setPadding(dpToPx(12), dpToPx(12), dpToPx(12), dpToPx(12))
@@ -1756,7 +1794,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                         initialTouchX = event.rawX
                         initialTouchY = event.rawY
                         isDragging = false
-                        return false
+                        return true
                     }
                     MotionEvent.ACTION_MOVE -> {
                         val deltaX = (event.rawX - initialTouchX).toInt()
@@ -1859,8 +1897,10 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
                             isDragging = false
                             return true
+                        } else {
+                            v.performClick()
                         }
-                        return false
+                        return true
                     }
                     MotionEvent.ACTION_CANCEL -> {
                         isDragging = false
@@ -1905,7 +1945,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val headerText = TextView(context).apply {
-            text = "Быстрые настройки кнопки"
+            text = "Р‘С‹СЃС‚СЂС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё РєРЅРѕРїРєРё"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             gravity = Gravity.CENTER
@@ -1914,7 +1954,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         containerLayout.addView(headerText)
 
         val sizeText = TextView(context).apply {
-            text = "Размер: ${currentSize}dp"
+            text = "Р Р°Р·РјРµСЂ: ${currentSize}dp"
             setTextColor(Color.parseColor("#B0BEC5"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         }
@@ -1926,7 +1966,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val valDp = max(24, progress)
-                    sizeText.text = "Размер: ${valDp}dp"
+                    sizeText.text = "Р Р°Р·РјРµСЂ: ${valDp}dp"
                     prefs.edit().putInt(sizeKey, valDp).apply()
                     updateOverlayButtons()
                 }
@@ -1937,7 +1977,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         containerLayout.addView(sizeSeekBar)
 
         val opacityText = TextView(context).apply {
-            text = "Прозрачность: $currentOpacity%"
+            text = "РџСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ: $currentOpacity%"
             setTextColor(Color.parseColor("#B0BEC5"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(0, dpToPx(8), 0, 0)
@@ -1950,7 +1990,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val valPercent = max(10, progress)
-                    opacityText.text = "Прозрачность: $valPercent%"
+                    opacityText.text = "РџСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ: $valPercent%"
                     prefs.edit().putInt(opacityKey, valPercent).apply()
                     updateOverlayButtons()
                 }
@@ -1962,7 +2002,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
         // Shape Selector
         val shapeLabelText = TextView(context).apply {
-            text = "Форма кнопки"
+            text = "Р¤РѕСЂРјР° РєРЅРѕРїРєРё"
             setTextColor(Color.parseColor("#B0BEC5"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setPadding(0, dpToPx(8), 0, dpToPx(6))
@@ -2091,7 +2131,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         containerLayout.addView(shapeScroll)
 
         val closeBtn = TextView(context).apply {
-            text = "Закрыть"
+            text = "Р—Р°РєСЂС‹С‚СЊ"
             setTextColor(Color.parseColor("#7C4DFF"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             gravity = Gravity.CENTER
@@ -2146,7 +2186,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val serviceChannel = NotificationChannel(
                 CHANNEL_ID,
-                "Оверлей Служба",
+                "РћРІРµСЂР»РµР№ РЎР»СѓР¶Р±Р°",
                 NotificationManager.IMPORTANCE_LOW
             )
             val manager = getSystemService(NotificationManager::class.java)
@@ -2181,3 +2221,4 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
     }
 }
+

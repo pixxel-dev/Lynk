@@ -759,6 +759,34 @@ fun WirelessAdbCard(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            var showInstructions by remember { mutableStateOf(false) }
+            TextButton(
+                onClick = { showInstructions = !showInstructions },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (showInstructions) stringResource(R.string.wireless_adb_hide_instructions) else stringResource(R.string.wireless_adb_show_instructions))
+            }
+            if (showInstructions) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.wireless_adb_instructions_text),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
         }
     }
 }
