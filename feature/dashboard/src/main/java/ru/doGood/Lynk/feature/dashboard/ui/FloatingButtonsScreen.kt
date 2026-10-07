@@ -842,7 +842,6 @@ private fun FloatingButtonCard(
                     val shapes = remember {
                         listOf(
                             "CIRCLE" to R.string.shape_circle,
-                            "CIRCLE" to R.string.shape_circle,
                             "ROUNDED_SQUARE" to R.string.shape_rounded_square,
                             "SQUARE" to R.string.shape_square,
                             "STAR" to R.string.shape_star,
