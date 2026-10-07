@@ -123,6 +123,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private var logcatProcess: Process? = null
     private var logReaderThread: Thread? = null
     private val recordedLogsBuilder = StringBuilder()
+    private val adbWirelessManager = com.example.lynk.core.domain.system.AdbWirelessManager()
 
     init {
         // Load initial app language
@@ -906,7 +907,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     // --- System Info, Wireless ADB & Logger ---
-    private val adbWirelessManager = com.example.lynk.core.domain.system.AdbWirelessManager()
 
     fun loadAdbInfo() {
         viewModelScope.launch(Dispatchers.IO) {
