@@ -6,6 +6,7 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 
 /**
@@ -22,15 +23,40 @@ public class AdbWirelessManager {
      */
     public String getWifiIpAddress() {
         try {
-            List<NetworkInterface> interfaces = Collections.list(NetworkInterface.getNetworkInterfaces());
+            Enumeration<NetworkInterface> nis = NetworkInterface.getNetworkInterfaces();
+            if (nis == null) {
+                return "127.0.0.1";
+            }
+            List<NetworkInterface> interfaces = Collections.list(nis);
             // First pass: look specifically for Wi-Fi or Ethernet interfaces
             for (NetworkInterface intf : interfaces) {
-                if (intf.isLoopback() || !intf.isUp()) continue;
-                String name = intf.getName().toLowerCase();
+                if (intf == null || intf.isLoopback() || !intf.isUp()) continue;
+                String name = intf.getName();
+                if (name == null) continue;
+                name = name.toLowerCase();
                 if (name.contains("wlan") || name.contains("eth") || name.contains("ap")) {
-                    List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
+                    Enumeration<InetAddress> addrsEnum = intf.getInetAddresses();
+                    if (addrsEnum != null) {
+                        List<InetAddress> addrs = Collections.list(addrsEnum);
+                        for (InetAddress addr : addrs) {
+                            if (addr != null && !addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+                                String host = addr.getHostAddress();
+                                if (host != null && !host.isEmpty() && !host.equals("127.0.0.1")) {
+                                    return host;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Second pass: fallback to any active non-loopback IPv4 address
+            for (NetworkInterface intf : interfaces) {
+                if (intf == null || intf.isLoopback() || !intf.isUp()) continue;
+                Enumeration<InetAddress> addrsEnum = intf.getInetAddresses();
+                if (addrsEnum != null) {
+                    List<InetAddress> addrs = Collections.list(addrsEnum);
                     for (InetAddress addr : addrs) {
-                        if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
+                        if (addr != null && !addr.isLoopbackAddress() && addr instanceof Inet4Address) {
                             String host = addr.getHostAddress();
                             if (host != null && !host.isEmpty() && !host.equals("127.0.0.1")) {
                                 return host;
@@ -39,20 +65,8 @@ public class AdbWirelessManager {
                     }
                 }
             }
-            // Second pass: fallback to any active non-loopback IPv4 address
-            for (NetworkInterface intf : interfaces) {
-                if (intf.isLoopback() || !intf.isUp()) continue;
-                List<InetAddress> addrs = Collections.list(intf.getInetAddresses());
-                for (InetAddress addr : addrs) {
-                    if (!addr.isLoopbackAddress() && addr instanceof Inet4Address) {
-                        String host = addr.getHostAddress();
-                        if (host != null && !host.isEmpty() && !host.equals("127.0.0.1")) {
-                            return host;
-                        }
-                    }
-                }
-            }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            return "127.0.0.1";
         }
         return "127.0.0.1";
     }
@@ -65,12 +79,16 @@ public class AdbWirelessManager {
      * @return Execution output message.
      */
     public String connect(String ip, int port) {
-        if (ip == null || ip.trim().isEmpty()) {
-            return "Invalid IP address";
+        try {
+            if (ip == null || ip.trim().isEmpty()) {
+                return "Invalid IP address";
+            }
+            int targetPort = (port <= 0) ? DEFAULT_PORT : port;
+            String target = ip.trim() + ":" + targetPort;
+            return executeAdbCommand("adb connect " + target);
+        } catch (Exception e) {
+            return "";
         }
-        int targetPort = (port <= 0) ? DEFAULT_PORT : port;
-        String target = ip.trim() + ":" + targetPort;
-        return executeAdbCommand("adb connect " + target);
     }
 
     /**
@@ -81,12 +99,16 @@ public class AdbWirelessManager {
      * @return Execution output message.
      */
     public String disconnect(String ip, int port) {
-        if (ip == null || ip.trim().isEmpty()) {
-            return executeAdbCommand("adb disconnect");
+        try {
+            if (ip == null || ip.trim().isEmpty()) {
+                return executeAdbCommand("adb disconnect");
+            }
+            int targetPort = (port <= 0) ? DEFAULT_PORT : port;
+            String target = ip.trim() + ":" + targetPort;
+            return executeAdbCommand("adb disconnect " + target);
+        } catch (Exception e) {
+            return "";
         }
-        int targetPort = (port <= 0) ? DEFAULT_PORT : port;
-        String target = ip.trim() + ":" + targetPort;
-        return executeAdbCommand("adb disconnect " + target);
     }
 
     /**
@@ -97,24 +119,29 @@ public class AdbWirelessManager {
      * @return true if connected, false otherwise.
      */
     public boolean isConnected(String ip, int port) {
-        String devicesOutput = executeAdbCommand("adb devices");
-        if (devicesOutput == null || devicesOutput.isEmpty()) {
+        try {
+            String devicesOutput = executeAdbCommand("adb devices");
+            if (devicesOutput == null || devicesOutput.isEmpty()) {
+                return false;
+            }
+            int targetPort = (port <= 0) ? DEFAULT_PORT : port;
+            String target = (ip != null && !ip.trim().isEmpty()) ? ip.trim() + ":" + targetPort : "";
+
+            String[] lines = devicesOutput.split("\n");
+            for (String line : lines) {
+                if (line == null) continue;
+                String trimmed = line.trim();
+                if (trimmed.startsWith("List of devices")) continue;
+                if (!target.isEmpty() && trimmed.contains(target) && trimmed.contains("device")) {
+                    return true;
+                } else if (target.isEmpty() && trimmed.endsWith("\tdevice")) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
             return false;
         }
-        int targetPort = (port <= 0) ? DEFAULT_PORT : port;
-        String target = (ip != null && !ip.trim().isEmpty()) ? ip.trim() + ":" + targetPort : "";
-
-        String[] lines = devicesOutput.split("\n");
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.startsWith("List of devices")) continue;
-            if (!target.isEmpty() && trimmed.contains(target) && trimmed.contains("device")) {
-                return true;
-            } else if (target.isEmpty() && trimmed.endsWith("\tdevice")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
@@ -123,15 +150,23 @@ public class AdbWirelessManager {
      * @return ADB devices list output string.
      */
     public String getConnectedDevices() {
-        return executeAdbCommand("adb devices");
+        try {
+            String output = executeAdbCommand("adb devices");
+            return output != null ? output : "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     /**
      * Helper method to execute system command via Runtime.getRuntime().exec().
      */
     public String executeAdbCommand(String command) {
-        StringBuilder output = new StringBuilder();
         try {
+            if (command == null || command.trim().isEmpty()) {
+                return "";
+            }
+            StringBuilder output = new StringBuilder();
             Process process = Runtime.getRuntime().exec(command);
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 String line;
@@ -143,9 +178,9 @@ public class AdbWirelessManager {
                 }
             }
             process.waitFor();
+            return output.toString().trim();
         } catch (Exception e) {
-            return "Error: " + e.getMessage();
+            return "";
         }
-        return output.toString().trim();
     }
 }

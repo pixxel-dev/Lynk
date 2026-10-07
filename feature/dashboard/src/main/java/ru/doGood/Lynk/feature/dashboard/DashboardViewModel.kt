@@ -918,19 +918,30 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadAdbInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            val autoIp = adbWirelessManager.wifiIpAddress
-            val currentIp = _state.value.systemInfoState.adbIpAddress
-            val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
-            val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
-            val port = portStr.toIntOrNull() ?: 5555
-            val connected = adbWirelessManager.isConnected(effectiveIp, port)
-            _state.update {
-                it.copy(
-                    systemInfoState = it.systemInfoState.copy(
-                        adbIpAddress = effectiveIp,
-                        isAdbConnected = connected
+            try {
+                val autoIp = adbWirelessManager.wifiIpAddress
+                val currentIp = _state.value.systemInfoState.adbIpAddress
+                val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
+                val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
+                val port = portStr.toIntOrNull() ?: 5555
+                val connected = adbWirelessManager.isConnected(effectiveIp, port)
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            adbIpAddress = effectiveIp,
+                            isAdbConnected = connected
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            adbIpAddress = "127.0.0.1",
+                            isAdbConnected = false
+                        )
+                    )
+                }
             }
         }
     }
@@ -955,16 +966,28 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            val result = adbWirelessManager.connect(ip, port)
-            val connected = adbWirelessManager.isConnected(ip, port)
-            _state.update {
-                it.copy(
-                    systemInfoState = it.systemInfoState.copy(
-                        isAdbConnected = connected,
-                        adbStatusMessage = result,
-                        isAdbLoading = false
+            try {
+                val result = adbWirelessManager.connect(ip, port)
+                val connected = adbWirelessManager.isConnected(ip, port)
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            isAdbConnected = connected,
+                            adbStatusMessage = result,
+                            isAdbLoading = false
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            isAdbConnected = false,
+                            adbStatusMessage = e.message ?: "Connection error",
+                            isAdbLoading = false
+                        )
+                    )
+                }
             }
         }
     }
@@ -977,25 +1000,43 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            val result = adbWirelessManager.disconnect(ip, port)
-            val connected = adbWirelessManager.isConnected(ip, port)
-            _state.update {
-                it.copy(
-                    systemInfoState = it.systemInfoState.copy(
-                        isAdbConnected = connected,
-                        adbStatusMessage = result,
-                        isAdbLoading = false
+            try {
+                val result = adbWirelessManager.disconnect(ip, port)
+                val connected = adbWirelessManager.isConnected(ip, port)
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            isAdbConnected = connected,
+                            adbStatusMessage = result,
+                            isAdbLoading = false
+                        )
                     )
-                )
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(
+                        systemInfoState = it.systemInfoState.copy(
+                            isAdbConnected = false,
+                            adbStatusMessage = e.message ?: "Disconnect error",
+                            isAdbLoading = false
+                        )
+                    )
+                }
             }
         }
     }
 
     fun refreshAdbIp() {
         viewModelScope.launch(Dispatchers.IO) {
-            val autoIp = adbWirelessManager.wifiIpAddress
-            _state.update {
-                it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
+            try {
+                val autoIp = adbWirelessManager.wifiIpAddress
+                _state.update {
+                    it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
+                }
+            } catch (e: Exception) {
+                _state.update {
+                    it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = "127.0.0.1"))
+                }
             }
         }
     }
