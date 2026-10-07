@@ -21,8 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.filled.Circle
-import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -843,12 +841,13 @@ private fun FloatingButtonCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     val shapes = remember {
                         listOf(
-                            "CIRCLE" to (Icons.Rounded.Circle to R.string.shape_circle),
-                            "ROUNDED_SQUARE" to (Icons.Rounded.Square to R.string.shape_rounded_square),
-                            "SQUARE" to (Icons.Filled.Square to R.string.shape_square),
-                            "STAR" to (Icons.Rounded.Star to R.string.shape_star),
-                            "OCTAGON" to (Icons.Rounded.Hexagon to R.string.shape_octagon),
-                            "HEART" to (Icons.Rounded.Favorite to R.string.shape_heart)
+                            "CIRCLE" to R.string.shape_circle,
+                            "CIRCLE" to R.string.shape_circle,
+                            "ROUNDED_SQUARE" to R.string.shape_rounded_square,
+                            "SQUARE" to R.string.shape_square,
+                            "STAR" to R.string.shape_star,
+                            "OCTAGON" to R.string.shape_octagon,
+                            "HEART" to R.string.shape_heart
                         )
                     }
                     Row(
@@ -859,8 +858,7 @@ private fun FloatingButtonCard(
                             .horizontalScroll(rememberScrollState())
                             .padding(vertical = 4.dp)
                     ) {
-                        shapes.forEach { (shapeKey, iconAndRes) ->
-                            val (vectorIcon, stringRes) = iconAndRes
+                        shapes.forEach { (shapeKey, stringRes) ->
                             val isSelected = selectedShape == shapeKey
                             val labelDescription = stringResource(stringRes)
 
@@ -891,11 +889,10 @@ private fun FloatingButtonCard(
                                         contentDescription = labelDescription
                                     }
                             ) {
-                                Icon(
-                                    imageVector = vectorIcon,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
+                                ShapeIcon(
+                                    shape = shapeKey,
+                                    modifier = Modifier.size(20.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -1274,4 +1271,64 @@ private fun SelectAppDialog(
             }
         }
     )
+}
+
+@Composable
+fun ShapeIcon(
+    shape: String,
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
+) {
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        when (shape) {
+            "CIRCLE" -> drawCircle(color = color)
+            "ROUNDED_SQUARE" -> drawRoundRect(
+                color = color,
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * 0.2f, size.height * 0.2f)
+            )
+            "SQUARE" -> drawRect(color = color)
+            "STAR" -> {
+                val path = androidx.compose.ui.graphics.Path()
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                val outerRadius = size.width / 2
+                val innerRadius = outerRadius * 0.4f
+                for (i in 0 until 5) {
+                    val angle = i * Math.PI * 2 / 5 - Math.PI / 2
+                    val x = center.x + outerRadius * kotlin.math.cos(angle).toFloat()
+                    val y = center.y + outerRadius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    val innerAngle = angle + Math.PI / 5
+                    val innerX = center.x + innerRadius * kotlin.math.cos(innerAngle).toFloat()
+                    val innerY = center.y + innerRadius * kotlin.math.sin(innerAngle).toFloat()
+                    path.lineTo(innerX, innerY)
+                }
+                path.close()
+                drawPath(path, color = color)
+            }
+            "OCTAGON" -> {
+                val path = androidx.compose.ui.graphics.Path()
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                val radius = size.width / 2
+                for (i in 0 until 8) {
+                    val angle = i * Math.PI * 2 / 8 - Math.PI / 8
+                    val x = center.x + radius * kotlin.math.cos(angle).toFloat()
+                    val y = center.y + radius * kotlin.math.sin(angle).toFloat()
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                path.close()
+                drawPath(path, color = color)
+            }
+            "HEART" -> {
+                val path = androidx.compose.ui.graphics.Path()
+                val width = size.width
+                val height = size.height
+                path.moveTo(width / 2, height / 5)
+                path.cubicTo(width * 5 / 14, 0f, 0f, height / 15, width / 28, height * 2 / 5)
+                path.cubicTo(width / 14, height * 2 / 3, width * 3 / 7, height * 5 / 6, width / 2, height * 19 / 20)
+                path.cubicTo(width * 4 / 7, height * 5 / 6, width * 13 / 14, height * 2 / 3, width * 27 / 28, height * 2 / 5)
+                path.cubicTo(width, height / 15, width * 9 / 14, 0f, width / 2, height / 5)
+                drawPath(path, color = color)
+            }
+        }
+    }
 }
