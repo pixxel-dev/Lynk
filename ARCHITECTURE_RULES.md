@@ -10,6 +10,7 @@ This document defines the architectural guidelines and agent operating procedure
 ### 1. Fundamental Agent Operating Rules
 - **Change Approval & Scoping:** Agents must not perform unapproved cross-module refactoring or breaking architectural changes without explicit user or manager consent. Agents must operate strictly within their assigned scope.
 - **File Manipulation Constraints:** File modification via shell utilities (`sed`, `awk`, `echo >`, etc.) is strictly prohibited. Agents must exclusively use designated IDE file editing tools (`write_file`, `replace_file_content`, `multi_replace_file_content`) to prevent unsaved IDE buffer desynchronization.
+- **Mandatory Local Release Verification before Git Push**: Before pushing any commit to GitHub (`git push`), the Coder Agent must successfully execute a local release build `./gradlew :app:assembleRelease` in 100% of cases. Pushing non-compiling code or code that breaks CI/CD is strictly forbidden.
 
 ### 2. Architecture & Technology Stack
 - **Multi-Module Clean Architecture:**
@@ -64,6 +65,7 @@ This document defines the architectural guidelines and agent operating procedure
 ### 1. Фундаментальные правила работы агентов
 - **Согласование изменений и зоны ответственности:** Агентам запрещено проводить несогласованные кросс-модульные рефакторинги или вносить критические архитектурные изменения без явного одобрения пользователя или менеджера. Агенты работают строго в рамках своей зоны ответственности.
 - **Запрет шелл-редактирования:** Изменение файлов с помощью консольных утилит (`sed`, `awk`, `echo >` и т.д.) строго запрещено. Агенты должны использовать исключительно предназначенные инструменты редактирования файлов IDE (`write_file`, `replace_file_content`, `multi_replace_file_content`), чтобы избежать рассинхронизации буфера памяти IDE.
+- **Обязательная локальная релизная проверка перед Git Push**: Перед отправкой любого коммита на GitHub (`git push`), Coder Agent обязан в 100% случаев успешно выполнить локальную релизную сборку `./gradlew :app:assembleRelease`. Отправка некомпилирующегося или ломающего CI/CD кода категорически запрещена.
 
 ### 2. Архитектура и стек технологий
 - **Многомодульная Clean Architecture:**
