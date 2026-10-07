@@ -846,7 +846,7 @@ private fun FloatingButtonCard(
                             "SQUARE" to R.string.shape_square,
                             "STAR" to R.string.shape_star,
                             "OCTAGON" to R.string.shape_octagon,
-                            "HEART" to R.string.shape_heart
+                            "HEART" to R.string.shape_heart,
                         )
                     }
                     Row(
