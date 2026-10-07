@@ -77,7 +77,12 @@ data class ApkInstallerState(
 data class SystemInfoState(
     val deviceInfo: DeviceInfo = DeviceInfo("Unknown", "Unknown", "Unknown", "Unknown", 0, "Unknown", emptyMap()),
     val isRecordingLogs: Boolean = false,
-    val logsText: String = ""
+    val logsText: String = "",
+    val adbIpAddress: String = "127.0.0.1",
+    val adbPort: String = "5555",
+    val isAdbConnected: Boolean = false,
+    val adbStatusMessage: String? = null,
+    val isAdbLoading: Boolean = false
 )
 
 data class FloatingButtonsState(
@@ -137,6 +142,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
         loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
         loadDeviceInfo()
+        loadAdbInfo()
         loadInstalledApps()
         loadFloatingConfig()
         checkForUpdates()
@@ -907,7 +913,93 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- System Info & Logger ---
+    // --- System Info, Wireless ADB & Logger ---
+    private val adbWirelessManager = com.example.lynk.core.domain.system.AdbWirelessManager()
+
+    fun loadAdbInfo() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val autoIp = adbWirelessManager.wifiIpAddress
+            val currentIp = _state.value.systemInfoState.adbIpAddress
+            val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
+            val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
+            val port = portStr.toIntOrNull() ?: 5555
+            val connected = adbWirelessManager.isConnected(effectiveIp, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        adbIpAddress = effectiveIp,
+                        isAdbConnected = connected
+                    )
+                )
+            }
+        }
+    }
+
+    fun updateAdbIpAddress(ip: String) {
+        _state.update {
+            it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = ip))
+        }
+    }
+
+    fun updateAdbPort(port: String) {
+        _state.update {
+            it.copy(systemInfoState = it.systemInfoState.copy(adbPort = port))
+        }
+    }
+
+    fun connectAdb() {
+        val ip = _state.value.systemInfoState.adbIpAddress
+        val portStr = _state.value.systemInfoState.adbPort
+        val port = portStr.toIntOrNull() ?: 5555
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
+            }
+            val result = adbWirelessManager.connect(ip, port)
+            val connected = adbWirelessManager.isConnected(ip, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        isAdbConnected = connected,
+                        adbStatusMessage = result,
+                        isAdbLoading = false
+                    )
+                )
+            }
+        }
+    }
+
+    fun disconnectAdb() {
+        val ip = _state.value.systemInfoState.adbIpAddress
+        val portStr = _state.value.systemInfoState.adbPort
+        val port = portStr.toIntOrNull() ?: 5555
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
+            }
+            val result = adbWirelessManager.disconnect(ip, port)
+            val connected = adbWirelessManager.isConnected(ip, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        isAdbConnected = connected,
+                        adbStatusMessage = result,
+                        isAdbLoading = false
+                    )
+                )
+            }
+        }
+    }
+
+    fun refreshAdbIp() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val autoIp = adbWirelessManager.wifiIpAddress
+            _state.update {
+                it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
+            }
+        }
+    }
+
     private fun loadDeviceInfo() {
         val carProps = mutableMapOf<String, String>()
         val propKeys = arrayOf("ro.vin", "ro.car.vin", "ro.product.model", "ro.flyme.version", "persist.sys.locale")

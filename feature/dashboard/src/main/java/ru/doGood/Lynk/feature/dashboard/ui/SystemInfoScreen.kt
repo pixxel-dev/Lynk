@@ -3,6 +3,7 @@ package ru.doGood.Lynk.feature.dashboard.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.lynk.core.domain.system.DeviceInfo
@@ -90,7 +92,8 @@ fun SystemInfoScreen(
             0 -> DeviceInfoTab(
                 deviceInfo = deviceInfo,
                 currentLanguage = currentLanguage,
-                onLanguageSelected = { lang -> viewModel?.setAppLanguage(lang) }
+                onLanguageSelected = { lang -> viewModel?.setAppLanguage(lang) },
+                viewModel = viewModel
             )
             1 -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -141,8 +144,12 @@ fun SystemInfoScreen(
 fun DeviceInfoTab(
     deviceInfo: DeviceInfo,
     currentLanguage: AppLanguage = AppLanguage.RU,
-    onLanguageSelected: (AppLanguage) -> Unit = {}
+    onLanguageSelected: (AppLanguage) -> Unit = {},
+    viewModel: DashboardViewModel? = null
 ) {
+    val dashboardState by viewModel?.state?.collectAsState() ?: remember { mutableStateOf(null) }
+    val sysState = dashboardState?.systemInfoState
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
@@ -153,27 +160,46 @@ fun DeviceInfoTab(
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                LanguageSelectionCard(
-                    currentLanguage = currentLanguage,
-                    onLanguageSelected = onLanguageSelected
-                )
+                item {
+                    LanguageSelectionCard(
+                        currentLanguage = currentLanguage,
+                        onLanguageSelected = onLanguageSelected
+                    )
+                }
 
-                InfoSectionCard(
-                    title = stringResource(R.string.hardware_os_title),
-                    icon = Icons.Rounded.DeveloperBoard
-                ) {
-                    InfoRow(stringResource(R.string.manufacturer), deviceInfo.manufacturer)
-                    InfoRow(stringResource(R.string.brand), deviceInfo.brand)
-                    InfoRow(stringResource(R.string.model), deviceInfo.model)
-                    InfoRow(stringResource(R.string.device_code), deviceInfo.device)
-                    InfoRow(stringResource(R.string.android_version), deviceInfo.androidRelease)
-                    InfoRow(stringResource(R.string.sdk_level), deviceInfo.androidSdk.toString())
+                item {
+                    WirelessAdbCard(
+                        ipAddress = sysState?.adbIpAddress ?: "127.0.0.1",
+                        port = sysState?.adbPort ?: "5555",
+                        isConnected = sysState?.isAdbConnected == true,
+                        isLoading = sysState?.isAdbLoading == true,
+                        statusMessage = sysState?.adbStatusMessage,
+                        onIpChange = { viewModel?.updateAdbIpAddress(it) },
+                        onPortChange = { viewModel?.updateAdbPort(it) },
+                        onConnect = { viewModel?.connectAdb() },
+                        onDisconnect = { viewModel?.disconnectAdb() },
+                        onRefreshIp = { viewModel?.refreshAdbIp() }
+                    )
+                }
+
+                item {
+                    InfoSectionCard(
+                        title = stringResource(R.string.hardware_os_title),
+                        icon = Icons.Rounded.DeveloperBoard
+                    ) {
+                        InfoRow(stringResource(R.string.manufacturer), deviceInfo.manufacturer)
+                        InfoRow(stringResource(R.string.brand), deviceInfo.brand)
+                        InfoRow(stringResource(R.string.model), deviceInfo.model)
+                        InfoRow(stringResource(R.string.device_code), deviceInfo.device)
+                        InfoRow(stringResource(R.string.android_version), deviceInfo.androidRelease)
+                        InfoRow(stringResource(R.string.sdk_level), deviceInfo.androidSdk.toString())
+                    }
                 }
             }
 
@@ -208,6 +234,21 @@ fun DeviceInfoTab(
                 LanguageSelectionCard(
                     currentLanguage = currentLanguage,
                     onLanguageSelected = onLanguageSelected
+                )
+            }
+
+            item {
+                WirelessAdbCard(
+                    ipAddress = sysState?.adbIpAddress ?: "127.0.0.1",
+                    port = sysState?.adbPort ?: "5555",
+                    isConnected = sysState?.isAdbConnected == true,
+                    isLoading = sysState?.isAdbLoading == true,
+                    statusMessage = sysState?.adbStatusMessage,
+                    onIpChange = { viewModel?.updateAdbIpAddress(it) },
+                    onPortChange = { viewModel?.updateAdbPort(it) },
+                    onConnect = { viewModel?.connectAdb() },
+                    onDisconnect = { viewModel?.disconnectAdb() },
+                    onRefreshIp = { viewModel?.refreshAdbIp() }
                 )
             }
 
@@ -535,5 +576,189 @@ fun InfoRow(label: String, value: String) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+fun WirelessAdbCard(
+    ipAddress: String,
+    port: String,
+    isConnected: Boolean,
+    isLoading: Boolean,
+    statusMessage: String?,
+    onIpChange: (String) -> Unit,
+    onPortChange: (String) -> Unit,
+    onConnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    onRefreshIp: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = 6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Wifi,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.wireless_adb_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Text(
+                text = stringResource(R.string.wireless_adb_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 10.dp)
+            )
+            HorizontalDivider(modifier = Modifier.padding(bottom = 12.dp))
+
+            // Status Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.wireless_adb_status),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isConnected) 
+                        MaterialTheme.colorScheme.primaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.errorContainer,
+                    contentColor = if (isConnected) 
+                        MaterialTheme.colorScheme.onPrimaryContainer 
+                    else 
+                        MaterialTheme.colorScheme.onErrorContainer
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (isConnected) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isConnected) 
+                                stringResource(R.string.wireless_adb_status_connected) 
+                            else 
+                                stringResource(R.string.wireless_adb_status_disconnected),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Input Fields Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = ipAddress,
+                    onValueChange = onIpChange,
+                    label = { Text(stringResource(R.string.wireless_adb_ip_label)) },
+                    singleLine = true,
+                    modifier = Modifier.weight(0.65f),
+                    shape = RoundedCornerShape(12.dp),
+                    trailingIcon = {
+                        IconButton(onClick = onRefreshIp) {
+                            Icon(
+                                imageVector = Icons.Rounded.Refresh,
+                                contentDescription = "Refresh IP"
+                            )
+                        }
+                    }
+                )
+                OutlinedTextField(
+                    value = port,
+                    onValueChange = onPortChange,
+                    label = { Text(stringResource(R.string.wireless_adb_port_label)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(0.35f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onConnect,
+                    enabled = !isLoading && ipAddress.isNotBlank(),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(stringResource(R.string.wireless_adb_connect))
+                }
+
+                if (isConnected) {
+                    OutlinedButton(
+                        onClick = onDisconnect,
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(stringResource(R.string.wireless_adb_disconnect))
+                    }
+                }
+            }
+
+            if (!statusMessage.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = statusMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+        }
     }
 }

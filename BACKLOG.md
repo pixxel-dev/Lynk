@@ -11,8 +11,12 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Integrate Cloud Storage connections in FileManager (Yandex Disk, Mail.ru, Google Drive, WebDAV support).
 - [ ] Built-in File Viewer and Archiver in File Manager: Support for viewing text files, extracting/compressing ZIP/RAR archives, and built-in media viewer.
 - [ ] Boot Autostart Manager: Automatic launch of user-selected applications upon device/head unit boot (`BOOT_COMPLETED`).
+- [ ] Silent background APK installation via ADB (Silent ADB Install).
+- [ ] Resolution & DPI Switcher via ADB (Screen resolution and DPI scaling modifier via ADB).
+- [ ] System Bloatware Freezer via ADB (Disable/Freeze system applications via ADB).
 
 ### In Progress
+- [/] Wireless ADB Manager (Wireless ADB over Wi-Fi).
 
 ### Done
 - [x] Multi-Overlay Manager (Custom Overlay Builder): Capability to create up to 3 independent overlays, where the user can add 1 or more customizable buttons with individual parameters (size, opacity, position, actions) to each overlay.
@@ -60,8 +64,12 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [ ] Внедрить подключение к облачным дискам в файловый менеджер (Яндекс Диск, Облако Mail.ru, Google Drive, поддержка WebDAV).
 - [ ] Встроенный просмотрщик файлов и архиватор в ФМ: Поддержка просмотра текстовых файлов, распаковки/упаковки ZIP/RAR архивов и встроенного просмотрщика медиа.
 - [ ] Менеджер автозапуска при загрузке устройства: Автоматический запуск выбранных пользователем приложений при включении магнитолы/телефона (`BOOT_COMPLETED`).
+- [ ] Бесшумная фоновая установка APK через ADB (Silent ADB Install).
+- [ ] Изменение масштаба и DPI экрана (Resolution & DPI Switcher via ADB).
+- [ ] Отключение/Заморозка системных приложений (System Bloatware Freezer via ADB).
 
 ### В работе (In Progress)
+- [/] Беспроводной ADB по Wi-Fi (Wireless ADB Manager).
 
 ### Готово (Done)
 - [x] Конструктор кастомных оверлеев (Multi-Overlay Manager): Возможность создания до 3 независимых оверлеев, в каждый из которых пользователь сможет добавлять 1 или несколько настраиваемых кнопок со своими персональными параметрами (размер, прозрачность, позиция, действия).

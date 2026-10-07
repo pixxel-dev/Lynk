@@ -276,4 +276,15 @@
     <string name="chip_freeform">🪟 Freeform</string>
     <string name="chip_no_active_buttons">⚠️ Нет активных кнопок</string>
 
+    <!-- Wireless ADB -->
+    <string name="wireless_adb_title">Беспроводной ADB</string>
+    <string name="wireless_adb_desc">Управление подключением ADB по сети Wi-Fi</string>
+    <string name="wireless_adb_ip_label">IP-адрес</string>
+    <string name="wireless_adb_port_label">Порт</string>
+    <string name="wireless_adb_connect">Подключить Wireless ADB</string>
+    <string name="wireless_adb_disconnect">Отключить Wireless ADB</string>
+    <string name="wireless_adb_status">Статус подключения:</string>
+    <string name="wireless_adb_status_connected">Подключено</string>
+    <string name="wireless_adb_status_disconnected">Отключено</string>
+
 </resources>

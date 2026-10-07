@@ -276,4 +276,15 @@
     <string name="chip_freeform">🪟 Freeform</string>
     <string name="chip_no_active_buttons">⚠️ No active buttons</string>
 
+    <!-- Wireless ADB -->
+    <string name="wireless_adb_title">Wireless ADB</string>
+    <string name="wireless_adb_desc">Wireless ADB connection management over Wi-Fi</string>
+    <string name="wireless_adb_ip_label">IP Address</string>
+    <string name="wireless_adb_port_label">Port</string>
+    <string name="wireless_adb_connect">Connect Wireless ADB</string>
+    <string name="wireless_adb_disconnect">Disconnect Wireless ADB</string>
+    <string name="wireless_adb_status">Connection status:</string>
+    <string name="wireless_adb_status_connected">Connected</string>
+    <string name="wireless_adb_status_disconnected">Disconnected</string>
+
 </resources>
