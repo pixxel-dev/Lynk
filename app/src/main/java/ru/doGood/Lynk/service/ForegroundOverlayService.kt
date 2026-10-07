@@ -42,6 +42,8 @@ import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import ru.doGood.Lynk.R
+import android.provider.Settings
+import android.util.Log
 import java.util.Collections
 import kotlin.math.max
 import kotlin.math.min
@@ -50,6 +52,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     companion object {
         private const val CHANNEL_ID = "OverlayServiceChannel"
+        private const val NOTIFICATION_ID = 1001
         const val SECONDARY_DISPLAY_ID = 1003
 
         @JvmStatic
@@ -161,6 +164,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun startForegroundServiceInternal() {
+        createNotificationChannel()
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Lynk Floating Service")
             .setContentText("Служба плавающих кнопок активна")
@@ -171,9 +175,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             .build()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(1, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
-            startForeground(1, notification)
+            startForeground(NOTIFICATION_ID, notification)
         }
     }
 
@@ -328,6 +332,10 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     // --- Main Overlay Update Loop ---
 
     fun updateOverlayButtons() {
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w("LynkOverlay", "Cannot draw overlays: Settings.canDrawOverlays is false")
+            return
+        }
         val currentProfileIds = loadOverlayProfiles()
         val activeViewIds = ArrayList(profileViewsMap.keys)
         for (id in activeViewIds) {
@@ -384,6 +392,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileOverlayButtons(profileId: Int) {
+        if (!Settings.canDrawOverlays(this)) return
         val separateEnabled = getProfileBool(profileId, "separate_buttons", "separate_buttons_enabled", false)
         val views = profileViewsMap.getOrPut(profileId) { ProfileOverlayViews(profileId) }
 
@@ -443,6 +452,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     // --- Combined Overlay rendering per profile ---
 
     private fun updateProfileCombinedOverlay(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
+
         val showQuickLaunch = getProfileBool(profileId, "quick_launch_enabled", "quick_launch_enabled", false)
         val fullscreenApps = getProfileStringSet(profileId, "fullscreen_apps", "fullscreen_apps")
         val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
@@ -458,16 +469,18 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "opacity_percent", "opacity_percent", 85)
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
 
         val sizeDp = getProfileInt(profileId, "combined_button_size", "combined_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         hideProfileCombinedOverlay(views)
 
         val defY = getDefaultY(profileId, "combined")
-        val x = getProfileInt(profileId, "combined_pos_x", "combined_pos_x", 0)
-        val y = getProfileInt(profileId, "combined_pos_y", "combined_pos_y", defY)
+        val rawX = getProfileInt(profileId, "combined_pos_x", "combined_pos_x", 100)
+        val rawY = getProfileInt(profileId, "combined_pos_y", "combined_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
         val screenWidth = resources.displayMetrics.widthPixels
         val screenHeight = resources.displayMetrics.heightPixels
 
@@ -478,12 +491,19 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val minDist = min(min(distLeft, distRight), min(distTop, distBottom))
         val isHorizontal = (minDist == distTop || minDist == distBottom)
 
-        views.combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
-        views.combinedView?.alpha = alphaFloat
+        val marginPx = dpToPx(4)
+        val numButtons = (if (showQuickLaunch) 1 else 0) + (if (showFullscreen) 1 else 0) + (if (showHome) 1 else 0) + (if (showBack) 1 else 0) + (if (showRefresh) 1 else 0) + (if (showFreeform) 1 else 0)
+        val estWidth = if (isHorizontal) max((sizePx + 2 * marginPx) * numButtons, sizePx) else max(sizePx + 2 * marginPx, sizePx)
+        val estHeight = if (isHorizontal) max(sizePx + 2 * marginPx, sizePx) else max((sizePx + 2 * marginPx) * numButtons, sizePx)
+
+        val combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+        combinedView.visibility = View.VISIBLE
+        combinedView.alpha = alphaFloat
+        views.combinedView = combinedView
 
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            estWidth,
+            estHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
@@ -495,31 +515,31 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         views.combinedParams = params
 
+        Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
         defaultWindowManager.addView(views.combinedView, params)
 
         val secWM = secondaryWindowManager
         val secContext = secondaryContext
         if (secWM != null && secWM != defaultWindowManager && secContext != null) {
-            views.combinedViewSecondary = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
-            views.combinedViewSecondary?.alpha = alphaFloat
-            val marginPx = dpToPx(4)
-            val numButtons = (if (showQuickLaunch) 1 else 0) + (if (showFullscreen) 1 else 0) + (if (showHome) 1 else 0) + (if (showBack) 1 else 0) + (if (showRefresh) 1 else 0) + (if (showFreeform) 1 else 0)
-            val estWidth = if (isHorizontal) (sizePx + 2 * marginPx) * numButtons else (sizePx + 2 * marginPx)
-            val estHeight = if (isHorizontal) (sizePx + 2 * marginPx) else (sizePx + 2 * marginPx) * numButtons
+            val secView = createCombinedLinearLayout(secContext, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
+            secView.visibility = View.VISIBLE
+            secView.alpha = alphaFloat
+            views.combinedViewSecondary = secView
 
             val paramsSec = WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
+                estWidth,
+                estHeight,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                this.x = screenWidth - x - estWidth
-                this.y = screenHeight - y - estHeight
+                this.x = max(100, screenWidth - x - estWidth)
+                this.y = max(300, screenHeight - y - estHeight)
                 this.alpha = alphaFloat
             }
             views.combinedParamsSecondary = paramsSec
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             secWM.addView(views.combinedViewSecondary, paramsSec)
         }
 
@@ -630,6 +650,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     // --- Separate Buttons rendering per profile ---
 
     private fun updateProfileQuickLaunchButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val isEnabled = getProfileBool(profileId, "quick_launch_enabled", "quick_launch_enabled", false)
         if (!isEnabled) {
             views.quickLaunchView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
@@ -640,21 +661,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "ql_opacity_percent", "ql_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "ql_button_size", "ql_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "ql_color_hex", "ql_color_hex", getProfileString(profileId, "button_color", "button_color", "#6750A4"))
         val shapeStr = getProfileString(profileId, "ql_shape", "ql_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
         val defY = getDefaultY(profileId, "ql")
-        val x = getProfileInt(profileId, "ql_pos_x", "ql_pos_x", 0)
-        val y = getProfileInt(profileId, "ql_pos_y", "ql_pos_y", defY)
+        val rawX = getProfileInt(profileId, "ql_pos_x", "ql_pos_x", 100)
+        val rawY = getProfileInt(profileId, "ql_pos_y", "ql_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_ql"
 
         if (views.quickLaunchView == null) {
             val qv = createSingleOverlayButton(this, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
+            qv.visibility = View.VISIBLE
             qv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -670,12 +694,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.quickLaunchParams = params
             views.quickLaunchView = qv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(qv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val qvSec = createSingleOverlayButton(secContext, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
+                qvSec.visibility = View.VISIBLE
                 qvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -686,12 +712,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.quickLaunchParamsSecondary = paramsSec
                 views.quickLaunchViewSecondary = qvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(qvSec, paramsSec)
             }
 
@@ -700,9 +727,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val qv = views.quickLaunchView!!
             val params = views.quickLaunchParams!!
             updateSingleButtonVisuals(qv, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
+            qv.visibility = View.VISIBLE
             qv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(qv, params)
 
@@ -710,7 +741,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.quickLaunchParamsSecondary
             if (qvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(qvSec, R.drawable.ic_menu, colorHex, shapeStr, sizePx)
+                qvSec.visibility = View.VISIBLE
                 qvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -720,6 +753,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileFullscreenButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val fullscreenApps = getProfileStringSet(profileId, "fullscreen_apps", "fullscreen_apps")
         val isCurrentAppTarget = fullscreenApps.contains(currentForegroundPackage)
         val shouldShow = (getProfileBool(profileId, "fullscreen_overlay_enabled", "fullscreen_overlay_enabled", false) && isCurrentAppTarget) || isTargetAppFullscreen
@@ -733,22 +767,25 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "fs_opacity_percent", "fs_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "fs_button_size", "fs_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "fs_color_hex", "fs_color_hex", getProfileString(profileId, "button_color", "button_color", "#1976D2"))
         val shapeStr = getProfileString(profileId, "fs_shape", "fs_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
         val iconRes = if (isTargetAppFullscreen) R.drawable.ic_fullscreen_exit else R.drawable.ic_fullscreen_enter
 
         val defY = getDefaultY(profileId, "fs")
-        val x = getProfileInt(profileId, "fs_pos_x", "fs_pos_x", 100)
-        val y = getProfileInt(profileId, "fs_pos_y", "fs_pos_y", defY)
+        val rawX = getProfileInt(profileId, "fs_pos_x", "fs_pos_x", 100)
+        val rawY = getProfileInt(profileId, "fs_pos_y", "fs_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_fs"
 
         if (views.fullscreenToggleView == null) {
             val fv = createSingleOverlayButton(this, iconRes, colorHex, shapeStr, sizePx)
+            fv.visibility = View.VISIBLE
             fv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -764,12 +801,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.fullscreenToggleParams = params
             views.fullscreenToggleView = fv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(fv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val fvSec = createSingleOverlayButton(secContext, iconRes, colorHex, shapeStr, sizePx)
+                fvSec.visibility = View.VISIBLE
                 fvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -780,12 +819,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.fullscreenToggleParamsSecondary = paramsSec
                 views.fullscreenToggleViewSecondary = fvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(fvSec, paramsSec)
             }
 
@@ -794,9 +834,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val fv = views.fullscreenToggleView!!
             val params = views.fullscreenToggleParams!!
             updateSingleButtonVisuals(fv, iconRes, colorHex, shapeStr, sizePx)
+            fv.visibility = View.VISIBLE
             fv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(fv, params)
 
@@ -804,7 +848,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.fullscreenToggleParamsSecondary
             if (fvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(fvSec, iconRes, colorHex, shapeStr, sizePx)
+                fvSec.visibility = View.VISIBLE
                 fvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -814,6 +860,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileHomeButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val isEnabled = getProfileBool(profileId, "home_navigator_enabled", "home_navigator_enabled", false)
         if (!isEnabled) {
             views.homeView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
@@ -824,21 +871,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "home_opacity_percent", "home_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "home_button_size", "home_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "home_color_hex", "home_color_hex", getProfileString(profileId, "button_color", "button_color", "#388E3C"))
         val shapeStr = getProfileString(profileId, "home_shape", "home_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
         val defY = getDefaultY(profileId, "home")
-        val x = getProfileInt(profileId, "home_pos_x", "home_pos_x", 0)
-        val y = getProfileInt(profileId, "home_pos_y", "home_pos_y", defY)
+        val rawX = getProfileInt(profileId, "home_pos_x", "home_pos_x", 100)
+        val rawY = getProfileInt(profileId, "home_pos_y", "home_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_home"
 
         if (views.homeView == null) {
             val hv = createSingleOverlayButton(this, R.drawable.ic_home, colorHex, shapeStr, sizePx)
+            hv.visibility = View.VISIBLE
             hv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -854,12 +904,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.homeParams = params
             views.homeView = hv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(hv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val hvSec = createSingleOverlayButton(secContext, R.drawable.ic_home, colorHex, shapeStr, sizePx)
+                hvSec.visibility = View.VISIBLE
                 hvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -870,12 +922,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.homeParamsSecondary = paramsSec
                 views.homeViewSecondary = hvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(hvSec, paramsSec)
             }
 
@@ -884,9 +937,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val hv = views.homeView!!
             val params = views.homeParams!!
             updateSingleButtonVisuals(hv, R.drawable.ic_home, colorHex, shapeStr, sizePx)
+            hv.visibility = View.VISIBLE
             hv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(hv, params)
 
@@ -894,7 +951,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.homeParamsSecondary
             if (hvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(hvSec, R.drawable.ic_home, colorHex, shapeStr, sizePx)
+                hvSec.visibility = View.VISIBLE
                 hvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -904,6 +963,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileBackButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val isEnabled = getProfileBool(profileId, "back_navigator_enabled", "back_navigator_enabled", false)
         if (!isEnabled) {
             views.backView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
@@ -914,21 +974,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "back_opacity_percent", "back_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "back_button_size", "back_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "back_color_hex", "back_color_hex", getProfileString(profileId, "button_color", "button_color", "#D32F2F"))
         val shapeStr = getProfileString(profileId, "back_shape", "back_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
         val defY = getDefaultY(profileId, "back")
-        val x = getProfileInt(profileId, "back_pos_x", "back_pos_x", 0)
-        val y = getProfileInt(profileId, "back_pos_y", "back_pos_y", defY)
+        val rawX = getProfileInt(profileId, "back_pos_x", "back_pos_x", 100)
+        val rawY = getProfileInt(profileId, "back_pos_y", "back_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_back"
 
         if (views.backView == null) {
             val bv = createSingleOverlayButton(this, R.drawable.ic_back, colorHex, shapeStr, sizePx)
+            bv.visibility = View.VISIBLE
             bv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -944,12 +1007,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.backParams = params
             views.backView = bv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(bv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val bvSec = createSingleOverlayButton(secContext, R.drawable.ic_back, colorHex, shapeStr, sizePx)
+                bvSec.visibility = View.VISIBLE
                 bvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -960,12 +1025,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.backParamsSecondary = paramsSec
                 views.backViewSecondary = bvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(bvSec, paramsSec)
             }
 
@@ -974,9 +1040,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val bv = views.backView!!
             val params = views.backParams!!
             updateSingleButtonVisuals(bv, R.drawable.ic_back, colorHex, shapeStr, sizePx)
+            bv.visibility = View.VISIBLE
             bv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(bv, params)
 
@@ -984,7 +1054,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.backParamsSecondary
             if (bvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(bvSec, R.drawable.ic_back, colorHex, shapeStr, sizePx)
+                bvSec.visibility = View.VISIBLE
                 bvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -994,6 +1066,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileRefreshButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val isEnabled = getProfileBool(profileId, "refresh_navigator_enabled", "refresh_navigator_enabled", false)
         if (!isEnabled) {
             views.refreshView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
@@ -1004,21 +1077,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "refresh_opacity_percent", "refresh_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "refresh_button_size", "refresh_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "refresh_color_hex", "refresh_color_hex", getProfileString(profileId, "button_color", "button_color", "#FFA000"))
         val shapeStr = getProfileString(profileId, "refresh_shape", "refresh_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
         val defY = getDefaultY(profileId, "refresh")
-        val x = getProfileInt(profileId, "refresh_pos_x", "refresh_pos_x", 0)
-        val y = getProfileInt(profileId, "refresh_pos_y", "refresh_pos_y", defY)
+        val rawX = getProfileInt(profileId, "refresh_pos_x", "refresh_pos_x", 100)
+        val rawY = getProfileInt(profileId, "refresh_pos_y", "refresh_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_refresh"
 
         if (views.refreshView == null) {
             val rv = createSingleOverlayButton(this, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
+            rv.visibility = View.VISIBLE
             rv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -1034,12 +1110,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.refreshParams = params
             views.refreshView = rv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(rv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val rvSec = createSingleOverlayButton(secContext, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
+                rvSec.visibility = View.VISIBLE
                 rvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -1050,12 +1128,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.refreshParamsSecondary = paramsSec
                 views.refreshViewSecondary = rvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(rvSec, paramsSec)
             }
 
@@ -1064,9 +1143,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val rv = views.refreshView!!
             val params = views.refreshParams!!
             updateSingleButtonVisuals(rv, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
+            rv.visibility = View.VISIBLE
             rv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(rv, params)
 
@@ -1074,7 +1157,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.refreshParamsSecondary
             if (rvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(rvSec, R.drawable.ic_refresh, colorHex, shapeStr, sizePx)
+                rvSec.visibility = View.VISIBLE
                 rvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -1084,6 +1169,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun updateProfileFreeformButton(profileId: Int, views: ProfileOverlayViews) {
+        if (!Settings.canDrawOverlays(this)) return
         val isEnabled = getProfileBool(profileId, "freeform_window_enabled", "freeform_window_enabled", false)
         if (!isEnabled) {
             views.freeformView?.let { try { defaultWindowManager.removeView(it) } catch (_: Exception) {} }
@@ -1094,21 +1180,24 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         val opacityPercent = getProfileInt(profileId, "freeform_opacity_percent", "freeform_opacity_percent", getProfileInt(profileId, "opacity_percent", "opacity_percent", 85))
-        val alphaFloat = (opacityPercent.coerceIn(10, 100)) / 100.0f
+        val alphaFloat = (opacityPercent.coerceIn(10, 100) / 100.0f).coerceAtLeast(0.2f)
         val sizeDp = getProfileInt(profileId, "freeform_button_size", "freeform_button_size", 48)
-        val sizePx = dpToPx(sizeDp)
+        val sizePx = max(dpToPx(sizeDp), dpToPx(24))
 
         val colorHex = getProfileString(profileId, "freeform_color_hex", "freeform_color_hex", getProfileString(profileId, "button_color", "button_color", "#00897B"))
         val shapeStr = getProfileString(profileId, "freeform_shape", "freeform_shape", getProfileString(profileId, "button_shape", "button_shape", "CIRCLE"))
 
         val defY = getDefaultY(profileId, "freeform")
-        val x = getProfileInt(profileId, "freeform_pos_x", "freeform_pos_x", 0)
-        val y = getProfileInt(profileId, "freeform_pos_y", "freeform_pos_y", defY)
+        val rawX = getProfileInt(profileId, "freeform_pos_x", "freeform_pos_x", 100)
+        val rawY = getProfileInt(profileId, "freeform_pos_y", "freeform_pos_y", if (defY > 0) defY else 300)
+        val x = if (rawX > 0) rawX else 100
+        val y = if (rawY > 0) rawY else 300
 
         val prefPrefix = "overlay_${profileId}_freeform"
 
         if (views.freeformView == null) {
             val fv = createSingleOverlayButton(this, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
+            fv.visibility = View.VISIBLE
             fv.alpha = alphaFloat
 
             val params = WindowManager.LayoutParams(
@@ -1124,12 +1213,14 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             }
             views.freeformParams = params
             views.freeformView = fv
+            Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
             defaultWindowManager.addView(fv, params)
 
             val secWM = secondaryWindowManager
             val secContext = secondaryContext
             if (secWM != null && secWM != defaultWindowManager && secContext != null) {
                 val fvSec = createSingleOverlayButton(secContext, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
+                fvSec.visibility = View.VISIBLE
                 fvSec.alpha = alphaFloat
                 val screenWidth = resources.displayMetrics.widthPixels
                 val screenHeight = resources.displayMetrics.heightPixels
@@ -1140,12 +1231,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
-                    this.x = screenWidth - x - sizePx
-                    this.y = screenHeight - y - sizePx
+                    this.x = max(100, screenWidth - x - sizePx)
+                    this.y = max(300, screenHeight - y - sizePx)
                     this.alpha = alphaFloat
                 }
                 views.freeformParamsSecondary = paramsSec
                 views.freeformViewSecondary = fvSec
+                Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
                 secWM.addView(fvSec, paramsSec)
             }
 
@@ -1154,9 +1246,13 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val fv = views.freeformView!!
             val params = views.freeformParams!!
             updateSingleButtonVisuals(fv, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
+            fv.visibility = View.VISIBLE
             fv.alpha = alphaFloat
+            params.gravity = Gravity.TOP or Gravity.START
             params.width = sizePx
             params.height = sizePx
+            params.x = x
+            params.y = y
             params.alpha = alphaFloat
             defaultWindowManager.updateViewLayout(fv, params)
 
@@ -1164,7 +1260,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             val paramsSec = views.freeformParamsSecondary
             if (fvSec != null && paramsSec != null) {
                 updateSingleButtonVisuals(fvSec, R.drawable.ic_freeform, colorHex, shapeStr, sizePx)
+                fvSec.visibility = View.VISIBLE
                 fvSec.alpha = alphaFloat
+                paramsSec.gravity = Gravity.TOP or Gravity.START
                 paramsSec.width = sizePx
                 paramsSec.height = sizePx
                 paramsSec.alpha = alphaFloat
@@ -1313,12 +1411,15 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         shapeStr: String,
         sizePx: Int
     ): FrameLayout {
-        val frame = FrameLayout(context)
+        val frame = FrameLayout(context).apply {
+            visibility = View.VISIBLE
+        }
         val iconSize = (sizePx * 0.55f).toInt()
         val img = ImageView(context).apply {
             setImageResource(iconRes)
             setColorFilter(Color.WHITE)
             scaleType = ImageView.ScaleType.FIT_CENTER
+            visibility = View.VISIBLE
         }
         val lp = FrameLayout.LayoutParams(iconSize, iconSize).apply {
             gravity = Gravity.CENTER
@@ -1441,6 +1542,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun toggleFreeformContainer() {
+        if (!Settings.canDrawOverlays(this)) return
+
         if (freeformContainerView != null) {
             try { defaultWindowManager.removeView(freeformContainerView) } catch (_: Exception) {}
             freeformContainerView = null
@@ -1460,6 +1563,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 setStroke(dp(1), Color.parseColor("#3F3F56"))
             }
             setPadding(dp(12), dp(12), dp(12), dp(12))
+            visibility = View.VISIBLE
+            alpha = 1.0f
         }
 
         val headerLayout = LinearLayout(context).apply {
@@ -1497,16 +1602,20 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         rootContainer.addView(contentTv)
 
+        val wPx = max(dp(280), dp(100))
+        val hPx = max(dp(180), dp(100))
+
         val params = WindowManager.LayoutParams(
-            dp(280),
-            dp(180),
+            wPx,
+            hPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER
-            x = 0
-            y = 0
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 300
+            alpha = 1.0f
         }
 
         headerLayout.setOnTouchListener(object : View.OnTouchListener {
@@ -1537,10 +1646,12 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
         freeformContainerParams = params
         freeformContainerView = rootContainer
+        Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
         defaultWindowManager.addView(rootContainer, params)
     }
 
     private fun showQuickLaunchMenuForProfile(profileId: Int) {
+        if (!Settings.canDrawOverlays(this)) return
         val appPkgs = getProfileStringSet(profileId, "quick_launch_apps", "quick_launch_apps")
         val context = this
         val density = resources.displayMetrics.density
@@ -1554,6 +1665,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 cornerRadius = dpToPx(16).toFloat()
                 setColor(Color.parseColor("#CC1E1E2C"))
             }
+            visibility = View.VISIBLE
+            alpha = 1.0f
         }
 
         val pm = packageManager
@@ -1587,20 +1700,27 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
             container.addView(tv)
         }
 
+        val wPx = max(dpToPx(64), dpToPx(48))
+        val hPx = max(dpToPx(200), dpToPx(48))
+
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            wPx,
+            hPx,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 300
+            alpha = 1.0f
         }
 
         container.setOnClickListener {
             try { defaultWindowManager.removeView(container) } catch (_: Exception) {}
         }
 
+        Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
         defaultWindowManager.addView(container, params)
     }
 
@@ -1740,6 +1860,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun showQuickSettingsDialog(prefPrefix: String) {
+        if (!Settings.canDrawOverlays(this)) return
         activeSettingsDialogView?.let {
             try {
                 defaultWindowManager.removeView(it)
@@ -1766,6 +1887,8 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                 setColor(Color.parseColor("#1E1E2C"))
                 setStroke(dpToPx(1), Color.parseColor("#3F3F56"))
             }
+            visibility = View.VISIBLE
+            alpha = 1.0f
         }
 
         val headerText = TextView(context).apply {
@@ -1971,14 +2094,20 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
         containerLayout.addView(closeBtn)
 
+        val dialogWidth = max(dpToPx(240), dpToPx(100))
+        val dialogHeight = max(dpToPx(320), dpToPx(100))
+
         val params = WindowManager.LayoutParams(
-            dpToPx(240),
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            dialogWidth,
+            dialogHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 300
+            alpha = 1.0f
         }
 
         containerLayout.setOnTouchListener { _, event ->
@@ -1996,6 +2125,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         }
 
         activeSettingsDialogView = containerLayout
+        Log.d("LynkOverlay", "Adding overlay view to WindowManager...")
         defaultWindowManager.addView(containerLayout, params)
     }
 
