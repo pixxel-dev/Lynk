@@ -30,6 +30,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewConfiguration
 import android.view.ViewOutlineProvider
 import android.view.WindowManager
@@ -491,10 +492,9 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
         val minDist = min(min(distLeft, distRight), min(distTop, distBottom))
         val isHorizontal = (minDist == distTop || minDist == distBottom)
 
-        val marginPx = dpToPx(4)
         val numButtons = (if (showQuickLaunch) 1 else 0) + (if (showFullscreen) 1 else 0) + (if (showHome) 1 else 0) + (if (showBack) 1 else 0) + (if (showRefresh) 1 else 0) + (if (showFreeform) 1 else 0)
-        val estWidth = if (isHorizontal) max((sizePx + 2 * marginPx) * numButtons, sizePx) else max(sizePx + 2 * marginPx, sizePx)
-        val estHeight = if (isHorizontal) max(sizePx + 2 * marginPx, sizePx) else max((sizePx + 2 * marginPx) * numButtons, sizePx)
+        val estWidth = if (isHorizontal) max(sizePx * numButtons, sizePx) else sizePx
+        val estHeight = if (isHorizontal) sizePx else max(sizePx * numButtons, sizePx)
 
         val combinedView = createCombinedLinearLayout(this, showQuickLaunch, showFullscreen, showHome, showBack, showRefresh, showFreeform, sizePx, isHorizontal, profileId)
         combinedView.visibility = View.VISIBLE
@@ -604,12 +604,6 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
         val container = LinearLayout(context).apply {
             orientation = if (isHorizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-            setPadding(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dpToPx(16).toFloat()
-                setColor(Color.parseColor("#33000000"))
-            }
         }
 
         if (showQuickLaunch) {
@@ -1413,6 +1407,7 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     ): FrameLayout {
         val frame = FrameLayout(context).apply {
             visibility = View.VISIBLE
+            layoutParams = ViewGroup.LayoutParams(sizePx, sizePx)
         }
         val iconSize = (sizePx * 0.55f).toInt()
         val img = ImageView(context).apply {
@@ -1803,47 +1798,65 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
                             val distBottom = max(0, screenHeight - (params.y + dragView.height))
 
                             val minDist = min(min(distLeft, distRight), min(distTop, distBottom))
+                            val startX = params.x
+                            val startY = params.y
+                            val endX: Int
+                            val endY: Int
+                            
                             val isHorizontal: Boolean
-
                             if (minDist == distLeft) {
-                                params.x = 0
+                                endX = 0
+                                endY = startY
                                 isHorizontal = false
                             } else if (minDist == distRight) {
-                                params.x = max(0, screenWidth - dragView.width)
+                                endX = max(0, screenWidth - dragView.width)
+                                endY = startY
                                 isHorizontal = false
                             } else if (minDist == distTop) {
-                                params.y = 0
+                                endX = startX
+                                endY = 0
                                 isHorizontal = true
                             } else {
-                                params.y = max(0, screenHeight - dragView.height)
+                                endX = startX
+                                endY = max(0, screenHeight - dragView.height)
                                 isHorizontal = true
                             }
 
                             if (dragView is LinearLayout) {
                                 dragView.orientation = if (isHorizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
                             }
-                            defaultWindowManager.updateViewLayout(dragView, params)
 
-                            if (dragViewSecondary != null && paramsSecondary != null) {
-                                paramsSecondary.x = screenWidth - params.x - dragView.width
-                                paramsSecondary.y = screenHeight - params.y - dragView.height
-                                if (dragViewSecondary is LinearLayout) {
-                                    dragViewSecondary.orientation = if (isHorizontal) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
+                            val animator = android.animation.ValueAnimator.ofFloat(0f, 1f)
+                            animator.duration = 200
+                            animator.addUpdateListener { animation ->
+                                val fraction = animation.animatedFraction
+                                params.x = (startX + (endX - startX) * fraction).toInt()
+                                params.y = (startY + (endY - startY) * fraction).toInt()
+                                defaultWindowManager.updateViewLayout(dragView, params)
+
+                                if (dragViewSecondary != null && paramsSecondary != null) {
+                                    paramsSecondary.x = screenWidth - params.x - dragView.width
+                                    paramsSecondary.y = screenHeight - params.y - dragView.height
+                                    secondaryWindowManager?.updateViewLayout(dragViewSecondary, paramsSecondary)
                                 }
-                                secondaryWindowManager?.updateViewLayout(dragViewSecondary, paramsSecondary)
                             }
+                            animator.addListener(object : android.animation.AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: android.animation.Animator) {
+                                    val editor = prefs.edit()
+                                        .putInt("${prefPrefix}_pos_x", endX)
+                                        .putInt("${prefPrefix}_pos_y", endY)
 
-                            val editor = prefs.edit()
-                                .putInt("${prefPrefix}_pos_x", params.x)
-                                .putInt("${prefPrefix}_pos_y", params.y)
+                                    if (profileId == 1) {
+                                        val legacyKey = prefPrefix.removePrefix("overlay_1_")
+                                        editor.putInt("${legacyKey}_pos_x", endX)
+                                            .putInt("${legacyKey}_pos_y", endY)
+                                    }
+                                    editor.apply()
+                                }
+                            })
+                            animator.start()
 
-                            if (profileId == 1) {
-                                val legacyKey = prefPrefix.removePrefix("overlay_1_")
-                                editor.putInt("${legacyKey}_pos_x", params.x)
-                                    .putInt("${legacyKey}_pos_y", params.y)
-                            }
 
-                            editor.apply()
                             isDragging = false
                             return true
                         }
