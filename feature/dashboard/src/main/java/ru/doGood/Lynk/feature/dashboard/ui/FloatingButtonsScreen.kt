@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Square
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -841,12 +843,12 @@ private fun FloatingButtonCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     val shapes = remember {
                         listOf(
-                            "CIRCLE" to ("●" to R.string.shape_circle),
-                            "ROUNDED_SQUARE" to ("▢" to R.string.shape_rounded_square),
-                            "SQUARE" to ("■" to R.string.shape_square),
-                            "STAR" to ("★" to R.string.shape_star),
-                            "OCTAGON" to ("🛑" to R.string.shape_octagon),
-                            "HEART" to ("♥" to R.string.shape_heart)
+                            "CIRCLE" to (Icons.Rounded.Circle to R.string.shape_circle),
+                            "ROUNDED_SQUARE" to (Icons.Rounded.Square to R.string.shape_rounded_square),
+                            "SQUARE" to (Icons.Filled.Square to R.string.shape_square),
+                            "STAR" to (Icons.Rounded.Star to R.string.shape_star),
+                            "OCTAGON" to (Icons.Rounded.Hexagon to R.string.shape_octagon),
+                            "HEART" to (Icons.Rounded.Favorite to R.string.shape_heart)
                         )
                     }
                     Row(
@@ -858,7 +860,7 @@ private fun FloatingButtonCard(
                             .padding(vertical = 4.dp)
                     ) {
                         shapes.forEach { (shapeKey, iconAndRes) ->
-                            val (symbol, stringRes) = iconAndRes
+                            val (vectorIcon, stringRes) = iconAndRes
                             val isSelected = selectedShape == shapeKey
                             val labelDescription = stringResource(stringRes)
 
@@ -866,11 +868,6 @@ private fun FloatingButtonCard(
                                 MaterialTheme.colorScheme.primaryContainer
                             } else {
                                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            }
-                            val contentColor = if (isSelected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
                             }
                             val borderColor = if (isSelected) {
                                 MaterialTheme.colorScheme.primary
@@ -881,7 +878,7 @@ private fun FloatingButtonCard(
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(40.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(backgroundColor)
                                     .border(
@@ -894,11 +891,11 @@ private fun FloatingButtonCard(
                                         contentDescription = labelDescription
                                     }
                             ) {
-                                Text(
-                                    text = symbol,
-                                    fontSize = 26.sp,
-                                    color = contentColor,
-                                    textAlign = TextAlign.Center
+                                Icon(
+                                    imageVector = vectorIcon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }
