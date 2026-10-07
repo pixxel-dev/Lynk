@@ -11,7 +11,6 @@ import android.os.StatFs
 import android.provider.Settings
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.lynk.core.domain.agent.OverlayProfile
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.file.FileItem
 import com.example.lynk.core.domain.floating.FloatingButtonAction
@@ -28,8 +27,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
@@ -86,17 +83,12 @@ data class SystemInfoState(
 )
 
 data class FloatingButtonsState(
-    val selectedProfileId: Int = 1,
-    val profiles: List<OverlayProfile> = emptyList(),
     val config: FloatingButtonConfig = FloatingButtonConfig(),
     val isOverlayPermissionGranted: Boolean = false,
     val isUsageStatsPermissionGranted: Boolean = false,
     val isServiceRunning: Boolean = false,
     val availableApps: List<AppItem> = emptyList()
-) {
-    val activeProfile: OverlayProfile
-        get() = profiles.find { it.id == selectedProfileId } ?: profiles.firstOrNull() ?: OverlayProfile()
-}
+)
 
 data class AppUpdateUiState(
     val updateInfo: com.example.lynk.core.domain.update.UpdateInfo? = null,
@@ -918,30 +910,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadAdbInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val autoIp = adbWirelessManager.wifiIpAddress
-                val currentIp = _state.value.systemInfoState.adbIpAddress
-                val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
-                val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
-                val port = portStr.toIntOrNull() ?: 5555
-                val connected = adbWirelessManager.isConnected(effectiveIp, port)
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            adbIpAddress = effectiveIp,
-                            isAdbConnected = connected
-                        )
+            val autoIp = adbWirelessManager.wifiIpAddress
+            val currentIp = _state.value.systemInfoState.adbIpAddress
+            val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
+            val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
+            val port = portStr.toIntOrNull() ?: 5555
+            val connected = adbWirelessManager.isConnected(effectiveIp, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        adbIpAddress = effectiveIp,
+                        isAdbConnected = connected
                     )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            adbIpAddress = "127.0.0.1",
-                            isAdbConnected = false
-                        )
-                    )
-                }
+                )
             }
         }
     }
@@ -966,28 +947,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            try {
-                val result = adbWirelessManager.connect(ip, port)
-                val connected = adbWirelessManager.isConnected(ip, port)
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            isAdbConnected = connected,
-                            adbStatusMessage = result,
-                            isAdbLoading = false
-                        )
+            val result = adbWirelessManager.connect(ip, port)
+            val connected = adbWirelessManager.isConnected(ip, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        isAdbConnected = connected,
+                        adbStatusMessage = result,
+                        isAdbLoading = false
                     )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            isAdbConnected = false,
-                            adbStatusMessage = e.message ?: "Connection error",
-                            isAdbLoading = false
-                        )
-                    )
-                }
+                )
             }
         }
     }
@@ -1000,43 +969,25 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            try {
-                val result = adbWirelessManager.disconnect(ip, port)
-                val connected = adbWirelessManager.isConnected(ip, port)
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            isAdbConnected = connected,
-                            adbStatusMessage = result,
-                            isAdbLoading = false
-                        )
+            val result = adbWirelessManager.disconnect(ip, port)
+            val connected = adbWirelessManager.isConnected(ip, port)
+            _state.update {
+                it.copy(
+                    systemInfoState = it.systemInfoState.copy(
+                        isAdbConnected = connected,
+                        adbStatusMessage = result,
+                        isAdbLoading = false
                     )
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(
-                        systemInfoState = it.systemInfoState.copy(
-                            isAdbConnected = false,
-                            adbStatusMessage = e.message ?: "Disconnect error",
-                            isAdbLoading = false
-                        )
-                    )
-                }
+                )
             }
         }
     }
 
     fun refreshAdbIp() {
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val autoIp = adbWirelessManager.wifiIpAddress
-                _state.update {
-                    it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
-                }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = "127.0.0.1"))
-                }
+            val autoIp = adbWirelessManager.wifiIpAddress
+            _state.update {
+                it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
             }
         }
     }
@@ -1164,464 +1115,144 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    // --- Floating Buttons & Multi-Overlay Manager ---
-
-    fun getLatestProfile(profileId: Int): OverlayProfile {
+    // --- Floating Buttons & Overlay Tweaks ---
+    fun getLatestFloatingConfig(): FloatingButtonConfig {
         val app = getApplication<Application>()
         val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
 
-        val pPrefix = "overlay_${profileId}_"
-        val hasProfileKeys = prefs.contains("${pPrefix}enabled") || prefs.contains("${pPrefix}quick_launch_enabled")
-
-        val defaultEnabled = if (hasProfileKeys) {
-            prefs.getBoolean("${pPrefix}enabled", false)
-        } else if (profileId == 1) {
-            prefs.getBoolean("quick_launch_enabled", false) ||
-            prefs.getBoolean("home_navigator_enabled", false) ||
-            prefs.getBoolean("back_navigator_enabled", false) ||
-            prefs.getBoolean("fullscreen_overlay_enabled", false) ||
-            true
-        } else {
-            false
-        }
-
-        val name = prefs.getString("${pPrefix}name", "Оверлей $profileId") ?: "Оверлей $profileId"
-        val isSeparateButtons = if (hasProfileKeys) {
-            prefs.getBoolean("${pPrefix}separate_buttons", false)
-        } else if (profileId == 1) {
-            prefs.getBoolean("separate_buttons_enabled", false)
-        } else {
-            false
-        }
-
         val config = FloatingButtonConfig()
+        config.isQuickLaunchEnabled = prefs.getBoolean("quick_launch_enabled", false)
+        config.quickLaunchApps = ArrayList(prefs.getStringSet("quick_launch_apps", emptySet()) ?: emptySet())
+        config.quickLaunchButtonSize = prefs.getInt("ql_button_size", 48)
+        config.quickLaunchOpacityPercent = prefs.getInt("ql_opacity_percent", 85)
 
-        fun getBool(key: String, legacyKey: String, def: Boolean): Boolean {
-            return if (prefs.contains("${pPrefix}$key")) prefs.getBoolean("${pPrefix}$key", def)
-                   else if (profileId == 1) prefs.getBoolean(legacyKey, def)
-                   else def
-        }
-        fun getInt(key: String, legacyKey: String, def: Int): Int {
-            return if (prefs.contains("${pPrefix}$key")) prefs.getInt("${pPrefix}$key", def)
-                   else if (profileId == 1) prefs.getInt(legacyKey, def)
-                   else def
-        }
-        fun getString(key: String, legacyKey: String, def: String): String {
-            return if (prefs.contains("${pPrefix}$key")) prefs.getString("${pPrefix}$key", def) ?: def
-                   else if (profileId == 1) prefs.getString(legacyKey, def) ?: def
-                   else def
-        }
-        fun getStringSet(key: String, legacyKey: String): List<String> {
-            val set = if (prefs.contains("${pPrefix}$key")) prefs.getStringSet("${pPrefix}$key", emptySet())
-                      else if (profileId == 1) prefs.getStringSet(legacyKey, emptySet())
-                      else emptySet()
-            return ArrayList(set ?: emptySet())
-        }
+        config.isFullscreenOverlayEnabled = prefs.getBoolean("fullscreen_overlay_enabled", false)
+        config.fullscreenApps = ArrayList(prefs.getStringSet("fullscreen_apps", emptySet()) ?: emptySet())
+        config.fullscreenButtonSize = prefs.getInt("fs_button_size", 48)
+        config.fullscreenOpacityPercent = prefs.getInt("fs_opacity_percent", 85)
 
-        config.isQuickLaunchEnabled = getBool("quick_launch_enabled", "quick_launch_enabled", false)
-        config.quickLaunchApps = getStringSet("quick_launch_apps", "quick_launch_apps")
-        config.quickLaunchButtonSize = getInt("ql_button_size", "ql_button_size", 48)
-        config.quickLaunchOpacityPercent = getInt("ql_opacity_percent", "ql_opacity_percent", 85)
+        config.isHomeNavigatorEnabled = prefs.getBoolean("home_navigator_enabled", false)
+        config.homeButtonSize = prefs.getInt("home_button_size", 48)
+        config.homeOpacityPercent = prefs.getInt("home_opacity_percent", 85)
 
-        config.isFullscreenOverlayEnabled = getBool("fullscreen_overlay_enabled", "fullscreen_overlay_enabled", false)
-        config.fullscreenApps = getStringSet("fullscreen_apps", "fullscreen_apps")
-        config.fullscreenButtonSize = getInt("fs_button_size", "fs_button_size", 48)
-        config.fullscreenOpacityPercent = getInt("fs_opacity_percent", "fs_opacity_percent", 85)
+        config.isBackNavigatorEnabled = prefs.getBoolean("back_navigator_enabled", false)
+        config.backButtonSize = prefs.getInt("back_button_size", 48)
+        config.backOpacityPercent = prefs.getInt("back_opacity_percent", 85)
 
-        config.isHomeNavigatorEnabled = getBool("home_navigator_enabled", "home_navigator_enabled", false)
-        config.homeButtonSize = getInt("home_button_size", "home_button_size", 48)
-        config.homeOpacityPercent = getInt("home_opacity_percent", "home_opacity_percent", 85)
+        config.isRefreshNavigatorEnabled = prefs.getBoolean("refresh_navigator_enabled", false)
+        config.refreshButtonSize = prefs.getInt("refresh_button_size", 48)
+        config.refreshOpacityPercent = prefs.getInt("refresh_opacity_percent", 85)
 
-        config.isBackNavigatorEnabled = getBool("back_navigator_enabled", "back_navigator_enabled", false)
-        config.backButtonSize = getInt("back_button_size", "back_button_size", 48)
-        config.backOpacityPercent = getInt("back_opacity_percent", "back_opacity_percent", 85)
+        config.isFreeformWindowEnabled = prefs.getBoolean("freeform_window_enabled", false)
+        config.freeformButtonSize = prefs.getInt("freeform_button_size", 48)
+        config.freeformOpacityPercent = prefs.getInt("freeform_opacity_percent", 85)
 
-        config.isRefreshNavigatorEnabled = getBool("refresh_navigator_enabled", "refresh_navigator_enabled", false)
-        config.refreshButtonSize = getInt("refresh_button_size", "refresh_button_size", 48)
-        config.refreshOpacityPercent = getInt("refresh_opacity_percent", "refresh_opacity_percent", 85)
+        config.isSeparateButtonsEnabled = prefs.getBoolean("separate_buttons_enabled", false)
+        config.combinedButtonSize = prefs.getInt("combined_button_size", 48)
+        config.isSecondaryDisplayMirroring = prefs.getBoolean("secondary_display_mirroring", true)
+        config.opacityPercent = prefs.getInt("opacity_percent", 85)
 
-        config.isFreeformWindowEnabled = getBool("freeform_window_enabled", "freeform_window_enabled", false)
-        config.freeformButtonSize = getInt("freeform_button_size", "freeform_button_size", 48)
-        config.freeformOpacityPercent = getInt("freeform_opacity_percent", "freeform_opacity_percent", 85)
+        config.buttonColor = prefs.getString("button_color", "#7C4DFF") ?: "#7C4DFF"
+        config.shape = prefs.getString("button_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.isSeparateButtonsEnabled = isSeparateButtons
-        config.combinedButtonSize = getInt("combined_button_size", "combined_button_size", 48)
-        config.isSecondaryDisplayMirroring = getBool("secondary_display_mirroring", "secondary_display_mirroring", true)
-        config.opacityPercent = getInt("opacity_percent", "opacity_percent", 85)
+        config.quickLaunchColorHex = prefs.getString("ql_color_hex", "#6750A4") ?: "#6750A4"
+        config.quickLaunchShape = prefs.getString("ql_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.buttonColor = getString("button_color", "button_color", "#7C4DFF")
-        config.shape = getString("button_shape", "button_shape", "CIRCLE")
+        config.fullscreenColorHex = prefs.getString("fs_color_hex", "#1976D2") ?: "#1976D2"
+        config.fullscreenShape = prefs.getString("fs_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.quickLaunchColorHex = getString("ql_color_hex", "ql_color_hex", "#6750A4")
-        config.quickLaunchShape = getString("ql_shape", "ql_shape", "CIRCLE")
+        config.homeColorHex = prefs.getString("home_color_hex", "#388E3C") ?: "#388E3C"
+        config.homeShape = prefs.getString("home_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.fullscreenColorHex = getString("fs_color_hex", "fs_color_hex", "#1976D2")
-        config.fullscreenShape = getString("fs_shape", "fs_shape", "CIRCLE")
+        config.backColorHex = prefs.getString("back_color_hex", "#D32F2F") ?: "#D32F2F"
+        config.backShape = prefs.getString("back_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.homeColorHex = getString("home_color_hex", "home_color_hex", "#388E3C")
-        config.homeShape = getString("home_shape", "home_shape", "CIRCLE")
+        config.refreshColorHex = prefs.getString("refresh_color_hex", "#FFA000") ?: "#FFA000"
+        config.refreshShape = prefs.getString("refresh_shape", "CIRCLE") ?: "CIRCLE"
 
-        config.backColorHex = getString("back_color_hex", "back_color_hex", "#D32F2F")
-        config.backShape = getString("back_shape", "back_shape", "CIRCLE")
-
-        config.refreshColorHex = getString("refresh_color_hex", "refresh_color_hex", "#FFA000")
-        config.refreshShape = getString("refresh_shape", "refresh_shape", "CIRCLE")
-
-        config.freeformColorHex = getString("freeform_color_hex", "freeform_color_hex", "#00897B")
-        config.freeformShape = getString("freeform_shape", "freeform_shape", "CIRCLE")
+        config.freeformColorHex = prefs.getString("freeform_color_hex", "#00897B") ?: "#00897B"
+        config.freeformShape = prefs.getString("freeform_shape", "CIRCLE") ?: "CIRCLE"
 
         config.syncActionsWithApps()
 
-        return OverlayProfile(profileId, name, defaultEnabled, isSeparateButtons, config)
-    }
-
-    fun getLatestFloatingConfig(): FloatingButtonConfig {
-        return getLatestProfile(_state.value.floatingButtonsState.selectedProfileId).config
-    }
-
-    fun loadProfilesList(): List<OverlayProfile> {
-        val app = getApplication<Application>()
-        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
-        val jsonStr = prefs.getString("overlay_profiles_json", null)
-        val profileMetaList = mutableListOf<Triple<Int, String, Boolean>>()
-
-        if (!jsonStr.isNullOrEmpty()) {
-            try {
-                val jsonArray = JSONArray(jsonStr)
-                for (i in 0 until jsonArray.length()) {
-                    val obj = jsonArray.getJSONObject(i)
-                    val id = obj.getInt("id")
-                    val name = obj.optString("name", "Оверлей $id")
-                    val isEnabled = obj.optBoolean("isEnabled", false)
-                    profileMetaList.add(Triple(id, name, isEnabled))
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        if (profileMetaList.isEmpty()) {
-            val hasLegacy1 = prefs.contains("overlay_1_enabled") || prefs.contains("overlay_1_name") || prefs.contains("quick_launch_enabled")
-            val hasLegacy2 = prefs.contains("overlay_2_enabled") || prefs.contains("overlay_2_name")
-            val hasLegacy3 = prefs.contains("overlay_3_enabled") || prefs.contains("overlay_3_name")
-
-            if (hasLegacy1 || hasLegacy2 || hasLegacy3) {
-                profileMetaList.add(Triple(1, prefs.getString("overlay_1_name", "Оверлей 1") ?: "Оверлей 1", false))
-                if (hasLegacy2) profileMetaList.add(Triple(2, prefs.getString("overlay_2_name", "Оверлей 2") ?: "Оверлей 2", false))
-                if (hasLegacy3) profileMetaList.add(Triple(3, prefs.getString("overlay_3_name", "Оверлей 3") ?: "Оверлей 3", false))
-            } else {
-                profileMetaList.add(Triple(1, "Оверлей 1", false))
-            }
-        }
-
-        val profiles = profileMetaList.map { (id, _, _) ->
-            getLatestProfile(id)
-        }
-        saveProfilesListToPrefs(prefs, profiles)
-        return profiles
-    }
-
-    private fun saveProfilesListToPrefs(prefs: android.content.SharedPreferences, profiles: List<OverlayProfile>) {
-        val jsonArray = JSONArray()
-        for (p in profiles) {
-            val obj = JSONObject()
-            obj.put("id", p.id)
-            obj.put("name", p.name)
-            obj.put("isEnabled", p.isEnabled)
-            obj.put("isSeparateButtons", p.isSeparateButtons)
-            jsonArray.put(obj)
-        }
-        prefs.edit().putString("overlay_profiles_json", jsonArray.toString()).apply()
+        return config
     }
 
     fun loadFloatingConfig() {
-        val profiles = loadProfilesList()
-        val currentSelId = _state.value.floatingButtonsState.selectedProfileId
-        val selId = if (profiles.any { it.id == currentSelId }) currentSelId else (profiles.firstOrNull()?.id ?: 1)
-        val activeProf = profiles.find { it.id == selId } ?: profiles.firstOrNull() ?: OverlayProfile()
-
+        val config = getLatestFloatingConfig()
         _state.update {
             it.copy(
                 floatingButtonsState = it.floatingButtonsState.copy(
-                    selectedProfileId = selId,
-                    profiles = profiles,
-                    config = activeProf.config.copy(),
+                    config = config,
                     availableApps = it.installerState.installedApps
                 )
             )
         }
     }
 
-    private fun saveAndApplyProfileConfig(profileId: Int, profile: OverlayProfile) {
+    private fun saveAndApplyFloatingConfig(newConfig: FloatingButtonConfig) {
         val app = getApplication<Application>()
         val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
 
-        val pPrefix = "overlay_${profileId}_"
-        val config = profile.config
+        prefs.edit()
+            .putBoolean("quick_launch_enabled", newConfig.isQuickLaunchEnabled)
+            .putStringSet("quick_launch_apps", newConfig.quickLaunchApps.toSet())
+            .putInt("ql_button_size", newConfig.quickLaunchButtonSize)
+            .putInt("ql_opacity_percent", newConfig.quickLaunchOpacityPercent)
 
-        val editor = prefs.edit()
-            .putBoolean("${pPrefix}enabled", profile.isEnabled)
-            .putString("${pPrefix}name", profile.name)
-            .putBoolean("${pPrefix}separate_buttons", profile.isSeparateButtons)
+            .putBoolean("fullscreen_overlay_enabled", newConfig.isFullscreenOverlayEnabled)
+            .putStringSet("fullscreen_apps", newConfig.fullscreenApps.toSet())
+            .putInt("fs_button_size", newConfig.fullscreenButtonSize)
+            .putInt("fs_opacity_percent", newConfig.fullscreenOpacityPercent)
 
-            .putBoolean("${pPrefix}quick_launch_enabled", config.isQuickLaunchEnabled)
-            .putStringSet("${pPrefix}quick_launch_apps", config.quickLaunchApps.toSet())
-            .putInt("${pPrefix}ql_button_size", config.quickLaunchButtonSize)
-            .putInt("${pPrefix}ql_opacity_percent", config.quickLaunchOpacityPercent)
+            .putBoolean("home_navigator_enabled", newConfig.isHomeNavigatorEnabled)
+            .putInt("home_button_size", newConfig.homeButtonSize)
+            .putInt("home_opacity_percent", newConfig.homeOpacityPercent)
 
-            .putBoolean("${pPrefix}fullscreen_overlay_enabled", config.isFullscreenOverlayEnabled)
-            .putStringSet("${pPrefix}fullscreen_apps", config.fullscreenApps.toSet())
-            .putInt("${pPrefix}fs_button_size", config.fullscreenButtonSize)
-            .putInt("${pPrefix}fs_opacity_percent", config.fullscreenOpacityPercent)
+            .putBoolean("back_navigator_enabled", newConfig.isBackNavigatorEnabled)
+            .putInt("back_button_size", newConfig.backButtonSize)
+            .putInt("back_opacity_percent", newConfig.backOpacityPercent)
 
-            .putBoolean("${pPrefix}home_navigator_enabled", config.isHomeNavigatorEnabled)
-            .putInt("${pPrefix}home_button_size", config.homeButtonSize)
-            .putInt("${pPrefix}home_opacity_percent", config.homeOpacityPercent)
+            .putBoolean("refresh_navigator_enabled", newConfig.isRefreshNavigatorEnabled)
+            .putInt("refresh_button_size", newConfig.refreshButtonSize)
+            .putInt("refresh_opacity_percent", newConfig.refreshOpacityPercent)
 
-            .putBoolean("${pPrefix}back_navigator_enabled", config.isBackNavigatorEnabled)
-            .putInt("${pPrefix}back_button_size", config.backButtonSize)
-            .putInt("${pPrefix}back_opacity_percent", config.backOpacityPercent)
+            .putBoolean("freeform_window_enabled", newConfig.isFreeformWindowEnabled)
+            .putInt("freeform_button_size", newConfig.freeformButtonSize)
+            .putInt("freeform_opacity_percent", newConfig.freeformOpacityPercent)
 
-            .putBoolean("${pPrefix}refresh_navigator_enabled", config.isRefreshNavigatorEnabled)
-            .putInt("${pPrefix}refresh_button_size", config.refreshButtonSize)
-            .putInt("${pPrefix}refresh_opacity_percent", config.refreshOpacityPercent)
+            .putBoolean("separate_buttons_enabled", newConfig.isSeparateButtonsEnabled)
+            .putInt("combined_button_size", newConfig.combinedButtonSize)
+            .putBoolean("secondary_display_mirroring", newConfig.isSecondaryDisplayMirroring)
+            .putInt("opacity_percent", newConfig.opacityPercent)
+            .putString("button_color", newConfig.buttonColor)
+            .putString("button_shape", newConfig.shape)
 
-            .putBoolean("${pPrefix}freeform_window_enabled", config.isFreeformWindowEnabled)
-            .putInt("${pPrefix}freeform_button_size", config.freeformButtonSize)
-            .putInt("${pPrefix}freeform_opacity_percent", config.freeformOpacityPercent)
+            .putString("ql_color_hex", newConfig.quickLaunchColorHex)
+            .putString("ql_shape", newConfig.quickLaunchShape)
+            .putString("fs_color_hex", newConfig.fullscreenColorHex)
+            .putString("fs_shape", newConfig.fullscreenShape)
+            .putString("home_color_hex", newConfig.homeColorHex)
+            .putString("home_shape", newConfig.homeShape)
+            .putString("back_color_hex", newConfig.backColorHex)
+            .putString("back_shape", newConfig.backShape)
+            .putString("refresh_color_hex", newConfig.refreshColorHex)
+            .putString("refresh_shape", newConfig.refreshShape)
+            .putString("freeform_color_hex", newConfig.freeformColorHex)
+            .putString("freeform_shape", newConfig.freeformShape)
+            .apply()
 
-            .putBoolean("${pPrefix}separate_buttons_enabled", config.isSeparateButtonsEnabled)
-            .putInt("${pPrefix}combined_button_size", config.combinedButtonSize)
-            .putBoolean("${pPrefix}secondary_display_mirroring", config.isSecondaryDisplayMirroring)
-            .putInt("${pPrefix}opacity_percent", config.opacityPercent)
-            .putString("${pPrefix}button_color", config.buttonColor)
-            .putString("${pPrefix}button_shape", config.shape)
-
-            .putString("${pPrefix}ql_color_hex", config.quickLaunchColorHex)
-            .putString("${pPrefix}ql_shape", config.quickLaunchShape)
-            .putString("${pPrefix}fs_color_hex", config.fullscreenColorHex)
-            .putString("${pPrefix}fs_shape", config.fullscreenShape)
-            .putString("${pPrefix}home_color_hex", config.homeColorHex)
-            .putString("${pPrefix}home_shape", config.homeShape)
-            .putString("${pPrefix}back_color_hex", config.backColorHex)
-            .putString("${pPrefix}back_shape", config.backShape)
-            .putString("${pPrefix}refresh_color_hex", config.refreshColorHex)
-            .putString("${pPrefix}refresh_shape", config.refreshShape)
-            .putString("${pPrefix}freeform_color_hex", config.freeformColorHex)
-            .putString("${pPrefix}freeform_shape", config.freeformShape)
-
-        if (profileId == 1) {
-            editor.putBoolean("quick_launch_enabled", config.isQuickLaunchEnabled)
-                .putStringSet("quick_launch_apps", config.quickLaunchApps.toSet())
-                .putInt("ql_button_size", config.quickLaunchButtonSize)
-                .putInt("ql_opacity_percent", config.quickLaunchOpacityPercent)
-                .putBoolean("fullscreen_overlay_enabled", config.isFullscreenOverlayEnabled)
-                .putStringSet("fullscreen_apps", config.fullscreenApps.toSet())
-                .putInt("fs_button_size", config.fullscreenButtonSize)
-                .putInt("fs_opacity_percent", config.fullscreenOpacityPercent)
-                .putBoolean("home_navigator_enabled", config.isHomeNavigatorEnabled)
-                .putInt("home_button_size", config.homeButtonSize)
-                .putInt("home_opacity_percent", config.homeOpacityPercent)
-                .putBoolean("back_navigator_enabled", config.isBackNavigatorEnabled)
-                .putInt("back_button_size", config.backButtonSize)
-                .putInt("back_opacity_percent", config.backOpacityPercent)
-                .putBoolean("refresh_navigator_enabled", config.isRefreshNavigatorEnabled)
-                .putInt("refresh_button_size", config.refreshButtonSize)
-                .putInt("refresh_opacity_percent", config.refreshOpacityPercent)
-                .putBoolean("freeform_window_enabled", config.isFreeformWindowEnabled)
-                .putInt("freeform_button_size", config.freeformButtonSize)
-                .putInt("freeform_opacity_percent", config.freeformOpacityPercent)
-                .putBoolean("separate_buttons_enabled", profile.isSeparateButtons)
-                .putInt("combined_button_size", config.combinedButtonSize)
-                .putBoolean("secondary_display_mirroring", config.isSecondaryDisplayMirroring)
-                .putInt("opacity_percent", config.opacityPercent)
-                .putString("button_color", config.buttonColor)
-                .putString("button_shape", config.shape)
-                .putString("ql_color_hex", config.quickLaunchColorHex)
-                .putString("ql_shape", config.quickLaunchShape)
-                .putString("fs_color_hex", config.fullscreenColorHex)
-                .putString("fs_shape", config.fullscreenShape)
-                .putString("home_color_hex", config.homeColorHex)
-                .putString("home_shape", config.homeShape)
-                .putString("back_color_hex", config.backColorHex)
-                .putString("back_shape", config.backShape)
-                .putString("refresh_color_hex", config.refreshColorHex)
-                .putString("refresh_shape", config.refreshShape)
-                .putString("freeform_color_hex", config.freeformColorHex)
-                .putString("freeform_shape", config.freeformShape)
-        }
-
-        editor.apply()
+        val configCopy = newConfig.copy()
 
         _state.update {
-            val existing = it.floatingButtonsState.profiles
-            val updatedProfiles = if (existing.none { p -> p.id == profileId }) {
-                ArrayList(existing + profile)
-            } else {
-                ArrayList(existing.map { p -> if (p.id == profileId) profile else p })
-            }
-            saveProfilesListToPrefs(prefs, updatedProfiles)
-            val activeProfile = updatedProfiles.find { p -> p.id == it.floatingButtonsState.selectedProfileId } ?: profile
             it.copy(
-                floatingButtonsState = it.floatingButtonsState.copy(
-                    profiles = updatedProfiles,
-                    config = activeProfile.config.copy()
-                )
+                floatingButtonsState = it.floatingButtonsState.copy(config = configCopy)
             )
         }
 
         val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
         intent.setPackage(app.packageName)
         app.sendBroadcast(intent)
-
-        if (_state.value.floatingButtonsState.profiles.any { it.isEnabled }) {
-            startOverlayServiceInternal(app)
-        }
-    }
-
-    private fun startOverlayServiceInternal(app: Context) {
-        if (!Settings.canDrawOverlays(app)) return
-        try {
-            val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
-            val startMethod = serviceClass.getMethod("startService", Context::class.java)
-            startMethod.invoke(null, app)
-        } catch (_: Exception) {
-            try {
-                val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
-                val intent = Intent(app, serviceClass)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    app.startForegroundService(intent)
-                } else {
-                    app.startService(intent)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-        val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
-        intent.setPackage(app.packageName)
-        app.sendBroadcast(intent)
-    }
-
-    fun selectOverlayProfile(profileId: Int) {
-        _state.update {
-            val activeProf = it.floatingButtonsState.profiles.find { p -> p.id == profileId }
-                ?: it.floatingButtonsState.profiles.firstOrNull()
-                ?: OverlayProfile(profileId, "Оверлей $profileId", false, false, FloatingButtonConfig())
-            it.copy(
-                floatingButtonsState = it.floatingButtonsState.copy(
-                    selectedProfileId = activeProf.id,
-                    config = activeProf.config.copy()
-                )
-            )
-        }
-    }
-
-    fun toggleOverlayProfileEnabled(profileId: Int, enabled: Boolean) {
-        val currentProfile = _state.value.floatingButtonsState.profiles.find { it.id == profileId }
-            ?: getLatestProfile(profileId)
-        currentProfile.isEnabled = enabled
-        saveAndApplyProfileConfig(profileId, currentProfile)
-        if (enabled || _state.value.floatingButtonsState.profiles.any { it.isEnabled }) {
-            startOverlayServiceInternal(getApplication())
-        }
-    }
-
-    fun addOverlayProfile(name: String) {
-        val app = getApplication<Application>()
-        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
-        val currentProfiles = _state.value.floatingButtonsState.profiles.toMutableList()
-        val nextId = (currentProfiles.maxOfOrNull { it.id } ?: 0) + 1
-        val profileName = name.trim().ifBlank { "Оверлей $nextId" }
-        val newProfile = OverlayProfile(nextId, profileName, true, false, FloatingButtonConfig())
-
-        currentProfiles.add(newProfile)
-        val newList = ArrayList(currentProfiles)
-        saveProfilesListToPrefs(prefs, newList)
-
-        _state.update { state ->
-            state.copy(
-                floatingButtonsState = state.floatingButtonsState.copy(
-                    profiles = newList,
-                    selectedProfileId = nextId,
-                    config = newProfile.config.copy()
-                )
-            )
-        }
-
-        saveAndApplyProfileConfig(nextId, newProfile)
-        selectOverlayProfile(nextId)
-    }
-
-    fun deleteOverlayProfile(profileId: String) {
-        val idInt = profileId.toIntOrNull() ?: return
-        deleteOverlayProfile(idInt)
-    }
-
-    fun deleteOverlayProfile(profileId: Int) {
-        val currentProfiles = _state.value.floatingButtonsState.profiles
-        if (currentProfiles.size <= 1) return
-
-        val profileToDelete = currentProfiles.find { it.id == profileId } ?: return
-        val updatedProfiles = currentProfiles.filter { it.id != profileId }
-
-        val app = getApplication<Application>()
-        val prefs = app.getSharedPreferences("${app.packageName}_preferences", Context.MODE_PRIVATE)
-
-        val pPrefix = "overlay_${profileId}_"
-        val editor = prefs.edit()
-        prefs.all.keys.filter { it.startsWith(pPrefix) }.forEach { key ->
-            editor.remove(key)
-        }
-        editor.apply()
-
-        saveProfilesListToPrefs(prefs, updatedProfiles)
-
-        val newSelectedId = if (_state.value.floatingButtonsState.selectedProfileId == profileId) {
-            updatedProfiles.first().id
-        } else {
-            _state.value.floatingButtonsState.selectedProfileId
-        }
-
-        val activeProf = updatedProfiles.find { it.id == newSelectedId } ?: updatedProfiles.first()
-
-        _state.update {
-            it.copy(
-                floatingButtonsState = it.floatingButtonsState.copy(
-                    selectedProfileId = newSelectedId,
-                    profiles = updatedProfiles,
-                    config = activeProf.config.copy()
-                )
-            )
-        }
-
-        val intent = Intent("ru.doGood.Lynk.ACTION_UPDATE_OVERLAY")
-        intent.setPackage(app.packageName)
-        app.sendBroadcast(intent)
-    }
-
-    fun renameOverlayProfile(profileId: String, newName: String) {
-        val idInt = profileId.toIntOrNull() ?: return
-        renameOverlayProfile(idInt, newName)
-    }
-
-    fun renameOverlayProfile(profileId: Int, newName: String) {
-        val cleanName = newName.trim()
-        if (cleanName.isBlank()) return
-
-        val currentProfiles = _state.value.floatingButtonsState.profiles
-        val targetProfile = currentProfiles.find { it.id == profileId } ?: return
-        targetProfile.name = cleanName
-
-        saveAndApplyProfileConfig(profileId, targetProfile)
-    }
-
-    private fun updateActiveProfileConfig(action: (FloatingButtonConfig, OverlayProfile) -> Unit) {
-        val currentState = _state.value.floatingButtonsState
-        val selId = currentState.selectedProfileId
-        val profile = currentState.profiles.find { it.id == selId } ?: getLatestProfile(selId)
-        action(profile.config, profile)
-        saveAndApplyProfileConfig(selId, profile)
     }
 
     fun refreshPermissions(context: Context? = null) {
@@ -1685,196 +1316,260 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun toggleQuickLaunchEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isQuickLaunchEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isQuickLaunchEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleFullscreenOverlayEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isFullscreenOverlayEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isFullscreenOverlayEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleHomeNavigatorEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isHomeNavigatorEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isHomeNavigatorEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleBackNavigatorEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isBackNavigatorEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isBackNavigatorEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleRefreshNavigatorEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isRefreshNavigatorEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isRefreshNavigatorEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleFreeformWindowEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isFreeformWindowEnabled = enabled }
+        val config = getLatestFloatingConfig()
+        config.isFreeformWindowEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleSeparateButtonsEnabled(enabled: Boolean) {
-        updateActiveProfileConfig { config, profile ->
-            config.isSeparateButtonsEnabled = enabled
-            profile.isSeparateButtons = enabled
-        }
+        val config = getLatestFloatingConfig()
+        config.isSeparateButtonsEnabled = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.quickLaunchButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.quickLaunchButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.quickLaunchOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.quickLaunchOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.fullscreenButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.fullscreenButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.fullscreenOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.fullscreenOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.homeButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.homeButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.homeOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.homeOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setBackSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.backButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.backButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setBackOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.backOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.backOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.refreshButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.refreshButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.refreshOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.refreshOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFreeformSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.freeformButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.freeformButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFreeformOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.freeformOpacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.freeformOpacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.quickLaunchColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.quickLaunchColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.quickLaunchShape = shape }
+        val config = getLatestFloatingConfig()
+        config.quickLaunchShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.fullscreenColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.fullscreenColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.fullscreenShape = shape }
+        val config = getLatestFloatingConfig()
+        config.fullscreenShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.homeColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.homeColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setHomeShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.homeShape = shape }
+        val config = getLatestFloatingConfig()
+        config.homeShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setBackColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.backColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.backColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setBackShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.backShape = shape }
+        val config = getLatestFloatingConfig()
+        config.backShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.refreshColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.refreshColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setRefreshShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.refreshShape = shape }
+        val config = getLatestFloatingConfig()
+        config.refreshShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFreeformColorHex(colorHex: String) {
-        updateActiveProfileConfig { config, _ -> config.freeformColorHex = colorHex }
+        val config = getLatestFloatingConfig()
+        config.freeformColorHex = colorHex
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFreeformShape(shape: String) {
-        updateActiveProfileConfig { config, _ -> config.freeformShape = shape }
+        val config = getLatestFloatingConfig()
+        config.freeformShape = shape
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setCombinedSize(size: Int) {
-        updateActiveProfileConfig { config, _ -> config.combinedButtonSize = size }
+        val config = getLatestFloatingConfig()
+        config.combinedButtonSize = size
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setOpacityPercent(percent: Int) {
-        updateActiveProfileConfig { config, _ -> config.opacityPercent = percent }
+        val config = getLatestFloatingConfig()
+        config.opacityPercent = percent
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleSecondaryMirroring(enabled: Boolean) {
-        updateActiveProfileConfig { config, _ -> config.isSecondaryDisplayMirroring = enabled }
+        val config = getLatestFloatingConfig()
+        config.isSecondaryDisplayMirroring = enabled
+        saveAndApplyFloatingConfig(config)
     }
 
     fun addQuickLaunchApp(packageName: String) {
-        updateActiveProfileConfig { config, _ ->
-            config.addQuickLaunchApp(packageName)
-        }
+        val config = getLatestFloatingConfig()
+        config.addQuickLaunchApp(packageName)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun removeQuickLaunchApp(packageName: String) {
-        updateActiveProfileConfig { config, _ ->
-            config.removeQuickLaunchApp(packageName)
-        }
+        val config = getLatestFloatingConfig()
+        config.removeQuickLaunchApp(packageName)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setQuickLaunchApps(apps: List<String>) {
-        updateActiveProfileConfig { config, _ ->
-            config.quickLaunchApps = ArrayList(apps)
-            config.syncActionsWithApps()
-        }
+        val config = getLatestFloatingConfig()
+        config.quickLaunchApps = ArrayList(apps)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun addFullscreenApp(packageName: String) {
-        updateActiveProfileConfig { config, _ ->
-            config.addFullscreenApp(packageName)
-        }
+        val config = getLatestFloatingConfig()
+        config.addFullscreenApp(packageName)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun removeFullscreenApp(packageName: String) {
-        updateActiveProfileConfig { config, _ ->
-            config.removeFullscreenApp(packageName)
-        }
+        val config = getLatestFloatingConfig()
+        config.removeFullscreenApp(packageName)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun setFullscreenApps(apps: List<String>) {
-        updateActiveProfileConfig { config, _ ->
-            config.fullscreenApps = ArrayList(apps)
-        }
+        val config = getLatestFloatingConfig()
+        config.fullscreenApps = ArrayList(apps)
+        saveAndApplyFloatingConfig(config)
     }
 
     fun toggleActionEnabled(actionId: String) {
-        updateActiveProfileConfig { config, _ ->
-            val action = config.actions.find { it.id == actionId }
-            action?.toggleEnabled()
-            if (action != null) {
-                when (action.actionType) {
-                    FloatingButtonAction.ActionType.QUICK_LAUNCH -> config.isQuickLaunchEnabled = action.isEnabled
-                    FloatingButtonAction.ActionType.FULLSCREEN_TOGGLE -> config.isFullscreenOverlayEnabled = action.isEnabled
-                    FloatingButtonAction.ActionType.HOME -> config.isHomeNavigatorEnabled = action.isEnabled
-                    FloatingButtonAction.ActionType.BACK -> config.isBackNavigatorEnabled = action.isEnabled
-                    FloatingButtonAction.ActionType.REFRESH -> config.isRefreshNavigatorEnabled = action.isEnabled
-                    FloatingButtonAction.ActionType.FREEFORM_WINDOW -> config.isFreeformWindowEnabled = action.isEnabled
-                    else -> {}
-                }
+        val config = getLatestFloatingConfig()
+        val action = config.actions.find { it.id == actionId }
+        action?.toggleEnabled()
+        if (action != null) {
+            when (action.actionType) {
+                FloatingButtonAction.ActionType.QUICK_LAUNCH -> config.isQuickLaunchEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.FULLSCREEN_TOGGLE -> config.isFullscreenOverlayEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.HOME -> config.isHomeNavigatorEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.BACK -> config.isBackNavigatorEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.REFRESH -> config.isRefreshNavigatorEnabled = action.isEnabled
+                FloatingButtonAction.ActionType.FREEFORM_WINDOW -> config.isFreeformWindowEnabled = action.isEnabled
+                else -> {}
             }
         }
+        saveAndApplyFloatingConfig(config)
     }
 }

@@ -1,19 +1,16 @@
 package ru.doGood.Lynk.feature.dashboard.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.graphics.Path
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.min
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,12 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,7 +39,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.lynk.core.domain.agent.OverlayProfile
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.floating.FloatingButtonConfig
 import ru.doGood.Lynk.feature.dashboard.FloatingButtonsState
@@ -58,11 +48,6 @@ import ru.doGood.Lynk.feature.dashboard.R
 @Composable
 fun FloatingButtonsScreen(
     state: FloatingButtonsState,
-    onSelectProfile: (Int) -> Unit = {},
-    onToggleProfileEnabled: (Int, Boolean) -> Unit = { _, _ -> },
-    onAddOverlayProfile: (String) -> Unit = {},
-    onDeleteOverlayProfile: (String) -> Unit = {},
-    onRenameOverlayProfile: (String, String) -> Unit = { _, _ -> },
     onToggleQuickLaunch: (Boolean) -> Unit,
     onSetQuickLaunchSize: (Int) -> Unit,
     onSetQuickLaunchOpacity: (Int) -> Unit,
@@ -104,26 +89,17 @@ fun FloatingButtonsScreen(
     onRemoveFullscreenApp: (String) -> Unit,
     onSetFullscreenApps: (List<String>) -> Unit = {},
     onCheckPermissions: (Context) -> Unit,
-    onToggleOverlayService: (Context) -> Unit = {}
+    onToggleOverlayService: (Context) -> Unit
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
+    val isServiceRunning = state.isServiceRunning
+    val hasOverlayPermission = state.isOverlayPermissionGranted
+
     var showAddQuickLaunchDialog by remember { mutableStateOf(false) }
     var showAddFullscreenDialog by remember { mutableStateOf(false) }
-
-    var showAddOverlayDialog by remember { mutableStateOf(false) }
-    var newOverlayName by remember { mutableStateOf("") }
-
-    var showRenameOverlayDialog by remember { mutableStateOf(false) }
-    var profileToRename by remember { mutableStateOf<OverlayProfile?>(null) }
-    var renameOverlayName by remember { mutableStateOf("") }
-
-    var showDeleteOverlayDialog by remember { mutableStateOf(false) }
-    var profileToDelete by remember { mutableStateOf<OverlayProfile?>(null) }
-
-    var isSettingsExpanded by remember(state.selectedProfileId) { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         onCheckPermissions(context)
@@ -136,84 +112,53 @@ fun FloatingButtonsScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // Overlay Profiles TabRow (Spans full width)
+        // Service Status Card (Spans full width)
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
-            val selectedIndex = state.profiles.indexOfFirst { it.id == state.selectedProfileId }.coerceAtLeast(0)
-            ScrollableTabRow(
-                selectedTabIndex = selectedIndex,
-                edgePadding = 8.dp,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                contentColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                state.profiles.forEach { profile ->
-                    val isSelected = state.selectedProfileId == profile.id
-                    Tab(
-                        selected = isSelected,
-                        onClick = { onSelectProfile(profile.id) },
-                        text = {
-                            Text(
-                                text = profile.name,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 14.sp
-                            )
+            ServiceStatusCard(
+                state = state,
+                onToggleService = { onToggleOverlayService(context) },
+                onOpenOverlaySettings = {
+                    try {
+                        val intent = Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
-                    )
-                }
-                // "+ Новый оверлей" Tab
-                Tab(
-                    selected = false,
-                    onClick = {
-                        newOverlayName = ""
-                        showAddOverlayDialog = true
-                    },
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.add_new_overlay),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        val fallback = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
+                        context.startActivity(fallback)
                     }
-                )
-            }
+                },
+                onOpenUsageStatsSettings = {
+                    try {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        val fallback = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                        ).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(fallback)
+                    }
+                }
+            )
         }
 
-        // Active Profile Status Card & Button Configuration Cards
+        // All floating button configuration cards wrapped in AnimatedVisibility
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ProfileStatusCard(
-                        profile = state.activeProfile,
-                        canDelete = state.profiles.size > 1,
-                        onToggleProfileEnabled = { enabled ->
-                            onToggleProfileEnabled(state.selectedProfileId, enabled)
-                        },
-                        onRenameClick = {
-                            profileToRename = state.activeProfile
-                            renameOverlayName = state.activeProfile.name
-                            showRenameOverlayDialog = true
-                        },
-                        onDeleteClick = {
-                            profileToDelete = state.activeProfile
-                            showDeleteOverlayDialog = true
-                        },
-                        isSettingsExpanded = isSettingsExpanded,
-                        onToggleSettingsExpanded = { isSettingsExpanded = !isSettingsExpanded }
-                    )
-
-                    AnimatedVisibility(visible = state.activeProfile.isEnabled && isSettingsExpanded) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            AnimatedVisibility(visible = isServiceRunning && hasOverlayPermission) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (isLandscape) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -366,7 +311,6 @@ fun FloatingButtonsScreen(
             }
         }
     }
-}
 
     // Add App to Quick Launch Dialog
     if (showAddQuickLaunchDialog) {
@@ -392,110 +336,6 @@ fun FloatingButtonsScreen(
             onConfirm = { selectedApps ->
                 onSetFullscreenApps(selectedApps)
                 showAddFullscreenDialog = false
-            }
-        )
-    }
-
-    // Add New Overlay Dialog
-    if (showAddOverlayDialog) {
-        AlertDialog(
-            onDismissRequest = { showAddOverlayDialog = false },
-            title = { Text(text = stringResource(R.string.add_new_overlay)) },
-            text = {
-                OutlinedTextField(
-                    value = newOverlayName,
-                    onValueChange = { newOverlayName = it },
-                    label = { Text(stringResource(R.string.overlay_name_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showAddOverlayDialog = false
-                        onAddOverlayProfile(newOverlayName)
-                    }
-                ) {
-                    Text(stringResource(R.string.btn_add_custom))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddOverlayDialog = false }) {
-                    Text(stringResource(R.string.btn_cancel))
-                }
-            }
-        )
-    }
-
-    // Rename Overlay Dialog
-    if (showRenameOverlayDialog && profileToRename != null) {
-        AlertDialog(
-            onDismissRequest = { showRenameOverlayDialog = false },
-            title = { Text(text = stringResource(R.string.rename_overlay)) },
-            text = {
-                OutlinedTextField(
-                    value = renameOverlayName,
-                    onValueChange = { renameOverlayName = it },
-                    label = { Text(stringResource(R.string.overlay_name_label)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val prof = profileToRename
-                        showRenameOverlayDialog = false
-                        if (prof != null && renameOverlayName.isNotBlank()) {
-                            onRenameOverlayProfile(prof.id.toString(), renameOverlayName)
-                        }
-                    }
-                ) {
-                    Text(stringResource(R.string.btn_save))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenameOverlayDialog = false }) {
-                    Text(stringResource(R.string.btn_cancel))
-                }
-            }
-        )
-    }
-
-    // Delete Overlay Dialog
-    if (showDeleteOverlayDialog && profileToDelete != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteOverlayDialog = false },
-            title = { Text(text = stringResource(R.string.delete_overlay_confirm_title)) },
-            text = {
-                Text(
-                    text = stringResource(
-                        R.string.delete_overlay_confirm_msg,
-                        profileToDelete?.name ?: ""
-                    )
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val prof = profileToDelete
-                        showDeleteOverlayDialog = false
-                        if (prof != null) {
-                            onDeleteOverlayProfile(prof.id.toString())
-                        }
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.btn_delete),
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteOverlayDialog = false }) {
-                    Text(stringResource(R.string.btn_cancel))
-                }
             }
         )
     }
@@ -763,91 +603,98 @@ private fun FreeformWindowCard(
     )
 }
 
-private fun createComposeStarPath(width: Float, height: Float): Path {
-    val path = Path()
-    val cx = width / 2f
-    val cy = height / 2f
-    val outerRadius = min(width, height) / 2f * 0.95f
-    val innerRadius = outerRadius * 0.42f
-    val points = 5
-    val angleStep = Math.PI / points
-
-    for (i in 0 until (points * 2)) {
-        val r = if (i % 2 == 0) outerRadius else innerRadius
-        val angle = -Math.PI / 2 + i * angleStep
-        val x = (cx + r * cos(angle)).toFloat()
-        val y = (cy + r * sin(angle)).toFloat()
-        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-    }
-    path.close()
-    return path
-}
-
-private fun createComposeOctagonPath(width: Float, height: Float): Path {
-    val path = Path()
-    val corner = min(width, height) * 0.28f
-    path.moveTo(corner, 0f)
-    path.lineTo(width - corner, 0f)
-    path.lineTo(width, corner)
-    path.lineTo(width, height - corner)
-    path.lineTo(width - corner, height)
-    path.lineTo(corner, height)
-    path.lineTo(0f, height - corner)
-    path.lineTo(0f, corner)
-    path.close()
-    return path
-}
-
-private fun createComposeHeartPath(width: Float, height: Float): Path {
-    val path = Path()
-    val cx = width / 2f
-    val topY = height * 0.25f
-    val bottomY = height * 0.88f
-
-    path.moveTo(cx, bottomY)
-    path.cubicTo(
-        cx - width * 0.55f, height * 0.55f,
-        cx - width * 0.55f, height * 0.08f,
-        cx - width * 0.26f, height * 0.08f
-    )
-    path.cubicTo(
-        cx - width * 0.08f, height * 0.08f,
-        cx, topY,
-        cx, topY
-    )
-    path.cubicTo(
-        cx, topY,
-        cx + width * 0.08f, height * 0.08f,
-        cx + width * 0.26f, height * 0.08f
-    )
-    path.cubicTo(
-        cx + width * 0.55f, height * 0.08f,
-        cx + width * 0.55f, height * 0.55f,
-        cx, bottomY
-    )
-    path.close()
-    return path
-}
-
 @Composable
-private fun ShapePreview(
-    shapeKey: String,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier
+private fun ServiceStatusCard(
+    state: FloatingButtonsState,
+    onToggleService: () -> Unit,
+    onOpenOverlaySettings: () -> Unit,
+    onOpenUsageStatsSettings: () -> Unit
 ) {
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-        when (shapeKey.uppercase()) {
-            "STAR" -> drawPath(createComposeStarPath(w, h), color = color)
-            "OCTAGON" -> drawPath(createComposeOctagonPath(w, h), color = color)
-            "HEART" -> drawPath(createComposeHeartPath(w, h), color = color)
-            "ROUNDED_SQUARE" -> drawRoundRect(
-                color = color,
-                cornerRadius = CornerRadius(w * 0.22f)
-            )
-            "SQUARE" -> drawRect(color = color)
-            else -> drawCircle(color = color)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clipToBounds(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (state.isServiceRunning)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = if (state.isServiceRunning) Icons.Rounded.PlayArrow else Icons.Rounded.Stop,
+                        contentDescription = null,
+                        tint = if (state.isServiceRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (state.isServiceRunning) stringResource(R.string.service_running) else stringResource(R.string.service_stopped),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = if (state.isServiceRunning) stringResource(R.string.service_running_desc) else stringResource(R.string.service_stopped_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onToggleService) {
+                    Text(if (state.isServiceRunning) stringResource(R.string.btn_stop_service) else stringResource(R.string.btn_start_service))
+                }
+            }
+
+            if (!state.isOverlayPermissionGranted || !state.isUsageStatsPermissionGranted) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                Text(
+                    text = stringResource(R.string.system_permissions_required),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (!state.isOverlayPermissionGranted) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = stringResource(R.string.perm_overlay_display), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = onOpenOverlaySettings) {
+                            Text(stringResource(R.string.btn_allow))
+                        }
+                    }
+                }
+
+                if (!state.isUsageStatsPermissionGranted) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = stringResource(R.string.perm_usage_history), style = MaterialTheme.typography.bodySmall)
+                        TextButton(onClick = onOpenUsageStatsSettings) {
+                            Text(stringResource(R.string.btn_allow))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -994,12 +841,12 @@ private fun FloatingButtonCard(
                     Spacer(modifier = Modifier.height(6.dp))
                     val shapes = remember {
                         listOf(
-                            "CIRCLE" to R.string.shape_circle,
-                            "ROUNDED_SQUARE" to R.string.shape_rounded_square,
-                            "SQUARE" to R.string.shape_square,
-                            "STAR" to R.string.shape_star,
-                            "OCTAGON" to R.string.shape_octagon,
-                            "HEART" to R.string.shape_heart
+                            "CIRCLE" to ("●" to R.string.shape_circle),
+                            "ROUNDED_SQUARE" to ("▢" to R.string.shape_rounded_square),
+                            "SQUARE" to ("■" to R.string.shape_square),
+                            "STAR" to ("★" to R.string.shape_star),
+                            "OCTAGON" to ("🛑" to R.string.shape_octagon),
+                            "HEART" to ("♥" to R.string.shape_heart)
                         )
                     }
                     Row(
@@ -1010,7 +857,8 @@ private fun FloatingButtonCard(
                             .horizontalScroll(rememberScrollState())
                             .padding(vertical = 4.dp)
                     ) {
-                        shapes.forEach { (shapeKey, stringRes) ->
+                        shapes.forEach { (shapeKey, iconAndRes) ->
+                            val (symbol, stringRes) = iconAndRes
                             val isSelected = selectedShape == shapeKey
                             val labelDescription = stringResource(stringRes)
 
@@ -1033,23 +881,24 @@ private fun FloatingButtonCard(
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(backgroundColor)
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
                                         color = borderColor,
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable { onSetShape(shapeKey) }
                                     .semantics {
                                         contentDescription = labelDescription
                                     }
                             ) {
-                                ShapePreview(
-                                    shapeKey = shapeKey,
+                                Text(
+                                    text = symbol,
+                                    fontSize = 26.sp,
                                     color = contentColor,
-                                    modifier = Modifier.size(20.dp)
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         }
@@ -1428,155 +1277,4 @@ private fun SelectAppDialog(
             }
         }
     )
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ProfileStatusCard(
-    profile: OverlayProfile,
-    canDelete: Boolean,
-    onToggleProfileEnabled: (Boolean) -> Unit,
-    onRenameClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    isSettingsExpanded: Boolean,
-    onToggleSettingsExpanded: () -> Unit
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (profile.isEnabled)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Text(
-                        text = profile.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    IconButton(
-                        onClick = onRenameClick,
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = stringResource(R.string.rename_overlay),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    if (canDelete) {
-                        IconButton(
-                            onClick = onDeleteClick,
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = stringResource(R.string.delete_overlay),
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
-                Switch(
-                    checked = profile.isEnabled,
-                    onCheckedChange = onToggleProfileEnabled
-                )
-            }
-
-            val config = profile.config
-            val activeChips = remember(config) {
-                listOfNotNull(
-                    if (config.isQuickLaunchEnabled) R.string.chip_quick_launch else null,
-                    if (config.isFullscreenOverlayEnabled) R.string.chip_fullscreen else null,
-                    if (config.isHomeNavigatorEnabled) R.string.chip_home else null,
-                    if (config.isBackNavigatorEnabled) R.string.chip_back else null,
-                    if (config.isRefreshNavigatorEnabled) R.string.chip_refresh else null,
-                    if (config.isFreeformWindowEnabled) R.string.chip_freeform else null
-                )
-            }
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (activeChips.isNotEmpty()) {
-                    activeChips.forEach { resId ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        ) {
-                            Text(
-                                text = stringResource(resId),
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                    ) {
-                        Text(
-                            text = stringResource(R.string.chip_no_active_buttons),
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                FilledTonalButton(
-                    onClick = onToggleSettingsExpanded,
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.button_settings),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (isSettingsExpanded) stringResource(R.string.hide_button_settings) else stringResource(R.string.button_settings),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = if (isSettingsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-        }
-    }
 }
