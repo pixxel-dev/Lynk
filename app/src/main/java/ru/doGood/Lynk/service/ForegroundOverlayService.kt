@@ -48,11 +48,13 @@ import android.widget.SeekBar
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import dagger.hilt.android.AndroidEntryPoint
 import ru.doGood.Lynk.R
 import java.util.Collections
 import kotlin.math.max
 import kotlin.math.min
 
+@AndroidEntryPoint
 class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreferenceChangeListener {
 
     companion object {

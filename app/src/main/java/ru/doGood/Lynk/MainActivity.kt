@@ -16,8 +16,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.*
+import dagger.hilt.android.AndroidEntryPoint
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.serialization.Serializable
 import ru.doGood.Lynk.feature.dashboard.DashboardViewModel
@@ -28,12 +30,13 @@ import ru.doGood.Lynk.ui.theme.LynkTheme
 @Serializable
 object MainDashboardRoute
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val mainViewModel: DashboardViewModel = viewModel()
+            val mainViewModel: DashboardViewModel = hiltViewModel()
             val state by mainViewModel.state.collectAsState()
 
             val context = LocalContext.current

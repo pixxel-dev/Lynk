@@ -1,5 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
@@ -23,6 +25,8 @@ android {
 }
 
 dependencies {
+    implementation(libs.hilt.android)
+    "ksp"(libs.hilt.compiler)
     implementation(project(":core:domain"))
     
     implementation(platform(libs.androidx.compose.bom))

@@ -9,8 +9,14 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.SharedPreferences
+import com.example.lynk.core.domain.system.AdbWirelessManager
+import com.example.lynk.core.domain.update.AppUpdateManager
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import com.example.lynk.core.domain.app.AppItem
 import com.example.lynk.core.domain.file.FileItem
 import com.example.lynk.core.domain.floating.FloatingButtonAction
@@ -110,9 +116,17 @@ data class DashboardState(
     val updateState: AppUpdateUiState = AppUpdateUiState()
 )
 
-class DashboardViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    @ApplicationContext val context: Context,
+    val updateManager: AppUpdateManager,
+    val adbManager: AdbWirelessManager,
+    val sharedPrefs: SharedPreferences
+) : ViewModel() {
 
-    // private val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager("1.0.0")
+    private fun <T: Application> getApplication(): T {
+        return context.applicationContext as T
+    }
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state.asStateFlow()
@@ -123,14 +137,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private var logcatProcess: Process? = null
     private var logReaderThread: Thread? = null
     private val recordedLogsBuilder = StringBuilder()
-    private val adbWirelessManager = com.example.lynk.core.domain.system.AdbWirelessManager()
 
     init {
         // Load initial app language
-        val prefs = application.getSharedPreferences("${application.packageName}_preferences", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
         val savedLangCode = prefs.getString("app_language", AppLanguage.RU.code) ?: AppLanguage.RU.code
         val initialLang = AppLanguage.fromCode(savedLangCode)
-        ru.doGood.Lynk.feature.dashboard.util.LocaleHelper.applyLanguage(application, initialLang)
+        ru.doGood.Lynk.feature.dashboard.util.LocaleHelper.applyLanguage(context, initialLang)
         _state.update { it.copy(appLanguage = initialLang) }
 
         loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
@@ -276,12 +289,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val info = withContext(Dispatchers.IO) {
                 try {
-                    val app = getApplication<Application>()
-                    val pInfo = app.packageManager.getPackageInfo(app.packageName, 0)
-                    val currentVersion = pInfo.versionName
-                    val repoPath = app.getString(R.string.github_repo_path)
-                    val appUpdateManager = com.example.lynk.core.domain.update.AppUpdateManager(currentVersion, repoPath)
-                    appUpdateManager.checkForUpdates()
+                    updateManager.checkForUpdates()
                 } catch(e: Exception) {
                     com.example.lynk.core.domain.update.UpdateInfo("1.0.0", "", "", com.example.lynk.core.domain.update.UpdateInfo.UpdateState.ERROR)
                 }
@@ -910,12 +918,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun loadAdbInfo() {
         viewModelScope.launch(Dispatchers.IO) {
-            val autoIp = adbWirelessManager.wifiIpAddress
+            val autoIp = adbManager.wifiIpAddress
             val currentIp = _state.value.systemInfoState.adbIpAddress
             val effectiveIp = if (currentIp == "127.0.0.1" || currentIp.isBlank()) autoIp else currentIp
             val portStr = _state.value.systemInfoState.adbPort.ifBlank { "5555" }
             val port = portStr.toIntOrNull() ?: 5555
-            val connected = adbWirelessManager.isConnected(effectiveIp, port)
+            val connected = adbManager.isConnected(effectiveIp, port)
             _state.update {
                 it.copy(
                     systemInfoState = it.systemInfoState.copy(
@@ -947,8 +955,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            val result = adbWirelessManager.connect(ip, port)
-            val connected = adbWirelessManager.isConnected(ip, port)
+            val result = adbManager.connect(ip, port)
+            val connected = adbManager.isConnected(ip, port)
             _state.update {
                 it.copy(
                     systemInfoState = it.systemInfoState.copy(
@@ -969,8 +977,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(isAdbLoading = true, adbStatusMessage = null))
             }
-            val result = adbWirelessManager.disconnect(ip, port)
-            val connected = adbWirelessManager.isConnected(ip, port)
+            val result = adbManager.disconnect(ip, port)
+            val connected = adbManager.isConnected(ip, port)
             _state.update {
                 it.copy(
                     systemInfoState = it.systemInfoState.copy(
@@ -985,7 +993,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun refreshAdbIp() {
         viewModelScope.launch(Dispatchers.IO) {
-            val autoIp = adbWirelessManager.wifiIpAddress
+            val autoIp = adbManager.wifiIpAddress
             _state.update {
                 it.copy(systemInfoState = it.systemInfoState.copy(adbIpAddress = autoIp))
             }
