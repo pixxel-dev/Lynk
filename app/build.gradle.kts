@@ -23,7 +23,7 @@ android {
         versionCode = buildNumber.toIntOrNull() ?: 1
         versionName = fullVersionName
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "ru.doGood.Lynk.CustomTestRunner"
     }
 
     signingConfigs {
@@ -132,6 +132,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.hilt.testing)
+    "kspAndroidTest"(libs.hilt.compiler)
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.6.0")
     debugImplementation(libs.androidx.compose.ui.tooling)
     "ksp"(libs.androidx.room.compiler)
