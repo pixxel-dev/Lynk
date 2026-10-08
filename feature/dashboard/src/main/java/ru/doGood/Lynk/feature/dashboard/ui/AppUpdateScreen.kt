@@ -179,7 +179,7 @@ private fun CurrentVersionCard(
                     text = when {
                         isChecking -> stringResource(R.string.checking_updates)
                         updateInfo == null -> stringResource(R.string.version_status_unchecked)
-                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.new_version_available_format, updateInfo.latestVersion.removePrefix("v"))
+                        updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE -> stringResource(R.string.update_available_subtitle)
                         else -> stringResource(R.string.latest_version_installed_format, currentVersion)
                     },
                     style = MaterialTheme.typography.bodySmall,
@@ -241,11 +241,6 @@ private fun LatestVersionCard(
                         text = stringResource(R.string.latest_release_format, updateInfo.latestVersion.removePrefix("v")),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = stringResource(R.string.update_available_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 

@@ -1149,15 +1149,10 @@ private fun StorageCard(
                 } else {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = stringResource(R.string.storage_free, freeSpaceFormatted),
+                            text = stringResource(R.string.storage_free_total, freeSpaceFormatted, totalSpaceFormatted),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = stringResource(R.string.storage_total, totalSpaceFormatted),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }

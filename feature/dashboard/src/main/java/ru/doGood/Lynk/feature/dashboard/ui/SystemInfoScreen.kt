@@ -208,7 +208,7 @@ fun DeviceInfoTab(
                     title = stringResource(R.string.car_props_title),
                     icon = Icons.Rounded.DirectionsCar
                 ) {
-                    val carProps = deviceInfo.carSystemProperties
+                    val carProps = deviceInfo.carSystemProperties.filter { !it.key.contains("ip", ignoreCase = true) }
                     if (carProps.isEmpty()) {
                         Text(
                             text = stringResource(R.string.no_car_props),
@@ -271,7 +271,7 @@ fun DeviceInfoTab(
                     title = stringResource(R.string.car_props_title),
                     icon = Icons.Rounded.DirectionsCar
                 ) {
-                    val carProps = deviceInfo.carSystemProperties
+                    val carProps = deviceInfo.carSystemProperties.filter { !it.key.contains("ip", ignoreCase = true) }
                     if (carProps.isEmpty()) {
                         Text(
                             text = stringResource(R.string.no_car_props),
