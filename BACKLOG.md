@@ -6,6 +6,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ## 🇬🇧 English
 
 ### To Do
+- [ ] Customizable overlay builder (Multi-Overlay Manager).
 - [ ] Setup dependency injection framework (e.g. Dagger/Hilt or Koin) across modules.
 - [ ] Integrate Cloud Storage connections in FileManager (Mail.ru, Google Drive).
 - [ ] Built-in File Viewer and Archiver in File Manager: Support for viewing text files, extracting/compressing ZIP/RAR archives, and built-in media viewer.
@@ -19,7 +20,6 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [/] Ongoing stability improvements.
 
 ### Done
-- [x] Unlimited Custom Overlay Builder (Support for shapes: star, heart, etc.).
 - [x] WebDAV Integration (Yandex Disk).
 - [x] Wireless ADB Manager (Wireless ADB over Wi-Fi).
 - [x] 100% Localization (RU/EN).
@@ -65,6 +65,7 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 ## 🇷🇺 Русский
 
 ### В планах (To Do)
+- [ ] Конструктор кастомных оверлеев (Multi-Overlay Manager).
 - [ ] Настроить фреймворк внедрения зависимостей (например, Dagger/Hilt или Koin) во всех модулях.
 - [ ] Интеграция Облака Mail.ru / Google Drive.
 - [ ] Встроенный просмотрщик файлов и архиватор в ФМ: Поддержка просмотра текстовых файлов, распаковки/упаковки ZIP/RAR архивов и встроенного просмотрщика медиа.
@@ -78,7 +79,6 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 - [/] Оптимизация производительности.
 
 ### Готово (Done)
-- [x] Безлимитный конструктор оверлеев (С поддержкой форм: звезда, сердечко и т.д.).
 - [x] Интеграция WebDAV (Яндекс Диск).
 - [x] Беспроводной ADB по Wi-Fi.
 - [x] Локализация 100%.

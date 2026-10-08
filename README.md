@@ -11,9 +11,9 @@
 
 ### Основные возможности
 
-1. **Безлимитный конструктор оверлеев (Unlimited Custom Overlay Builder)**:
-   - Создание неограниченного количества плавающих элементов управления поверх всех приложений.
-   - Индивидуальная настройка параметров по долгому нажатию: размер, прозрачность, кастомные формы (звезда, сердечко, круг, квадрат и т.д.) и цветовые палитры. Все изменения применяются в реальном времени!
+1. **Настраиваемый оверлей плавающих кнопок**:
+   - Плавающий элемент управления, работающий поверх всех приложений.
+   - Индивидуальная настройка параметров по долгому нажатию: размер, прозрачность, 6 кастомных форм (звезда, сердечко, круг, квадрат и т.д.) и цветовые палитры. Все изменения применяются в реальном времени!
    - Назначение действий: Навигация («Домой», «Назад»), Быстрый запуск, Полный экран, Обновить.
 
 2. **Беспроводной ADB (Wireless ADB)**:
@@ -82,9 +82,9 @@ cd Lynk
 
 ### Key Features
 
-1. **Unlimited Custom Overlay Builder**:
-   - Create an unlimited number of floating elements displayed over all apps.
-   - Individual quick settings via long-press: size, opacity, custom shapes (star, heart, circle, square, etc.), and color palettes. All applied live in real-time!
+1. **Customizable Floating Overlay**:
+   - A persistent floating control element displayed over all apps.
+   - Quick settings via long-press: size, opacity, 6 custom shapes (star, heart, circle, square, etc.), and color palettes. All applied live in real-time!
    - Assign actions: Home, Back, Quick App Launcher, Fullscreen Mode, Refresh UI.
 
 2. **Wireless ADB**:
