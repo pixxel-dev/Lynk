@@ -1,6 +1,5 @@
 package ru.doGood.Lynk.feature.dashboard.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -220,10 +219,13 @@ private fun LatestVersionCard(
     onStartDownload: () -> Unit,
     onInstallUpdate: () -> Unit
 ) {
+    val isDownloadingState = isDownloading || updateInfo.state == UpdateInfo.UpdateState.DOWNLOADING
+    val isDownloadedState = isDownloaded || updateInfo.state == UpdateInfo.UpdateState.DOWNLOADED
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE || isDownloaded) {
+            containerColor = if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE || isDownloadedState) {
                 MaterialTheme.colorScheme.secondaryContainer
             } else {
                 MaterialTheme.colorScheme.surfaceVariant
@@ -236,15 +238,25 @@ private fun LatestVersionCard(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.latest_release_format, updateInfo.latestVersion.removePrefix("v")),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
+                if (!isDownloadingState && !isDownloadedState) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.latest_release_format, updateInfo.latestVersion.removePrefix("v")),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
-                if (isDownloaded || updateInfo.state == UpdateInfo.UpdateState.DOWNLOADED) {
+                if (isDownloadedState) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.ready_to_install),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
                     Button(
                         onClick = onInstallUpdate,
                         modifier = Modifier.fillMaxWidth(),
@@ -256,6 +268,33 @@ private fun LatestVersionCard(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(stringResource(R.string.btn_install_update))
                     }
+                } else if (isDownloadingState) {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.download_progress_format, (downloadProgress * 100).toInt()),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                        statusMessage?.let { msg ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = msg,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 } else if (updateInfo.state == UpdateInfo.UpdateState.UPDATE_AVAILABLE) {
                     Button(
                         onClick = onStartDownload,
@@ -264,34 +303,7 @@ private fun LatestVersionCard(
                     ) {
                         Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(if (isDownloading) stringResource(R.string.btn_downloading) else stringResource(R.string.btn_download_install))
-                    }
-                }
-            }
-
-            AnimatedVisibility(visible = isDownloading || !statusMessage.isNullOrEmpty()) {
-                Column(modifier = Modifier.padding(top = 12.dp)) {
-                    if (isDownloading) {
-                        LinearProgressIndicator(
-                            progress = downloadProgress,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(8.dp),
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = stringResource(R.string.download_progress_format, (downloadProgress * 100).toInt()),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    statusMessage?.let { msg ->
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = msg,
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Text(stringResource(R.string.btn_download_install))
                     }
                 }
             }

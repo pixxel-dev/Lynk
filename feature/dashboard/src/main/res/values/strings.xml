@@ -125,6 +125,7 @@
     <string name="waterfall_install">Waterfall Install</string>
     <string name="installation_diagnostic_steps">Installation Diagnostic Steps</string>
     <string name="ready">Ready</string>
+    <string name="ready_to_install">Ready to install</string>
     <string name="installed_system_user_apps">Installed System &amp; User Apps</string>
     <string name="installation_succeeded">Installation Succeeded</string>
     <string name="installation_failed">Installation Failed</string>

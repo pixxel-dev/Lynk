@@ -125,6 +125,7 @@
     <string name="waterfall_install">Waterfall установка</string>
     <string name="installation_diagnostic_steps">Шаги диагностики установки</string>
     <string name="ready">Готово</string>
+    <string name="ready_to_install">Готово к установке</string>
     <string name="installed_system_user_apps">Установленные системные и пользовательские ПО</string>
     <string name="installation_succeeded">Установка успешно завершена</string>
     <string name="installation_failed">Ошибка установки</string>
