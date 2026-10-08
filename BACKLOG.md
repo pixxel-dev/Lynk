@@ -7,19 +7,24 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 
 ### To Do
 - [ ] Setup dependency injection framework (e.g. Dagger/Hilt or Koin) across modules.
-- [ ] Implement end-to-end instrumented tests & UI automated verification.
-- [ ] Multi-Overlay Manager (Custom Overlay Builder): Capability to create up to 3 independent overlays, where the user can add 1 or more customizable buttons with individual parameters (size, opacity, position, actions) to each overlay.
-- [ ] Integrate Cloud Storage connections in FileManager (Yandex Disk, Mail.ru, Google Drive, WebDAV support).
+- [ ] Integrate Cloud Storage connections in FileManager (Mail.ru, Google Drive).
 - [ ] Built-in File Viewer and Archiver in File Manager: Support for viewing text files, extracting/compressing ZIP/RAR archives, and built-in media viewer.
 - [ ] Boot Autostart Manager: Automatic launch of user-selected applications upon device/head unit boot (`BOOT_COMPLETED`).
+- [ ] Freeform Windows Enhancements.
 - [ ] Silent background APK installation via ADB (Silent ADB Install).
 - [ ] Resolution & DPI Switcher via ADB (Screen resolution and DPI scaling modifier via ADB).
 - [ ] System Bloatware Freezer via ADB (Disable/Freeze system applications via ADB).
 
 ### In Progress
-- [/] Wireless ADB Manager (Wireless ADB over Wi-Fi).
+- [/] Ongoing stability improvements.
 
 ### Done
+- [x] Unlimited Custom Overlay Builder (Support for shapes: star, heart, etc.).
+- [x] WebDAV Integration (Yandex Disk).
+- [x] Wireless ADB Manager (Wireless ADB over Wi-Fi).
+- [x] 100% Localization (RU/EN).
+- [x] OTA Updates from GitHub.
+- [x] Saving Logcat to a file.
 - [x] Implement end-to-end instrumented tests & UI automated verification.
 - [x] App Update UI Refactoring & Reorganization: Fixed UI squishing issues in AppUpdateScreen buttons, removed hardcoded version in favor of PackageManager resolution, dynamically stripped 'v' prefix from version strings, moved the Update screen to a sub-tab under SystemInfoScreen, and conditionally hid the TopAppBar update icon to only appear when updates are genuinely available.
 - [x] Integration of Localization Agent & :checkLocalization Audit Tool: Promoted `Localization Agent` to active status in `ARCHITECTURE_RULES.md`, established mandatory localization rules (100% RU/EN key parity, no hardcoded Compose strings), created the Python audit script `scripts/check_localization.py` and Gradle task `:checkLocalization`.
@@ -61,19 +66,24 @@ This file tracks the upcoming features, chores, and technical debt for the Lynk 
 
 ### В планах (To Do)
 - [ ] Настроить фреймворк внедрения зависимостей (например, Dagger/Hilt или Koin) во всех модулях.
-- [ ] Реализовать сквозные (E2E) инструментальные тесты и автоматизированное тестирование UI.
-- [ ] Конструктор кастомных оверлеев (Multi-Overlay Manager): Возможность создания до 3 независимых оверлеев, в каждый из которых пользователь сможет добавлять 1 или несколько настраиваемых кнопок со своими персональными параметрами (размер, прозрачность, позиция, действия).
-- [ ] Внедрить подключение к облачным дискам в файловый менеджер (Яндекс Диск, Облако Mail.ru, Google Drive, поддержка WebDAV).
+- [ ] Интеграция Облака Mail.ru / Google Drive.
 - [ ] Встроенный просмотрщик файлов и архиватор в ФМ: Поддержка просмотра текстовых файлов, распаковки/упаковки ZIP/RAR архивов и встроенного просмотрщика медиа.
 - [ ] Менеджер автозапуска при загрузке устройства: Автоматический запуск выбранных пользователем приложений при включении магнитолы/телефона (`BOOT_COMPLETED`).
+- [ ] Freeform окна (доработка).
 - [ ] Бесшумная фоновая установка APK через ADB (Silent ADB Install).
 - [ ] Изменение масштаба и DPI экрана (Resolution & DPI Switcher via ADB).
 - [ ] Отключение/Заморозка системных приложений (System Bloatware Freezer via ADB).
 
 ### В работе (In Progress)
-- [/] Беспроводной ADB по Wi-Fi (Wireless ADB Manager).
+- [/] Оптимизация производительности.
 
 ### Готово (Done)
+- [x] Безлимитный конструктор оверлеев (С поддержкой форм: звезда, сердечко и т.д.).
+- [x] Интеграция WebDAV (Яндекс Диск).
+- [x] Беспроводной ADB по Wi-Fi.
+- [x] Локализация 100%.
+- [x] Сохранение Logcat в файл.
+- [x] OTA Обновления с GitHub.
 - [x] Реализовать сквозные (E2E) инструментальные тесты и автоматизированное тестирование UI.
 - [x] Рефакторинг экрана обновления приложения: Исправлено сплющивание кнопок в AppUpdateScreen, удалена захардкоженная версия в пользу получения версии через PackageManager, убрано дублирование символа 'v' в строках версий, экран обновления перенесен во вкладку внутри SystemInfoScreen, а иконка обновления в TopAppBar скрыта по умолчанию и отображается только при наличии реального обновления.
 - [x] Интеграция Агента локализации и утилиты :checkLocalization: Статус `Localization Agent` в `ARCHITECTURE_RULES.md` переведен в активно действующие стандарты команды; добавлены правила обязательной локализации (100% паритет ключей RU/EN, запрет хардкода в Compose); созданы скрипт проверки `scripts/check_localization.py` и Gradle-таска `:checkLocalization`.

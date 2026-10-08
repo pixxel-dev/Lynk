@@ -11,36 +11,31 @@
 
 ### Основные возможности
 
-1. **Плавающие оверлей-кнопки (Overlay Controls)**:
-   - Отображение плавающих элементов управления поверх всех приложений (`WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY`).
-   - Навигация: «Домой», «Назад», «Быстрый запуск приложений», «Полный экран» (с поддержкой второго экрана/дисплея) и «Обновить интерфейс».
-   - **Быстрые настройки по долгому нажатию**: удержание любой плавающей кнопки открывает диалоговое окно для настройки размера (dp), прозрачности (%), формы (круглая, скругленная, квадратная) и цвета. Все изменения сразу же применяются в реальном времени!
+1. **Безлимитный конструктор оверлеев (Unlimited Custom Overlay Builder)**:
+   - Создание неограниченного количества плавающих элементов управления поверх всех приложений.
+   - Индивидуальная настройка параметров по долгому нажатию: размер, прозрачность, кастомные формы (звезда, сердечко, круг, квадрат и т.д.) и цветовые палитры. Все изменения применяются в реальном времени!
+   - Назначение действий: Навигация («Домой», «Назад»), Быстрый запуск, Полный экран, Обновить.
 
-2. **Водопадный инсталлятор APK (Waterfall APK Installer)**:
-   - Пошаговая диагностика и установка пакетов через цепочку стратегий:
-     1. **Pine (Hook)**
-     2. **Shizuku API**
-     3. **Native ADB**
-     4. **Local ADB**
-     5. **PackageInstaller (Системный инсталлятор)**
-   - Поддержка выбора локального APK и групповой работы с установленными приложениями.
+2. **Беспроводной ADB (Wireless ADB)**:
+   - Встроенный менеджер для подключения и выполнения команд ADB по Wi-Fi прямо из приложения без ПК.
 
-3. **Системный монитор и Logcat**:
-   - Диагностика технических характеристик устройства (процессор, ОЗУ, экраны, ОС).
-   - Запись, отображение, копирование и очистка логов Logcat в реальном времени.
-   - Управление разрешениями и правами приложения (Storage, Install Packages, Usage Stats, Overlay, Boot).
+3. **Водопадный инсталлятор APK (Waterfall APK Installer)**:
+   - Пошаговая диагностика и установка пакетов через цепочку стратегий: Pine (Hook), Shizuku API, Native ADB, Local ADB, PackageInstaller.
 
-4. **Автоматическое обновление приложения (App Update Manager)**:
-   - Автоматическая проверка новых релизов через GitHub API.
-   - Скачивание APK-файлов с помощью `DownloadManager`.
-   - **Автозапуск установки**: по завершению скачивания сразу вызывает системный интент установки через `FileProvider`.
-   - Кнопка «Установить обновление» на экране обновлений для повторного вызова установки в любой момент.
+4. **WebDAV Файловый менеджер (WebDAV File Manager)**:
+   - Интеграция с Яндекс Диском: навигация по файлам, скачивание и установка по публичным ссылкам и WebDAV.
+   - Локальная навигация, поиск, сортировка и установка APK.
 
-5. **Файловый менеджер (File Manager)**:
-   - Навигация по файловой системе, поиск, сортировка, просмотр свойств файлов и выбор APK для установки.
+5. **Системный монитор и Logcat**:
+   - Диагностика технических характеристик устройства (ОЗУ, процессор, экраны).
+   - Запись, отображение, копирование и **сохранение логов Logcat в файл**.
+   - Управление разрешениями и правами приложения.
 
-6. **Многоязычный интерфейс (RU/EN)**:
-   - Динамическое переключение языка между русским и английским.
+6. **ОТА Обновления с GitHub (OTA App Update Manager)**:
+   - Автоматическая проверка новых релизов через GitHub API, скачивание и вызов установки обновлений.
+
+7. **Многоязычный интерфейс (RU/EN)**:
+   - Динамическое переключение языка интерфейса с 100% локализацией.
 
 ---
 
@@ -87,36 +82,31 @@ cd Lynk
 
 ### Key Features
 
-1. **Floating Overlay Controls**:
-   - Floating buttons displayed over all apps (`WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY`).
-   - Quick navigation: Home, Back, Quick App Launcher, Fullscreen Mode (secondary display supported), and Refresh UI.
-   - **Long-Press Quick Settings Dialog**: Long-pressing any floating button opens a dialog to customize size (dp), opacity (%), shape (Circle, Rounded Square, Square), and color palette presets live in real-time!
+1. **Unlimited Custom Overlay Builder**:
+   - Create an unlimited number of floating elements displayed over all apps.
+   - Individual quick settings via long-press: size, opacity, custom shapes (star, heart, circle, square, etc.), and color palettes. All applied live in real-time!
+   - Assign actions: Home, Back, Quick App Launcher, Fullscreen Mode, Refresh UI.
 
-2. **Waterfall APK Installer**:
-   - Sequential diagnostic installation strategies:
-     1. **Pine (Hook)**
-     2. **Shizuku API**
-     3. **Native ADB**
-     4. **Local ADB**
-     5. **PackageInstaller (Android Package Manager)**
-   - Local APK selection and batch app inspection.
+2. **Wireless ADB**:
+   - Built-in manager to connect and execute ADB commands over Wi-Fi directly from the app without a PC.
 
-3. **System Diagnostics & Logcat**:
+3. **Waterfall APK Installer**:
+   - Sequential diagnostic installation strategies: Pine (Hook), Shizuku API, Native ADB, Local ADB, Android Package Manager.
+
+4. **WebDAV File Manager**:
+   - Yandex Disk Integration: browse files, download, and install via public links and WebDAV.
+   - Local storage navigation, search, sort, and direct APK installation.
+
+5. **System Diagnostics & Logcat Exporter**:
    - Comprehensive hardware & OS system specifications.
-   - Real-time Logcat recording, viewer, clipboard copy, and clear controls.
-   - System permission status monitoring (Storage, Install Packages, Usage Stats, Overlay, Boot).
+   - Real-time Logcat recording, viewer, clipboard copy, and **saving logs directly to a file**.
+   - System permission status monitoring.
 
-4. **Automated App Update Manager**:
-   - Release detection via GitHub API.
-   - Download management using Android's `DownloadManager`.
-   - **Auto-Launch Package Installer**: Automatically launches the package installation dialog via `FileProvider` upon download completion.
-   - Explicit "Install Update" button on the Update screen for re-triggering installation anytime.
+6. **OTA Updates from GitHub**:
+   - Automated release detection via GitHub API, background downloading, and update installation triggering.
 
-5. **File Manager**:
-   - Storage navigation, search, sort, file property inspector, and direct APK installation trigger.
-
-6. **Multi-language UI (RU/EN)**:
-   - Dynamic language switcher supporting English and Russian.
+7. **Multi-language UI (RU/EN)**:
+   - Dynamic language switcher supporting fully localized English and Russian interfaces.
 
 ---
 
