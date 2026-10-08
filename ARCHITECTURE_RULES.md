@@ -22,6 +22,7 @@ This document defines the architectural guidelines and agent operating procedure
   - **Navigation:** Jetpack Navigation 3 (`androidx.navigation3`).
   - **Minimum SDK:** 31 (Android 12).
   - **Dependency Management:** Centralized via Gradle Version Catalog (`gradle/libs.versions.toml`).
+- **APK Size Optimization (R8/ProGuard):** Agents must apply aggressive shrinking for release builds (`isMinifyEnabled = true`, `isShrinkResources = true`). It is forbidden to use overly broad keep rules (e.g., `-keep class androidx.compose.** { *; }`) that bloat the app size. The release APK size must not exceed ~5-10 MB.
 
 ### 3. Documentation & Bilingual Standards
 - **Dual Language Requirement:** All primary architectural, design, and project documentation must maintain full English (EN) and Russian (RU) versions.
@@ -77,6 +78,7 @@ This document defines the architectural guidelines and agent operating procedure
   - **Навигация:** Jetpack Navigation 3 (`androidx.navigation3`).
   - **Минимальный SDK:** 31 (Android 12).
   - **Управление зависимостями:** Централизованно через Gradle Version Catalog (`gradle/libs.versions.toml`).
+- **Оптимизация размера APK (R8/ProGuard):** Агенты обязаны использовать агрессивное сжатие для релизных сборок (`isMinifyEnabled = true`, `isShrinkResources = true`). Запрещено использовать слишком широкие правила исключений (например, `-keep class androidx.compose.** { *; }`), которые раздувают размер приложения. Размер релизного APK не должен превышать ~5-10 МБ.
 
 ### 3. Стандарты документации и двуязычия
 - **Обязательное двуязычие:** Вся ключевая архитектурная, проектная документация и описание требований обязаны поддерживаться в двух версиях: английской (EN) и русской (RU).
