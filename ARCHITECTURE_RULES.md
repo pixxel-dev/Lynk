@@ -32,6 +32,7 @@ This document defines the architectural guidelines and agent operating procedure
 ### 4. QA, Testing & UX Optimization Protocol
 - **Full Interactive Controls Testing:** After every iteration or enhancement stage, testing agents must verify all buttons, tabs, and interactive UI controls on an emulator.
 - **Redundancy Elimination & Auto-Actions:** Manual or repetitive user actions must be eliminated (e.g., replacing manual "Refresh" buttons with reactive state flows, lifecycle auto-updates on `ON_RESUME`, or background synchronization).
+- **Mandatory Release Startup Verification:** After every successful release build (`:app:assembleRelease`), the agent MUST install it on a local emulator (`adb install -r ...`) and verify successful startup (`adb shell monkey -p ru.doGood.Lynk -c android.intent.category.LAUNCHER 1`), reading logs (`adb logcat -d -b crash`) to prevent startup crashes.
 
 ### 5. AI Agent Ecosystem & Roles
 1. **Engineering Manager Agent:** Orchestration, backlog and implementation plan management, user communication, and task delegation.
@@ -88,6 +89,7 @@ This document defines the architectural guidelines and agent operating procedure
 ### 4. Протокол QA, тестирования и оптимизации UX
 - **Сквозное тестирование кнопок на эмуляторе:** После каждого этапа доработки QA-агент обязан выполнять автоматизированную или интерактивную проверку работоспособности всех кнопок, вкладок и элементов интерфейса.
 - **Оптимизация UX и авто-обновление:** Устранение ручных и повторяющихся действий пользователя (например, замена ручных кнопок «Обновить» / «Refresh» на автоматическую реактивную подписку, авто-обновление данных при событии `ON_RESUME` или фоновую синхронизацию).
+- **Обязательная проверка запуска релизного APK:** После каждой успешной сборки релизного APK (`:app:assembleRelease`) агент ОБЯЗАН установить его на локальный эмулятор (`adb install -r ...`) и проверить успешный запуск (`adb shell monkey -p ru.doGood.Lynk -c android.intent.category.LAUNCHER 1`), считав логи (`adb logcat -d -b crash`), чтобы исключить падения на старте.
 
 ### 5. Экосистема и роли ИИ-агентов
 1. **Engineering Manager Agent (Менеджер проекта):** Оркестрация процесса разработки, прямое общение с пользователем, ведение плана реализации и бэклога, делегирование задач.
