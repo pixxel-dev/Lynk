@@ -64,7 +64,7 @@
 #### Сборка проекта:
 ```bash
 # Клонирование репозитория
-git clone https://github.com/dmitry1010/Lynk.git
+git clone https://github.com/pixxel-dev/Lynk.git
 cd Lynk
 
 # Сборка Debug APK
@@ -136,7 +136,7 @@ cd Lynk
 #### Build Commands:
 ```bash
 # Clone repository
-git clone https://github.com/dmitry1010/Lynk.git
+git clone https://github.com/pixxel-dev/Lynk.git
 cd Lynk
 
 # Build Debug APK
