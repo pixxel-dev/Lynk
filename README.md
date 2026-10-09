@@ -23,8 +23,9 @@
    - Пошаговая диагностика и установка пакетов через цепочку стратегий: Pine (Hook), Shizuku API, Native ADB, Local ADB, PackageInstaller.
 
 4. **WebDAV Файловый менеджер (WebDAV File Manager)**:
-   - Интеграция с Яндекс Диском: навигация по файлам, скачивание и установка по публичным ссылкам и WebDAV.
+   - Интеграция с Яндекс Диском и Облаком Mail.ru: навигация по файлам, скачивание и установка по публичным ссылкам и WebDAV.
    - Локальная навигация, поиск, сортировка и установка APK.
+   - **Важно для WebDAV**: Для авторизации в Яндекс Диске и Облаке Mail.ru используйте **Пароль для внешних приложений** (создается в настройках безопасности вашего аккаунта), а не обычный пароль от почты. В Mail.ru логином является полный email.
 
 5. **Системный монитор и Logcat**:
    - Диагностика технических характеристик устройства (ОЗУ, процессор, экраны).
@@ -94,8 +95,9 @@ cd Lynk
    - Sequential diagnostic installation strategies: Pine (Hook), Shizuku API, Native ADB, Local ADB, Android Package Manager.
 
 4. **WebDAV File Manager**:
-   - Yandex Disk Integration: browse files, download, and install via public links and WebDAV.
+   - Yandex Disk and Mail.ru Cloud Integration: browse files, download, and install via public links and WebDAV.
    - Local storage navigation, search, sort, and direct APK installation.
+   - **WebDAV Important Note**: To authenticate with Yandex Disk and Mail.ru Cloud, use an **App Password** (generated in your account security settings), not your regular email password. For Mail.ru, use your full email address as the username.
 
 5. **System Diagnostics & Logcat Exporter**:
    - Comprehensive hardware & OS system specifications.

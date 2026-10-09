@@ -88,6 +88,7 @@
     <string name="cloud_anonymous_label">Anonymous / Public folder</string>
     <string name="cloud_username_label">Username (optional)</string>
     <string name="cloud_password_label">Password / Token (optional)</string>
+    <string name="cloud_app_password_hint">Note: For Yandex and Mail.ru, use a special "App Password" generated in your account security settings, not your regular email password.</string>
     <string name="cloud_btn_connect">Connect</string>
     <string name="delete_cloud">Remove cloud connection</string>
     <string name="disconnect_cloud">Disconnect cloud</string>
