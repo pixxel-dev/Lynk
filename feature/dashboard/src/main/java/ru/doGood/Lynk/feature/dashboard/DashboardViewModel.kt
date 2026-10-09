@@ -373,6 +373,67 @@ class DashboardViewModel @Inject constructor(
     }
 
     // --- File Explorer ---
+    fun readTextFile(file: com.example.lynk.core.domain.file.FileItem, onResult: (String?) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val f = File(file.path)
+                if (!f.exists() || f.isDirectory) {
+                    withContext(Dispatchers.Main) { onResult(null) }
+                    return@launch
+                }
+                
+                // Read up to 500 KB to avoid memory issues
+                val maxBytes = 500 * 1024
+                val length = f.length()
+                val bytesToRead = if (length > maxBytes) maxBytes else length.toInt()
+                
+                val buffer = ByteArray(bytesToRead)
+                f.inputStream().use { it.read(buffer) }
+                
+                var text = String(buffer, Charsets.UTF_8)
+                if (length > maxBytes) {
+                    text += "\n\n... (Файл слишком большой. Показаны первые 500 КБ) ..."
+                }
+                
+                withContext(Dispatchers.Main) {
+                    onResult(text)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { onResult(null) }
+            }
+        }
+    }
+
+    fun extractZipArchive(file: com.example.lynk.core.domain.file.FileItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update { it.copy(
+                fileManagerState = it.fileManagerState.copy(isLoading = true, message = "Распаковка архива...")
+            )}
+            
+            val zipFile = File(file.path)
+            val parentDir = zipFile.parentFile?.absolutePath ?: "/"
+            val folderName = zipFile.nameWithoutExtension
+            val destDir = File(parentDir, folderName).absolutePath
+            
+            val zipManager = com.example.lynk.core.domain.file.ZipArchiveManager()
+            val success = zipManager.extractZip(file.path, destDir)
+            
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    _state.update { it.copy(
+                        fileManagerState = it.fileManagerState.copy(isLoading = false, message = "Архив успешно распакован")
+                    )}
+                    loadDirectory(parentDir)
+                } else {
+                    _state.update { it.copy(
+                        fileManagerState = it.fileManagerState.copy(isLoading = false, message = "Ошибка при распаковке архива")
+                    )}
+                }
+            }
+        }
+    }
+
     fun loadDirectory(path: String) {
         viewModelScope.launch(Dispatchers.IO) {
             _state.update {

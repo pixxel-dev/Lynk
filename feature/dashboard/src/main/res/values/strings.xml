@@ -291,4 +291,9 @@
     <string name="wireless_adb_show_instructions">📖 Connection Instructions</string>
     <string name="wireless_adb_hide_instructions">📖 Hide Instructions</string>
     <string name="wireless_adb_instructions_text">1. Go to \"Settings\" -> \"Developer options\".\n2. Enable \"Wireless debugging\".\n3. Enter the IP and Port provided in the settings.\n4. Warning: On standard smartphones, commands work only via PC or Root.</string>
+
+    <string name="extract_zip_title">Extract Archive?</string>
+    <string name="extract_zip_message">Do you want to extract %1$s?</string>
+    <string name="btn_extract">Extract</string>
+    <string name="error_read_file">Error reading file</string>
 </resources>

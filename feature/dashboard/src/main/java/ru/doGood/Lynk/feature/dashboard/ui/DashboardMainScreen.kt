@@ -280,7 +280,9 @@ fun DashboardMainScreen(
                             },
                             onDownloadCloudFile = { fileItem, installAfterDownload ->
                                 viewModel.downloadCloudFile(fileItem, installAfterDownload)
-                            }
+                            },
+                            onExtractZip = { file -> viewModel.extractZipArchive(file) },
+                            onReadTextFile = { file, onResult -> viewModel.readTextFile(file, onResult) }
                         )
 
                         1 -> ApkInstallerScreen(

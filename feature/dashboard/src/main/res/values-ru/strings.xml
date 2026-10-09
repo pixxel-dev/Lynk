@@ -291,4 +291,9 @@
     <string name="wireless_adb_show_instructions">📖 Инструкция по подключению</string>
     <string name="wireless_adb_hide_instructions">📖 Скрыть инструкцию</string>
     <string name="wireless_adb_instructions_text">1. Зайдите в \"Настройки\" -> \"Для разработчиков\".\n2. Включите \"Отладка по Wi-Fi\" (Wireless Debugging).\n3. Введите IP и Порт, указанные в настройках.\n4. Внимание: на обычных смартфонах команды работают только через ПК или Root.</string>
+
+    <string name="extract_zip_title">Распаковать архив?</string>
+    <string name="extract_zip_message">Вы хотите распаковать архив %1$s?</string>
+    <string name="btn_extract">Распаковать</string>
+    <string name="error_read_file">Ошибка чтения файла</string>
 </resources>

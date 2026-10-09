@@ -80,6 +80,8 @@ fun FileManagerScreen(
     onSelectCloudConnection: (com.example.lynk.core.domain.cloud.CloudConnection) -> Unit = {},
     onRemoveCloudConnection: (String) -> Unit = {},
     onDownloadCloudFile: (FileItem, Boolean) -> Unit = { _, _ -> },
+    onExtractZip: (FileItem) -> Unit = {},
+    onReadTextFile: (FileItem, (String?) -> Unit) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -93,6 +95,11 @@ fun FileManagerScreen(
     var fileToRename by remember { mutableStateOf<FileItem?>(null) }
     var fileToDelete by remember { mutableStateOf<FileItem?>(null) }
     var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
+    
+    var fileToExtract by remember { mutableStateOf<FileItem?>(null) }
+    var textFileToShow by remember { mutableStateOf<FileItem?>(null) }
+    var textFileContent by remember { mutableStateOf<String?>(null) }
+    var isLoadingText by remember { mutableStateOf(false) }
     
     val uploadLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -409,6 +416,15 @@ fun FileManagerScreen(
                                     selectedItemForMenu = item
                                 } else if (item.name.endsWith(".apk", ignoreCase = true)) {
                                     onStartInlineWaterfallInstall(item)
+                                } else if (!item.isCloud && item.name.endsWith(".zip", ignoreCase = true)) {
+                                    fileToExtract = item
+                                } else if (!item.isCloud && item.name.matches(Regex(".*\\.(txt|log|md|xml|json|properties|csv|ini|conf)$", RegexOption.IGNORE_CASE))) {
+                                    textFileToShow = item
+                                    isLoadingText = true
+                                    onReadTextFile(item) { content ->
+                                        textFileContent = content
+                                        isLoadingText = false
+                                    }
                                 } else {
                                     openFileWithIntent(context, item)
                                 }
@@ -817,6 +833,60 @@ fun FileManagerScreen(
                 dismissButton = {
                     TextButton(onClick = { fileToRename = null }) {
                         Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // Extract ZIP Dialog
+        fileToExtract?.let { file ->
+            AlertDialog(
+                onDismissRequest = { fileToExtract = null },
+                title = { Text(stringResource(R.string.extract_zip_title)) },
+                text = { Text(stringResource(R.string.extract_zip_message, file.name)) },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onExtractZip(file)
+                            fileToExtract = null
+                        }
+                    ) {
+                        Text(stringResource(R.string.btn_extract))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { fileToExtract = null }) {
+                        Text(stringResource(R.string.btn_cancel))
+                    }
+                }
+            )
+        }
+
+        // View Text File Dialog
+        textFileToShow?.let { file ->
+            AlertDialog(
+                onDismissRequest = { textFileToShow = null },
+                title = { Text(file.name) },
+                text = {
+                    if (isLoadingText) {
+                        Box(modifier = Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        val content = textFileContent ?: stringResource(R.string.error_read_file)
+                        Text(
+                            text = content,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 400.dp)
+                                .verticalScroll(rememberScrollState())
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { textFileToShow = null }) {
+                        Text(stringResource(R.string.btn_close))
                     }
                 }
             )
