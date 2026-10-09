@@ -293,7 +293,7 @@ class DashboardViewModel @Inject constructor(
                 try {
                     updateManager.checkForUpdates()
                 } catch(e: Exception) {
-                    com.example.lynk.core.domain.update.UpdateInfo("1.0.0", "", "", com.example.lynk.core.domain.update.UpdateInfo.UpdateState.ERROR)
+                    com.example.lynk.core.domain.update.UpdateInfo("1.0.0", e.message ?: "Unknown Error", "", com.example.lynk.core.domain.update.UpdateInfo.UpdateState.ERROR)
                 }
             }
             _state.update {
@@ -301,7 +301,11 @@ class DashboardViewModel @Inject constructor(
                     updateState = it.updateState.copy(
                         updateInfo = info,
                         isChecking = false,
-                        statusMessage = if (info.state == com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE) "Доступна новая версия v${info.latestVersion}!" else "У вас установлена актуальная версия."
+                        statusMessage = when(info.state) {
+                            com.example.lynk.core.domain.update.UpdateInfo.UpdateState.UPDATE_AVAILABLE -> "Доступна новая версия v${info.latestVersion}!"
+                            com.example.lynk.core.domain.update.UpdateInfo.UpdateState.ERROR -> "Ошибка проверки обновлений: ${info.changelog}"
+                            else -> "У вас установлена актуальная версия."
+                        }
                     )
                 )
             }

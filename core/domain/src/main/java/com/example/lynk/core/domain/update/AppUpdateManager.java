@@ -139,8 +139,8 @@ public class AppUpdateManager {
     public boolean isVersionNewer(String latest, String current) {
         if (latest == null || current == null) return false;
         
-        String cleanLatest = latest.toLowerCase().replace("v", "");
-        String cleanCurrent = current.toLowerCase().replace("v", "");
+        String cleanLatest = latest.replaceAll("[^0-9.]", "");
+        String cleanCurrent = current.replaceAll("[^0-9.]", "");
 
         String[] latestParts = cleanLatest.split("\\.");
         String[] currentParts = cleanCurrent.split("\\.");
