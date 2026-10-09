@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -57,6 +58,7 @@ fun FileManagerScreen(
     isLoading: Boolean = false,
     cloudConnections: List<com.example.lynk.core.domain.cloud.CloudConnection> = emptyList(),
     activeCloudConnection: com.example.lynk.core.domain.cloud.CloudConnection? = null,
+    onUploadFile: (Uri) -> Unit = {},
     onPathClick: (String) -> Unit,
     onNavigateUp: () -> Unit,
     onFileClick: (FileItem) -> Unit,
@@ -91,6 +93,12 @@ fun FileManagerScreen(
     var fileToRename by remember { mutableStateOf<FileItem?>(null) }
     var fileToDelete by remember { mutableStateOf<FileItem?>(null) }
     var filesPendingDelete by remember { mutableStateOf<List<FileItem>>(emptyList()) }
+    
+    val uploadLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { onUploadFile(it) }
+    }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -144,6 +152,16 @@ fun FileManagerScreen(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
+                // Upload Button (for Cloud)
+                if (currentPath.startsWith("webdav://")) {
+                    IconButton(
+                        onClick = { uploadLauncher.launch("*/*") },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Rounded.Upload, contentDescription = "Upload")
+                    }
+                }
 
                 // Sort Button & Dropdown
                 Box {
@@ -1193,6 +1211,35 @@ fun AddCloudConnectionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.AssistChip(
+                        onClick = {
+                            if (name.isEmpty() || name == "Облако Mail.ru" || name == "Свой WebDAV") name = "Яндекс Диск"
+                            url = "https://webdav.yandex.ru"
+                        },
+                        label = { Text("Яндекс Диск") }
+                    )
+                    androidx.compose.material3.AssistChip(
+                        onClick = {
+                            if (name.isEmpty() || name == "Яндекс Диск" || name == "Свой WebDAV") name = "Облако Mail.ru"
+                            url = "https://webdav.cloud.mail.ru"
+                        },
+                        label = { Text("Облако Mail.ru") }
+                    )
+                    androidx.compose.material3.AssistChip(
+                        onClick = {
+                            if (name.isEmpty() || name == "Яндекс Диск" || name == "Облако Mail.ru") name = "Свой WebDAV"
+                            url = ""
+                        },
+                        label = { Text("Свой WebDAV") }
+                    )
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },

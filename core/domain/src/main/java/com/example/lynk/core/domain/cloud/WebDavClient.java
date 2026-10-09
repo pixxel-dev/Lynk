@@ -300,6 +300,75 @@ public class WebDavClient implements CloudStorageClient {
         }
     }
 
+    @Override
+    public boolean uploadFile(String folderPath, String fileName, InputStream fileStream) throws Exception {
+        if (!folderPath.startsWith("webdav://")) {
+            throw new IllegalArgumentException("Path must start with webdav://");
+        }
+
+        String baseUrl = connection != null ? connection.getWebDavUrl() : "";
+        if (baseUrl == null) {
+            baseUrl = "";
+        }
+        baseUrl = baseUrl.trim();
+
+        if (isYandexPublicLink(baseUrl) || isGoogleDrivePublicLink(baseUrl)) {
+            throw new UnsupportedOperationException("Upload is not supported for public links");
+        }
+
+        String urlPath = folderPath.substring(9);
+        if (!urlPath.startsWith("/")) {
+            urlPath = "/" + urlPath;
+        }
+        if (!urlPath.endsWith("/")) {
+            urlPath = urlPath + "/";
+        }
+
+        String encodedFileName = java.net.URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
+        urlPath += encodedFileName;
+
+        String fullUrl = baseUrl;
+        if (fullUrl.endsWith("/") && urlPath.startsWith("/")) {
+            fullUrl += urlPath.substring(1);
+        } else if (!fullUrl.endsWith("/") && !urlPath.startsWith("/")) {
+            fullUrl += "/" + urlPath;
+        } else {
+            fullUrl += urlPath;
+        }
+
+        URL url = new URL(fullUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("PUT");
+        conn.setDoOutput(true);
+
+        String username = connection != null ? connection.getUsername() : null;
+        String passwordToken = connection != null ? connection.getPasswordToken() : null;
+        boolean hasUsername = username != null && !username.trim().isEmpty();
+        boolean hasPassword = passwordToken != null && !passwordToken.trim().isEmpty();
+        if (hasUsername || hasPassword) {
+            String u = hasUsername ? username.trim() : "";
+            String p = hasPassword ? passwordToken.trim() : "";
+            String auth = u + ":" + p;
+            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes(StandardCharsets.UTF_8));
+            conn.setRequestProperty("Authorization", "Basic " + encodedAuth);
+        }
+
+        try (java.io.OutputStream os = conn.getOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = fileStream.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+        } finally {
+            if (fileStream != null) {
+                fileStream.close();
+            }
+        }
+
+        int responseCode = conn.getResponseCode();
+        return responseCode >= 200 && responseCode < 300;
+    }
+
     @SuppressWarnings("unchecked")
     private List<FileItem> listYandexPublicFiles(String publicKeyUrl, String path) throws Exception {
         String relativePath = "";

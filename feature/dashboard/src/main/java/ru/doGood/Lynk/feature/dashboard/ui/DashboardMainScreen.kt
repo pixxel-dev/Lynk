@@ -235,6 +235,7 @@ fun DashboardMainScreen(
                             isLoading = state.fileManagerState.isLoading,
                             cloudConnections = state.fileManagerState.cloudConnections,
                             activeCloudConnection = state.fileManagerState.activeCloudConnection,
+                            onUploadFile = { uri -> viewModel.uploadFileToCloud(context, uri) },
                             onPathClick = { path -> viewModel.loadDirectory(path) },
                             onNavigateUp = { viewModel.navigateUp() },
                             onFileClick = { file ->

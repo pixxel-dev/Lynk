@@ -3,6 +3,8 @@ package ru.doGood.Lynk.feature.dashboard
 import android.app.Application
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
@@ -461,6 +463,60 @@ class DashboardViewModel @Inject constructor(
         val parent = File(currentPath).parentFile
         if (parent?.exists() == true) {
             loadDirectory(parent.absolutePath)
+        }
+    }
+
+    fun uploadFileToCloud(context: Context, fileUri: Uri) {
+        val currentPath = _state.value.fileManagerState.currentPath
+        if (!currentPath.startsWith("webdav://")) return
+        
+        viewModelScope.launch(Dispatchers.IO) {
+            _state.update {
+                it.copy(fileManagerState = it.fileManagerState.copy(isLoading = true, message = "Uploading..."))
+            }
+            try {
+                val cursor = context.contentResolver.query(fileUri, null, null, null, null)
+                var fileName = "upload_file"
+                if (cursor != null && cursor.moveToFirst()) {
+                    val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (nameIndex != -1) {
+                        fileName = cursor.getString(nameIndex)
+                    }
+                    cursor.close()
+                }
+
+                val activeConn = activeCloudConnection
+                if (activeConn != null) {
+                    val client = com.example.lynk.core.domain.cloud.WebDavClient(activeConn)
+                    val inputStream = context.contentResolver.openInputStream(fileUri)
+                    if (inputStream != null) {
+                        val success = client.uploadFile(currentPath, fileName, inputStream)
+                        if (success) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Upload successful", Toast.LENGTH_SHORT).show()
+                            }
+                            loadDirectory(currentPath)
+                        } else {
+                            _state.update {
+                                it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false, message = "Upload failed"))
+                            }
+                        }
+                    } else {
+                        _state.update {
+                            it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false, message = "Failed to open file"))
+                        }
+                    }
+                } else {
+                    _state.update {
+                        it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false, message = "No active cloud connection"))
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _state.update {
+                    it.copy(fileManagerState = it.fileManagerState.copy(isLoading = false, message = "Upload error: ${e.message}"))
+                }
+            }
         }
     }
 
