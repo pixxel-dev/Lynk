@@ -49,7 +49,8 @@ class MainActivity : ComponentActivity() {
 
             CompositionLocalProvider(
                 LocalContext provides contextWithLocale,
-                LocalConfiguration provides configurationWithLocale
+                LocalConfiguration provides configurationWithLocale,
+                androidx.activity.compose.LocalActivityResultRegistryOwner provides this
             ) {
                 LynkTheme(themeMode = state.themeMode) {
                     val backStack = remember { mutableStateListOf<Any>(MainDashboardRoute) }
