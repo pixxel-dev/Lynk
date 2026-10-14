@@ -801,67 +801,43 @@ class DashboardViewModel @Inject constructor(
             }
         }
 
-        val pine = ApkInstaller { _, callback ->
-            updateStep(InstallStep.PINE, null, "Hook checking...")
-            updateStep(InstallStep.PINE, false, "Pine hook unavailable")
-            callback.onResult(InstallResult(false, "Pine hook unavailable", InstallStep.PINE))
-        }
-
-        val shizuku = ApkInstaller { _, callback ->
-            updateStep(InstallStep.SHIZUKU, null, "Checking Shizuku API...")
-            updateStep(InstallStep.SHIZUKU, false, "Shizuku permission not granted")
-            callback.onResult(InstallResult(false, "Shizuku permission not granted", InstallStep.SHIZUKU))
-        }
-
-        val nativeAdb = ApkInstaller { _, callback ->
-            updateStep(InstallStep.NATIVE_ADB, null, "Connecting Native ADB...")
-            updateStep(InstallStep.NATIVE_ADB, false, "Native ADB port closed")
-            callback.onResult(InstallResult(false, "Native ADB port closed", InstallStep.NATIVE_ADB))
-        }
-
-        val localAdb = ApkInstaller { _, callback ->
-            updateStep(InstallStep.LOCAL_ADB, null, "Connecting Local ADB...")
-            updateStep(InstallStep.LOCAL_ADB, false, "Local ADB pairing required")
-            callback.onResult(InstallResult(false, "Local ADB pairing required", InstallStep.LOCAL_ADB))
-        }
-
-        val packageInstaller = ApkInstaller { apkFile, callback ->
-            updateStep(InstallStep.PACKAGE_INSTALLER, null, "Launching Package Installer...")
-            try {
-                val application = getApplication<Application>()
-                val apkUri = androidx.core.content.FileProvider.getUriForFile(
-                    application,
-                    application.packageName + ".fileprovider",
-                    apkFile
-                )
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(apkUri, "application/vnd.android.package-archive")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                application.startActivity(intent)
-                updateStep(InstallStep.PACKAGE_INSTALLER, true, "Sent to Package Installer")
-                callback.onResult(InstallResult(true, "Sent to Android Package Installer via FileProvider", InstallStep.PACKAGE_INSTALLER))
-            } catch (e: Exception) {
-                updateStep(InstallStep.PACKAGE_INSTALLER, false, "FileProvider error: ${e.message}")
-                callback.onResult(InstallResult(false, "FileProvider error: ${e.message}", InstallStep.PACKAGE_INSTALLER))
+        val installer = ru.doGood.Lynk.feature.dashboard.installer.HybridApkInstaller(getApplication())
+        installer.installApk(file, true, object : ru.doGood.Lynk.feature.dashboard.installer.HybridApkInstaller.InstallCallback {
+            override fun onProgress(status: String) {
+                updateStep(InstallStep.PACKAGE_INSTALLER, null, status)
             }
-        }
 
-        val strategy = WaterfallInstallStrategy(pine, shizuku, nativeAdb, localAdb, packageInstaller)
-        strategy.executeInstall(file) { result ->
-            _state.update { state ->
-                val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
-                state.copy(
-                    fileManagerState = state.fileManagerState.copy(
-                        inlineInstallState = currentInline.copy(
-                            isInstalling = false,
-                            installResult = result
+            override fun onSuccess(isSilent: Boolean) {
+                val msg = if (isSilent) "APK установлен в фоне (User 10)!" else "Открыто окно системного установщика"
+                updateStep(InstallStep.PACKAGE_INSTALLER, true, msg)
+                _state.update { state ->
+                    val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+                    state.copy(
+                        fileManagerState = state.fileManagerState.copy(
+                            inlineInstallState = currentInline.copy(
+                                isInstalling = false,
+                                installResult = InstallResult(true, msg, InstallStep.PACKAGE_INSTALLER)
+                            )
                         )
                     )
-                )
+                }
             }
-        }
+
+            override fun onError(error: String) {
+                updateStep(InstallStep.PACKAGE_INSTALLER, false, error)
+                _state.update { state ->
+                    val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+                    state.copy(
+                        fileManagerState = state.fileManagerState.copy(
+                            inlineInstallState = currentInline.copy(
+                                isInstalling = false,
+                                installResult = InstallResult(false, error, InstallStep.PACKAGE_INSTALLER)
+                            )
+                        )
+                    )
+                }
+            }
+        })
     }
 
     fun dismissInlineInstall() {
@@ -921,60 +897,39 @@ class DashboardViewModel @Inject constructor(
             )
         }
 
-        // Concrete ApkInstallers for domain WaterfallInstallStrategy
-        val pine = ApkInstaller { _, callback ->
-            updateStepStatus(InstallStep.PINE, "Hook checking...")
-            callback.onResult(InstallResult(false, "Pine hook unavailable", InstallStep.PINE))
-        }
-
-        val shizuku = ApkInstaller { _, callback ->
-            updateStepStatus(InstallStep.SHIZUKU, "Checking Shizuku API...")
-            callback.onResult(InstallResult(false, "Shizuku permission not granted", InstallStep.SHIZUKU))
-        }
-
-        val nativeAdb = ApkInstaller { _, callback ->
-            updateStepStatus(InstallStep.NATIVE_ADB, "Connecting Native ADB...")
-            callback.onResult(InstallResult(false, "Native ADB port closed", InstallStep.NATIVE_ADB))
-        }
-
-        val localAdb = ApkInstaller { _, callback ->
-            updateStepStatus(InstallStep.LOCAL_ADB, "Connecting Local ADB...")
-            callback.onResult(InstallResult(false, "Local ADB pairing required", InstallStep.LOCAL_ADB))
-        }
-
-        val packageInstaller = ApkInstaller { file, callback ->
-            updateStepStatus(InstallStep.PACKAGE_INSTALLER, "Launching Package Installer...")
-            try {
-                val application = getApplication<Application>()
-                val apkUri = androidx.core.content.FileProvider.getUriForFile(
-                    application,
-                    application.packageName + ".fileprovider",
-                    file
-                )
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(apkUri, "application/vnd.android.package-archive")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                application.startActivity(intent)
-                callback.onResult(InstallResult(true, "Sent to Android Package Installer via FileProvider", InstallStep.PACKAGE_INSTALLER))
-            } catch (e: Exception) {
-                callback.onResult(InstallResult(false, "FileProvider error: ${e.message}", InstallStep.PACKAGE_INSTALLER))
+        val installer = ru.doGood.Lynk.feature.dashboard.installer.HybridApkInstaller(getApplication())
+        installer.installApk(apkFile, true, object : ru.doGood.Lynk.feature.dashboard.installer.HybridApkInstaller.InstallCallback {
+            override fun onProgress(status: String) {
+                updateStepStatus(InstallStep.PACKAGE_INSTALLER, status)
             }
-        }
 
-        val strategy = WaterfallInstallStrategy(pine, shizuku, nativeAdb, localAdb, packageInstaller)
-        strategy.executeInstall(apkFile) { result ->
-            _state.update {
-                it.copy(
-                    installerState = it.installerState.copy(
-                        isInstalling = false,
-                        installResult = result,
-                        activeStep = result.step
+            override fun onSuccess(isSilent: Boolean) {
+                val msg = if (isSilent) "APK установлен в фоне (User 10)!" else "Открыто окно системного установщика"
+                updateStepStatus(InstallStep.PACKAGE_INSTALLER, msg)
+                _state.update { state ->
+                    state.copy(
+                        installerState = state.installerState.copy(
+                            isInstalling = false,
+                            installResult = InstallResult(true, msg, InstallStep.PACKAGE_INSTALLER),
+                            activeStep = InstallStep.PACKAGE_INSTALLER
+                        )
                     )
-                )
+                }
             }
-        }
+
+            override fun onError(error: String) {
+                updateStepStatus(InstallStep.PACKAGE_INSTALLER, error)
+                _state.update { state ->
+                    state.copy(
+                        installerState = state.installerState.copy(
+                            isInstalling = false,
+                            installResult = InstallResult(false, error, InstallStep.PACKAGE_INSTALLER),
+                            activeStep = InstallStep.PACKAGE_INSTALLER
+                        )
+                    )
+                }
+            }
+        })
     }
 
     fun runSingleInstallStep(step: InstallStep) {

@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
-val baseVersion = "0.1.1"
+val baseVersion = "0.1.2"
 val buildNumber = System.getenv("BUILD_NUMBER") ?: System.getenv("GITHUB_RUN_NUMBER") ?: "1"
 val fullVersionName = "$baseVersion.$buildNumber"
 
@@ -24,6 +24,10 @@ android {
         versionName = fullVersionName
 
         testInstrumentationRunner = "ru.doGood.Lynk.CustomTestRunner"
+        
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     signingConfigs {

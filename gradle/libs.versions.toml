@@ -42,8 +42,12 @@ okhttp = "5.3.2"
 moshiKotlin = "1.15.2"
 moshiKotlinCodegen = "1.15.2"
 datastorePreferences = "1.2.1"
+pine = "0.3.0"
+hiddenapibypass = "4.3"
 
 [libraries]
+pine-core = { module = "top.canyie.pine:core", version.ref = "pine" }
+hiddenapibypass = { module = "org.lsposed.hiddenapibypass:hiddenapibypass", version.ref = "hiddenapibypass" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version = "1.2.0" }
