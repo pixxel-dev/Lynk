@@ -267,6 +267,9 @@ fun DashboardMainScreen(
                             onRenameFile = { oldPath, newName -> viewModel.renameFile(oldPath, newName) },
                             onStartInlineWaterfallInstall = { file -> viewModel.startInlineWaterfallInstall(file) },
                             onDismissInlineInstall = { viewModel.dismissInlineInstall() },
+                            onToggleInlineUser = { userId -> viewModel.toggleInlineInstallUserSelection(userId) },
+                            onToggleAllInlineUsers = { selectAll -> viewModel.toggleAllInlineInstallUsers(selectAll) },
+                            onConfirmInlineInstall = { viewModel.confirmInlineWaterfallInstall() },
                             onSaveCloudConnection = { name, url, username, password ->
                                 val id = java.util.UUID.randomUUID().toString()
                                 val conn = com.example.lynk.core.domain.cloud.CloudConnection(id, name, url, username, password)

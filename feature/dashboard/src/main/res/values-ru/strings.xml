@@ -315,4 +315,10 @@
     <string name="subver_btn_force_stop">Остановить</string>
     <string name="subver_btn_uninstall_app">Удалить</string>
     <string name="subver_btn_system_settings">Настройки</string>
+
+    <string name="select_target_profiles">Выберите профили для установки</string>
+    <string name="all_profiles">Все профили</string>
+    <string name="btn_install">Установить</string>
+    <string name="initializing_install_user">Инициализация для User %d...</string>
+    <string name="pine_initialized">Pine инициализирован (User %s)</string>
 </resources>

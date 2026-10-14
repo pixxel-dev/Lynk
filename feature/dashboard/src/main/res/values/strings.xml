@@ -315,4 +315,10 @@
     <string name="subver_btn_force_stop">Force Stop</string>
     <string name="subver_btn_uninstall_app">Uninstall</string>
     <string name="subver_btn_system_settings">App Settings</string>
+
+    <string name="select_target_profiles">Select target profiles</string>
+    <string name="all_profiles">All profiles</string>
+    <string name="btn_install">Install</string>
+    <string name="initializing_install_user">Initializing for User %d...</string>
+    <string name="pine_initialized">Pine initialized (User %s)</string>
 </resources>

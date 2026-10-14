@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -76,6 +77,9 @@ fun FileManagerScreen(
     onRenameFile: (String, String) -> Unit = { _, _ -> },
     onStartInlineWaterfallInstall: (FileItem) -> Unit = {},
     onDismissInlineInstall: () -> Unit = {},
+    onToggleInlineUser: (Int) -> Unit = {},
+    onToggleAllInlineUsers: (Boolean) -> Unit = {},
+    onConfirmInlineInstall: () -> Unit = {},
     onSaveCloudConnection: (name: String, url: String, username: String, passwordToken: String) -> Unit = { _, _, _, _ -> },
     onSelectCloudConnection: (com.example.lynk.core.domain.cloud.CloudConnection) -> Unit = {},
     onRemoveCloudConnection: (String) -> Unit = {},
@@ -1003,7 +1007,10 @@ fun FileManagerScreen(
         inlineInstallState?.let { inlineState ->
             ApkInstallerDialog(
                 inlineState = inlineState,
-                onDismissRequest = onDismissInlineInstall
+                onDismissRequest = onDismissInlineInstall,
+                onToggleUser = onToggleInlineUser,
+                onToggleAllUsers = onToggleAllInlineUsers,
+                onConfirm = onConfirmInlineInstall
             )
         }
     }
@@ -1013,6 +1020,9 @@ fun FileManagerScreen(
 fun ApkInstallerDialog(
     inlineState: InlineInstallState,
     onDismissRequest: () -> Unit,
+    onToggleUser: (Int) -> Unit,
+    onToggleAllUsers: (Boolean) -> Unit,
+    onConfirm: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     AlertDialog(
@@ -1049,55 +1059,103 @@ fun ApkInstallerDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                val subverSteps = listOf(
-                    InstallStep.PINE,
-                    InstallStep.SHIZUKU,
-                    InstallStep.NATIVE_ADB,
-                    InstallStep.LOCAL_ADB,
-                    InstallStep.PACKAGE_INSTALLER
-                )
-
-                subverSteps.forEach { step ->
-                    val statusPair = inlineState.stepStatuses[step]
-                    val isSuccess = statusPair?.first
-                    val statusMsg = statusPair?.second ?: stringResource(R.string.ready)
-                    val isActive = inlineState.activeStep == step
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        when (isSuccess) {
-                            true -> Text("✅", modifier = Modifier.size(20.dp))
-                            false -> Text("❌", modifier = Modifier.size(20.dp))
-                            null -> {
-                                if (isActive && inlineState.isInstalling) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    Text("⏳", modifier = Modifier.size(20.dp))
-                                }
+                if (inlineState.isUserSelectionRequired) {
+                    Text(
+                        text = stringResource(R.string.select_target_profiles),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    if (inlineState.availableUsers.isEmpty()) {
+                        Text(
+                            text = "Loading...", // Fallback in case R.string.loading is not found
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    } else {
+                        val allSelected = inlineState.selectedUsers.size == inlineState.availableUsers.size
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggleAllUsers(!allSelected) }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Checkbox(
+                                checked = allSelected,
+                                onCheckedChange = { onToggleAllUsers(it) }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.all_profiles))
+                        }
+                        
+                        inlineState.availableUsers.forEach { (userId, userName) ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggleUser(userId) }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Checkbox(
+                                    checked = inlineState.selectedUsers.contains(userId),
+                                    onCheckedChange = { onToggleUser(userId) }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("User $userId ($userName)")
                             }
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(id = step.displayNameResId()),
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = statusMsg,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                    }
+                } else {
+                    val subverSteps = listOf(
+                        InstallStep.PINE,
+                        InstallStep.SHIZUKU,
+                        InstallStep.NATIVE_ADB,
+                        InstallStep.LOCAL_ADB,
+                        InstallStep.PACKAGE_INSTALLER
+                    )
+
+                    subverSteps.forEach { step ->
+                        val statusPair = inlineState.stepStatuses[step]
+                        val isSuccess = statusPair?.first
+                        val statusMsg = statusPair?.second ?: stringResource(R.string.ready)
+                        val isActive = inlineState.activeStep == step
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            when (isSuccess) {
+                                true -> Text("✅", modifier = Modifier.size(20.dp))
+                                false -> Text("❌", modifier = Modifier.size(20.dp))
+                                null -> {
+                                    if (isActive && inlineState.isInstalling) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    } else {
+                                        Text("⏳", modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(id = step.displayNameResId()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = statusMsg,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
                     }
                 }
@@ -1129,8 +1187,21 @@ fun ApkInstallerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text(stringResource(R.string.btn_close))
+            if (inlineState.isUserSelectionRequired) {
+                TextButton(onClick = onConfirm, enabled = inlineState.selectedUsers.isNotEmpty()) {
+                    Text(stringResource(R.string.btn_install))
+                }
+            } else {
+                TextButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.btn_close))
+                }
+            }
+        },
+        dismissButton = {
+            if (inlineState.isUserSelectionRequired) {
+                TextButton(onClick = onDismissRequest) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
             }
         }
     )

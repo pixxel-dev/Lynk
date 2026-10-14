@@ -48,7 +48,10 @@ data class InlineInstallState(
     val isInstalling: Boolean = false,
     val activeStep: InstallStep? = null,
     val stepStatuses: Map<InstallStep, Pair<Boolean?, String>> = emptyMap(),
-    val installResult: InstallResult? = null
+    val installResult: InstallResult? = null,
+    val isUserSelectionRequired: Boolean = true,
+    val availableUsers: Map<Int, String> = emptyMap(),
+    val selectedUsers: Set<Int> = emptySet()
 )
 
 data class FileManagerState(
@@ -777,6 +780,84 @@ class DashboardViewModel @Inject constructor(
         val file = File(fileItem.path)
         if (!file.exists()) return
 
+        _state.update {
+            it.copy(
+                fileManagerState = it.fileManagerState.copy(
+                    inlineInstallState = InlineInstallState(
+                        apkFile = fileItem,
+                        isUserSelectionRequired = true,
+                        isInstalling = false
+                    )
+                )
+            )
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val availableUsers = waterfallInstallStrategy.getAvailableCarUsers()
+            _state.update { state ->
+                val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+                state.copy(
+                    fileManagerState = state.fileManagerState.copy(
+                        inlineInstallState = currentInline.copy(
+                            availableUsers = availableUsers,
+                            selectedUsers = if (availableUsers.size == 1) setOf(availableUsers.keys.first()) else emptySet(),
+                            isUserSelectionRequired = availableUsers.size > 1
+                        )
+                    )
+                )
+            }
+            if (availableUsers.size <= 1) {
+                withContext(Dispatchers.Main) {
+                    confirmInlineWaterfallInstall()
+                }
+            }
+        }
+    }
+
+    fun toggleInlineInstallUserSelection(userId: Int) {
+        _state.update { state ->
+            val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+            val newSelected = currentInline.selectedUsers.toMutableSet()
+            if (newSelected.contains(userId)) {
+                newSelected.remove(userId)
+            } else {
+                newSelected.add(userId)
+            }
+            state.copy(
+                fileManagerState = state.fileManagerState.copy(
+                    inlineInstallState = currentInline.copy(selectedUsers = newSelected)
+                )
+            )
+        }
+    }
+
+    fun toggleAllInlineInstallUsers(selectAll: Boolean) {
+        _state.update { state ->
+            val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
+            val newSelected = if (selectAll) {
+                currentInline.availableUsers.keys.toSet()
+            } else {
+                emptySet()
+            }
+            state.copy(
+                fileManagerState = state.fileManagerState.copy(
+                    inlineInstallState = currentInline.copy(selectedUsers = newSelected)
+                )
+            )
+        }
+    }
+
+    fun confirmInlineWaterfallInstall() {
+        val inlineState = _state.value.fileManagerState.inlineInstallState ?: return
+        val file = File(inlineState.apkFile.path)
+        if (!file.exists()) return
+
+        val targetUsers = if (inlineState.selectedUsers.isEmpty()) {
+            listOf(-1) // fallback to -1 which is "all" or default user
+        } else {
+            inlineState.selectedUsers.toList()
+        }
+
         val subverSteps = listOf(
             InstallStep.PINE,
             InstallStep.SHIZUKU,
@@ -792,8 +873,8 @@ class DashboardViewModel @Inject constructor(
         _state.update {
             it.copy(
                 fileManagerState = it.fileManagerState.copy(
-                    inlineInstallState = InlineInstallState(
-                        apkFile = fileItem,
+                    inlineInstallState = inlineState.copy(
+                        isUserSelectionRequired = false,
                         isInstalling = true,
                         activeStep = InstallStep.PINE,
                         stepStatuses = initialStatuses
@@ -819,79 +900,89 @@ class DashboardViewModel @Inject constructor(
                 }
             }
 
-            updateStep(InstallStep.PINE, null, "Инициализация Pine & HiddenApiBypass...")
+            var overallSuccess = true
+            var finalMsg = ""
+            var lastActiveStep: InstallStep? = null
 
-            val success = waterfallInstallStrategy.install(file, null) { stage, details ->
-                when (stage) {
-                    WaterfallInstallStrategy.InstallStage.PREPARING_PINE_AND_USER -> {
-                        updateStep(InstallStep.PINE, true, "Pine инициализирован (User $details)")
-                        updateStep(InstallStep.SHIZUKU, null, "Ожидание Shizuku...")
-                    }
-                    WaterfallInstallStrategy.InstallStage.TRYING_SHIZUKU_STREAM -> {
-                        updateStep(InstallStep.PINE, true, "Pine OK")
-                        updateStep(InstallStep.SHIZUKU, null, "Потоковая установка через Shizuku (User $details)...")
-                    }
-                    WaterfallInstallStrategy.InstallStage.TRYING_NATIVE_ADB_STREAM,
-                    WaterfallInstallStrategy.InstallStage.TRYING_ADB_STREAM -> {
-                        updateStep(InstallStep.PINE, true, "Pine OK")
-                        if (_state.value.fileManagerState.inlineInstallState?.stepStatuses?.get(InstallStep.SHIZUKU)?.first != true) {
-                            updateStep(InstallStep.SHIZUKU, false, "Shizuku недоступен / пропущен")
+            for (userId in targetUsers) {
+                updateStep(InstallStep.PINE, null, "Инициализация для User $userId...")
+
+                val success = waterfallInstallStrategy.install(file, if (userId == -1) null else userId) { stage, details ->
+                    when (stage) {
+                        WaterfallInstallStrategy.InstallStage.PREPARING_PINE_AND_USER -> {
+                            updateStep(InstallStep.PINE, true, "Pine инициализирован (User $details)")
+                            updateStep(InstallStep.SHIZUKU, null, "Ожидание Shizuku...")
                         }
-                        updateStep(InstallStep.NATIVE_ADB, null, "Потоковая установка через Native ADB (User $details)...")
-                    }
-                    WaterfallInstallStrategy.InstallStage.TRYING_LOCAL_ADB_STREAM -> {
-                        if (_state.value.fileManagerState.inlineInstallState?.stepStatuses?.get(InstallStep.NATIVE_ADB)?.first != true) {
-                            updateStep(InstallStep.NATIVE_ADB, false, "Native ADB недоступен / пропущен")
+                        WaterfallInstallStrategy.InstallStage.TRYING_SHIZUKU_STREAM -> {
+                            updateStep(InstallStep.PINE, true, "Pine OK")
+                            updateStep(InstallStep.SHIZUKU, null, "Потоковая установка через Shizuku (User $details)...")
                         }
-                        updateStep(InstallStep.LOCAL_ADB, null, "Попытка Local ADB (User $details)...")
-                    }
-                    WaterfallInstallStrategy.InstallStage.FALLBACK_SYSTEM_INSTALLER_AS_USER -> {
-                        updateStep(InstallStep.PINE, true, "Pine OK")
-                        val currentStatuses = _state.value.fileManagerState.inlineInstallState?.stepStatuses
-                        if (currentStatuses?.get(InstallStep.SHIZUKU)?.first != true) {
-                            updateStep(InstallStep.SHIZUKU, false, "Пропущен")
+                        WaterfallInstallStrategy.InstallStage.TRYING_NATIVE_ADB_STREAM,
+                        WaterfallInstallStrategy.InstallStage.TRYING_ADB_STREAM -> {
+                            updateStep(InstallStep.PINE, true, "Pine OK")
+                            if (_state.value.fileManagerState.inlineInstallState?.stepStatuses?.get(InstallStep.SHIZUKU)?.first != true) {
+                                updateStep(InstallStep.SHIZUKU, false, "Shizuku недоступен / пропущен")
+                            }
+                            updateStep(InstallStep.NATIVE_ADB, null, "Потоковая установка через Native ADB (User $details)...")
                         }
-                        if (currentStatuses?.get(InstallStep.NATIVE_ADB)?.first != true) {
-                            updateStep(InstallStep.NATIVE_ADB, false, "Пропущен")
+                        WaterfallInstallStrategy.InstallStage.TRYING_LOCAL_ADB_STREAM -> {
+                            if (_state.value.fileManagerState.inlineInstallState?.stepStatuses?.get(InstallStep.NATIVE_ADB)?.first != true) {
+                                updateStep(InstallStep.NATIVE_ADB, false, "Native ADB недоступен / пропущен")
+                            }
+                            updateStep(InstallStep.LOCAL_ADB, null, "Попытка Local ADB (User $details)...")
                         }
-                        if (currentStatuses?.get(InstallStep.LOCAL_ADB)?.first != true) {
-                            updateStep(InstallStep.LOCAL_ADB, false, "Пропущен")
+                        WaterfallInstallStrategy.InstallStage.FALLBACK_SYSTEM_INSTALLER_AS_USER -> {
+                            updateStep(InstallStep.PINE, true, "Pine OK")
+                            val currentStatuses = _state.value.fileManagerState.inlineInstallState?.stepStatuses
+                            if (currentStatuses?.get(InstallStep.SHIZUKU)?.first != true) {
+                                updateStep(InstallStep.SHIZUKU, false, "Пропущен")
+                            }
+                            if (currentStatuses?.get(InstallStep.NATIVE_ADB)?.first != true) {
+                                updateStep(InstallStep.NATIVE_ADB, false, "Пропущен")
+                            }
+                            if (currentStatuses?.get(InstallStep.LOCAL_ADB)?.first != true) {
+                                updateStep(InstallStep.LOCAL_ADB, false, "Пропущен")
+                            }
+                            updateStep(InstallStep.PACKAGE_INSTALLER, null, "Запуск системного установщика (User $details)...")
                         }
-                        updateStep(InstallStep.PACKAGE_INSTALLER, null, "Запуск системного установщика (User $details)...")
-                    }
-                    WaterfallInstallStrategy.InstallStage.SUCCESS_SILENT -> {
-                        val msg = "Установлено в фоне ($details)"
-                        if (details.contains("Shizuku", ignoreCase = true)) {
-                            updateStep(InstallStep.SHIZUKU, true, msg)
-                        } else if (details.contains("Native", ignoreCase = true)) {
-                            updateStep(InstallStep.NATIVE_ADB, true, msg)
-                        } else if (details.contains("Local", ignoreCase = true)) {
-                            updateStep(InstallStep.LOCAL_ADB, true, msg)
-                        } else {
-                            updateStep(InstallStep.NATIVE_ADB, true, msg)
+                        WaterfallInstallStrategy.InstallStage.SUCCESS_SILENT -> {
+                            val msg = "Установлено в фоне ($details)"
+                            if (details.contains("Shizuku", ignoreCase = true)) {
+                                updateStep(InstallStep.SHIZUKU, true, msg)
+                            } else if (details.contains("Native", ignoreCase = true)) {
+                                updateStep(InstallStep.NATIVE_ADB, true, msg)
+                            } else if (details.contains("Local", ignoreCase = true)) {
+                                updateStep(InstallStep.LOCAL_ADB, true, msg)
+                            } else {
+                                updateStep(InstallStep.NATIVE_ADB, true, msg)
+                            }
+                        }
+                        WaterfallInstallStrategy.InstallStage.SUCCESS_SYSTEM_DIALOG -> {
+                            updateStep(InstallStep.PACKAGE_INSTALLER, true, "Запущено окно установки (User $details)")
+                        }
+                        WaterfallInstallStrategy.InstallStage.ERROR -> {
+                            updateStep(InstallStep.PACKAGE_INSTALLER, false, details)
                         }
                     }
-                    WaterfallInstallStrategy.InstallStage.SUCCESS_SYSTEM_DIALOG -> {
-                        updateStep(InstallStep.PACKAGE_INSTALLER, true, "Запущено окно установки (User $details)")
-                    }
-                    WaterfallInstallStrategy.InstallStage.ERROR -> {
-                        updateStep(InstallStep.PACKAGE_INSTALLER, false, details)
-                    }
+                }
+                
+                if (!success) overallSuccess = false
+                
+                // capture last step for result
+                val st = _state.value.fileManagerState.inlineInstallState
+                if (st != null) {
+                    lastActiveStep = st.activeStep
+                    finalMsg = if (overallSuccess) "Установка успешно выполнена!" else "Ошибка установки"
                 }
             }
 
             _state.update { state ->
                 val currentInline = state.fileManagerState.inlineInstallState ?: return@update state
-                val resultMsg = if (success) {
-                    "Установка успешно выполнена!"
-                } else {
-                    "Ошибка установки"
-                }
                 state.copy(
                     fileManagerState = state.fileManagerState.copy(
                         inlineInstallState = currentInline.copy(
                             isInstalling = false,
-                            installResult = InstallResult(success, resultMsg, currentInline.activeStep)
+                            installResult = InstallResult(overallSuccess, finalMsg, lastActiveStep)
                         )
                     )
                 )
