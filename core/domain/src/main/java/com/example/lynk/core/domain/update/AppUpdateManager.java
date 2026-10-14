@@ -4,11 +4,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AppUpdateManager {
 
     private String currentVersion = "1.0.0";
     private String repoPath = "pixxel-dev/Lynk";
+    private String githubAccessToken = "";
 
     public AppUpdateManager() {
     }
@@ -16,6 +19,12 @@ public class AppUpdateManager {
     public AppUpdateManager(String currentVersion, String repoPath) {
         this.currentVersion = currentVersion;
         this.repoPath = repoPath;
+    }
+
+    public AppUpdateManager(String currentVersion, String repoPath, String githubAccessToken) {
+        this.currentVersion = currentVersion;
+        this.repoPath = repoPath;
+        this.githubAccessToken = githubAccessToken != null ? githubAccessToken : "";
     }
 
     public String getCurrentVersion() {
@@ -34,6 +43,14 @@ public class AppUpdateManager {
         this.repoPath = repoPath;
     }
 
+    public String getGithubAccessToken() {
+        return githubAccessToken;
+    }
+
+    public void setGithubAccessToken(String githubAccessToken) {
+        this.githubAccessToken = githubAccessToken != null ? githubAccessToken : "";
+    }
+
     public UpdateInfo checkForUpdates() {
         try {
             URL url = new URL("https://api.github.com/repos/" + repoPath + "/releases/latest");
@@ -41,6 +58,9 @@ public class AppUpdateManager {
             connection.setRequestMethod("GET");
             connection.setRequestProperty("Accept", "application/vnd.github.v3+json");
             connection.setRequestProperty("User-Agent", "Lynk-Android-App");
+            if (githubAccessToken != null && !githubAccessToken.trim().isEmpty()) {
+                connection.setRequestProperty("Authorization", "token " + githubAccessToken.trim());
+            }
             connection.setConnectTimeout(5000);
             connection.setReadTimeout(5000);
 
@@ -72,6 +92,10 @@ public class AppUpdateManager {
                 } else {
                     return new UpdateInfo(currentVersion, "No changes", null, UpdateInfo.UpdateState.UP_TO_DATE);
                 }
+            } else if (responseCode == 404 || responseCode == 403) {
+                String errorMsg = "Ошибка доступа 404/403: Репозиторий приватный. Сделайте его Public на GitHub или укажите токен доступа.";
+                System.err.println("AppUpdateManager: " + errorMsg);
+                return new UpdateInfo(currentVersion, errorMsg, null, UpdateInfo.UpdateState.ERROR);
             } else {
                 String errorMsg = "Error checking updates: HTTP " + responseCode;
                 System.err.println("AppUpdateManager: " + errorMsg);
@@ -138,9 +162,9 @@ public class AppUpdateManager {
 
     public boolean isVersionNewer(String latest, String current) {
         if (latest == null || current == null) return false;
-        
-        String cleanLatest = latest.replaceAll("[^0-9.]", "");
-        String cleanCurrent = current.replaceAll("[^0-9.]", "");
+
+        String cleanLatest = sanitizeVersion(latest);
+        String cleanCurrent = sanitizeVersion(current);
 
         String[] latestParts = cleanLatest.split("\\.");
         String[] currentParts = cleanCurrent.split("\\.");
@@ -153,6 +177,19 @@ public class AppUpdateManager {
             if (v1 < v2) return false;
         }
         return false;
+    }
+
+    private String sanitizeVersion(String version) {
+        if (version == null) return "";
+        String trimmed = version.trim();
+        if (trimmed.toLowerCase().startsWith("v")) {
+            trimmed = trimmed.substring(1).trim();
+        }
+        Matcher matcher = Pattern.compile("\\d+(\\.\\d+)+").matcher(trimmed);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        return trimmed.replaceAll("[^0-9.]", "");
     }
 
     private int parseVersionPart(String part) {

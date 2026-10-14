@@ -9,6 +9,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import ru.doGood.Lynk.R
 import javax.inject.Singleton
 
 @Module
@@ -30,7 +31,17 @@ object AppModule {
         } catch (e: Exception) {
             "1.0.0"
         }
-        return AppUpdateManager(currentVersion, "doGood-It/Lynk-Android")
+        val repoPath = try {
+            context.getString(R.string.github_repo_path)
+        } catch (e: Exception) {
+            "pixxel-dev/Lynk"
+        }
+        val token = try {
+            context.getString(R.string.github_access_token)
+        } catch (e: Exception) {
+            ""
+        }
+        return AppUpdateManager(currentVersion, repoPath, token)
     }
 
     @Provides
