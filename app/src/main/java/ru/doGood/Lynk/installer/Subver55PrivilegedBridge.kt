@@ -171,7 +171,20 @@ class Subver55PrivilegedBridge @Inject constructor(
             true
         }.getOrElse { err ->
             Log.e(TAG, "Fallback startActivityAsUser failed", err)
-            false
+            runCatching {
+                val apkUri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    apkFile
+                )
+                val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(fallbackIntent)
+                true
+            }.getOrDefault(false)
         }
     }
 }
