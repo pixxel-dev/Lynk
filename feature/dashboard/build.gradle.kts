@@ -43,7 +43,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.kotlinx.serialization.core)
-    
+
     implementation(libs.pine.core)
     implementation(libs.hiddenapibypass)
     

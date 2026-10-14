@@ -20,14 +20,14 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# --- Pine (ART Hooking) ---
+# --- Pine (ART Hooking в стиле subver55) ---
 -keep class top.canyie.pine.** { *; }
 -dontwarn top.canyie.pine.**
 
-# --- HiddenApiBypass ---
+# --- HiddenApiBypass (доступ к UserHandle, startActivityAsUser, getCurrentUser) ---
 -keep class org.lsposed.hiddenapibypass.** { *; }
 -dontwarn org.lsposed.hiddenapibypass.**
 
-# --- Shizuku (для рефлексивного вызова Shizuku.newProcess) ---
+# --- Shizuku API (рефлексивный вызов Shizuku.newProcess) ---
 -keep class rikka.shizuku.** { *; }
 -dontwarn rikka.shizuku.**

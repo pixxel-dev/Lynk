@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <external-files-path name="downloaded_apks" path="." />
-    <external-files-path name="downloads" path="Download/" />
-    <external-path name="external_storage_root" path="." />
-    <root-path name="root" path="." />
+    <external-path name="external_files" path="." />
+    <external-files-path name="app_external_files" path="." />
+    <cache-path name="cache_files" path="." />
+    <external-cache-path name="external_cache_files" path="." />
+    <files-path name="internal_files" path="." />
 </paths>
