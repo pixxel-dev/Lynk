@@ -18,6 +18,8 @@ public class WaterfallInstallStrategy {
     public enum InstallStage {
         PREPARING_PINE_AND_USER,
         TRYING_SHIZUKU_STREAM,
+        TRYING_NATIVE_ADB_STREAM,
+        TRYING_LOCAL_ADB_STREAM,
         TRYING_ADB_STREAM,
         FALLBACK_SYSTEM_INSTALLER_AS_USER,
         SUCCESS_SILENT,
@@ -102,11 +104,13 @@ public class WaterfallInstallStrategy {
             }
         }
 
-        notify(listener, InstallStage.TRYING_ADB_STREAM, userArg);
+        notify(listener, InstallStage.TRYING_NATIVE_ADB_STREAM, userArg);
         if (streamInstallInternal(apkFile, userArg, false)) {
-            notify(listener, InstallStage.SUCCESS_SILENT, "ADB/Shell (User " + userArg + ")");
+            notify(listener, InstallStage.SUCCESS_SILENT, "Native ADB (User " + userArg + ")");
             return true;
         }
+
+        notify(listener, InstallStage.TRYING_LOCAL_ADB_STREAM, userArg);
 
         int fallbackUser = (targetUser == USER_ALL_SCREENS) ? bridge.resolveActiveDriverUserId() : targetUser;
         notify(listener, InstallStage.FALLBACK_SYSTEM_INSTALLER_AS_USER, String.valueOf(fallbackUser));

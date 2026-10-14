@@ -1001,93 +1001,139 @@ fun FileManagerScreen(
 
         // 1.5 Inline Waterfall Installation Dialog
         inlineInstallState?.let { inlineState ->
-            AlertDialog(
-                onDismissRequest = onDismissInlineInstall,
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Android,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.waterfall_dialog_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = inlineState.apkFile.name,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        InstallStep.entries.forEach { step ->
-                            val statusPair = inlineState.stepStatuses[step]
-                            val isSuccess = statusPair?.first
-                            val statusMsg = statusPair?.second ?: stringResource(R.string.ready)
-                            val isActive = inlineState.activeStep == step
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                when (isSuccess) {
-                                    true -> Text("✅", modifier = Modifier.size(20.dp))
-                                    false -> Text("❌", modifier = Modifier.size(20.dp))
-                                    null -> {
-                                        if (isActive && inlineState.isInstalling) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(16.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                        } else {
-                                            Text("⏳", modifier = Modifier.size(20.dp))
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(id = step.displayNameResId()),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = statusMsg,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = onDismissInlineInstall) {
-                        Text(stringResource(R.string.btn_close))
-                    }
-                }
+            ApkInstallerDialog(
+                inlineState = inlineState,
+                onDismissRequest = onDismissInlineInstall
             )
         }
     }
+}
+
+@Composable
+fun ApkInstallerDialog(
+    inlineState: InlineInstallState,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Android,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.waterfall_dialog_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = inlineState.apkFile.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                val subverSteps = listOf(
+                    InstallStep.PINE,
+                    InstallStep.SHIZUKU,
+                    InstallStep.NATIVE_ADB,
+                    InstallStep.LOCAL_ADB,
+                    InstallStep.PACKAGE_INSTALLER
+                )
+
+                subverSteps.forEach { step ->
+                    val statusPair = inlineState.stepStatuses[step]
+                    val isSuccess = statusPair?.first
+                    val statusMsg = statusPair?.second ?: stringResource(R.string.ready)
+                    val isActive = inlineState.activeStep == step
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        when (isSuccess) {
+                            true -> Text("✅", modifier = Modifier.size(20.dp))
+                            false -> Text("❌", modifier = Modifier.size(20.dp))
+                            null -> {
+                                if (isActive && inlineState.isInstalling) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Text("⏳", modifier = Modifier.size(20.dp))
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = stringResource(id = step.displayNameResId()),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = statusMsg,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                inlineState.installResult?.let { result ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (result.isSuccess) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.errorContainer
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = result.message,
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            color = if (result.isSuccess) {
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.onErrorContainer
+                            },
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(stringResource(R.string.btn_close))
+            }
+        }
+    )
 }
 
 @Composable

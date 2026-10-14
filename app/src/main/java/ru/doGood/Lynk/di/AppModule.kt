@@ -10,6 +10,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import ru.doGood.Lynk.R
+import com.example.lynk.core.domain.installer.WaterfallInstallStrategy
+import ru.doGood.Lynk.installer.Subver55PrivilegedBridge
 import javax.inject.Singleton
 
 @Module
@@ -48,5 +50,11 @@ object AppModule {
     @Singleton
     fun provideAdbWirelessManager(): AdbWirelessManager {
         return AdbWirelessManager()
+    }
+
+    @Provides
+    @Singleton
+    fun provideWaterfallInstallStrategy(bridge: Subver55PrivilegedBridge): WaterfallInstallStrategy {
+        return WaterfallInstallStrategy(bridge)
     }
 }
