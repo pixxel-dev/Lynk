@@ -297,4 +297,12 @@
     <string name="extract_zip_message">Do you want to extract %1$s?</string>
     <string name="btn_extract">Extract</string>
     <string name="error_read_file">Error reading file</string>
+
+    <!-- Installer Steps -->
+    <string name="install_step_pine">Pine Bypass</string>
+    <string name="install_step_shizuku">Shizuku Stream</string>
+    <string name="install_step_native_adb">Native ADB</string>
+    <string name="install_step_local_adb">Local ADB</string>
+    <string name="install_step_file_provider">File Provider</string>
+    <string name="install_step_package_installer">Standard Installer</string>
 </resources>

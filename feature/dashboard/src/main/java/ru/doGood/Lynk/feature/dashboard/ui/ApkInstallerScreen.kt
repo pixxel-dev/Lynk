@@ -20,6 +20,18 @@ import com.example.lynk.core.domain.installer.InstallResult
 import com.example.lynk.core.domain.installer.InstallStep
 import ru.doGood.Lynk.feature.dashboard.R
 
+@Composable
+internal fun InstallStep.displayNameResId(): Int {
+    return when (this) {
+        InstallStep.PINE -> R.string.install_step_pine
+        InstallStep.SHIZUKU -> R.string.install_step_shizuku
+        InstallStep.NATIVE_ADB -> R.string.install_step_native_adb
+        InstallStep.LOCAL_ADB -> R.string.install_step_local_adb
+        InstallStep.FILE_PROVIDER -> R.string.install_step_file_provider
+        InstallStep.PACKAGE_INSTALLER -> R.string.install_step_package_installer
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ApkInstallerScreen(
@@ -340,7 +352,7 @@ fun InstallStepCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = step.name,
+                    text = stringResource(id = step.displayNameResId()),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

@@ -297,4 +297,12 @@
     <string name="extract_zip_message">Вы хотите распаковать архив %1$s?</string>
     <string name="btn_extract">Распаковать</string>
     <string name="error_read_file">Ошибка чтения файла</string>
+
+    <!-- Installer Steps -->
+    <string name="install_step_pine">Обход через Pine</string>
+    <string name="install_step_shizuku">Потоковая установка Shizuku</string>
+    <string name="install_step_native_adb">Установка через Native ADB</string>
+    <string name="install_step_local_adb">Установка через Local ADB</string>
+    <string name="install_step_file_provider">Установка через File Provider</string>
+    <string name="install_step_package_installer">Стандартный установщик</string>
 </resources>

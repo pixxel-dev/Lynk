@@ -1064,7 +1064,7 @@ fun FileManagerScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = step.name,
+                                        text = stringResource(id = step.displayNameResId()),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.Bold
                                     )
