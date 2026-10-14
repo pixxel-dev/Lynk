@@ -8,7 +8,6 @@ import android.content.IntentFilter
 import android.net.Uri
 import android.os.Environment
 import androidx.core.content.ContextCompat
-import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -58,7 +57,6 @@ class ApkDownloader(private val context: Context) {
                     val downloadedFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
                     if (downloadedFile.exists() && downloadedFile.length() > 0) {
                         onProgress?.invoke(1.0f)
-                        installApk(downloadedFile)
                         onComplete?.invoke(downloadedFile)
                     }
                 }
@@ -126,27 +124,4 @@ class ApkDownloader(private val context: Context) {
         }
     }
 
-    fun installApk(file: File) {
-        if (!file.exists()) return
-        val apkUri: Uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        val installIntent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(apkUri, "application/vnd.android.package-archive")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(installIntent)
-    }
-
-    fun installDownloadedApk(fileName: String = "Lynk-update.apk"): Boolean {
-        val file = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-        if (file.exists() && file.length() > 0) {
-            installApk(file)
-            return true
-        }
-        return false
-    }
 }

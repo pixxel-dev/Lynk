@@ -364,9 +364,16 @@ class DashboardViewModel @Inject constructor(
 
     fun installDownloadedUpdate() {
         val app = getApplication<Application>()
-        val downloader = ru.doGood.Lynk.feature.dashboard.utils.ApkDownloader(app)
-        val success = downloader.installDownloadedApk("Lynk-update.apk")
-        if (!success) {
+        val file = java.io.File(app.getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "Lynk-update.apk")
+        if (file.exists()) {
+            _state.update {
+                it.copy(
+                    installerState = it.installerState.copy(selectedApkPath = file.absolutePath)
+                )
+            }
+            setSelectedTab(1)
+            runWaterfallInstall()
+        } else {
             _state.update {
                 it.copy(
                     updateState = it.updateState.copy(
