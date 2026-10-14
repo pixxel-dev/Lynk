@@ -57,7 +57,7 @@ fun ApkInstallerScreen(
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Left Column: Target APK Card & Diagnostic Steps
+            // Left Column: Target APK Card, Subver55 Control Card & Diagnostic Steps
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
@@ -69,6 +69,14 @@ fun ApkInstallerScreen(
                         isInstalling = isInstalling,
                         onSelectApkClick = onSelectApkClick,
                         onStartWaterfallInstall = onStartWaterfallInstall
+                    )
+                }
+
+                // Панель управления пакетами и правами в стиле subver55
+                item {
+                    SubverPackageControlCard(
+                        initialApkPath = selectedApkPath.orEmpty(),
+                        modifier = Modifier.padding(vertical = 6.dp)
                     )
                 }
 
@@ -136,6 +144,14 @@ fun ApkInstallerScreen(
                     isInstalling = isInstalling,
                     onSelectApkClick = onSelectApkClick,
                     onStartWaterfallInstall = onStartWaterfallInstall
+                )
+            }
+
+            // Панель управления пакетами и правами в стиле subver55
+            item {
+                SubverPackageControlCard(
+                    initialApkPath = selectedApkPath.orEmpty(),
+                    modifier = Modifier.padding(vertical = 6.dp)
                 )
             }
 

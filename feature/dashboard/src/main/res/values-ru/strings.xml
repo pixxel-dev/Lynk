@@ -305,4 +305,13 @@
     <string name="install_step_local_adb">Установка через Local ADB</string>
     <string name="install_step_file_provider">Установка через File Provider</string>
     <string name="install_step_package_installer">Стандартный установщик</string>
+
+    <string name="subver_panel_title">Управление пакетами и правами (User 10)</string>
+    <string name="subver_apk_path_label">Путь к APK-файлу</string>
+    <string name="subver_package_name_label">Имя пакета (например, ru.vk.store)</string>
+    <string name="subver_btn_install_and_grant">Установить APK + Выдать все права</string>
+    <string name="subver_btn_give_permissions">Выдать все права</string>
+    <string name="subver_btn_force_stop">Остановить</string>
+    <string name="subver_btn_uninstall_app">Удалить</string>
+    <string name="subver_btn_system_settings">Настройки</string>
 </resources>
