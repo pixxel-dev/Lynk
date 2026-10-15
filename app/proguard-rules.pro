@@ -33,6 +33,7 @@
 -dontwarn rikka.shizuku.**
 
 # --- Application and Hilt ---
+# Ensure LynkApplication and Hilt are kept to prevent ClassNotFoundException on release builds
 -keep class ru.doGood.Lynk.LynkApplication { *; }
 -keep class * extends android.app.Application { *; }
 -keep class dagger.hilt.** { *; }
