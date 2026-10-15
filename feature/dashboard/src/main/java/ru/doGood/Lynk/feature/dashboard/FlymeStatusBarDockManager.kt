@@ -150,7 +150,9 @@ object FlymeStatusBarDockManager {
 
             val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -164,7 +166,7 @@ object FlymeStatusBarDockManager {
             ).apply {
                 this.gravity = gravity
                 this.x = if (pos == 1) 0 else offsetX
-                this.y = dp(targetContext, 4)
+                this.y = dp(targetContext, 40)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     layoutInDisplayCutoutMode =
                         WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -210,6 +212,10 @@ object FlymeStatusBarDockManager {
                     cornerRadius = dp(context, 22).toFloat()
                     setColor(Color.parseColor("#CC181A20"))
                     setStroke(dp(context, 1), Color.parseColor("#4DFFFFFF"))
+                }
+                setOnTouchListener { _, event ->
+                    Log.d(TAG, "Touch on dock container: ${event.action}")
+                    false
                 }
             }
 
@@ -274,6 +280,10 @@ object FlymeStatusBarDockManager {
                 setPadding(dp(context, 13), dp(context, 3), dp(context, 13), dp(context, 3))
                 isClickable = true
                 isFocusable = true
+                setOnTouchListener { _, event ->
+                    Log.d(TAG, "Touch on action button '$label': ${event.action}")
+                    false
+                }
                 setOnClickListener {
                     try {
                         onClick(this)
