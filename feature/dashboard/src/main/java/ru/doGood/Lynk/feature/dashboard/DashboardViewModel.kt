@@ -145,20 +145,44 @@ class DashboardViewModel @Inject constructor(
     private val recordedLogsBuilder = StringBuilder()
 
     init {
-        // Load initial app language
-        val prefs = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
-        val savedLangCode = prefs.getString("app_language", AppLanguage.RU.code) ?: AppLanguage.RU.code
-        val initialLang = AppLanguage.fromCode(savedLangCode)
-        ru.doGood.Lynk.feature.dashboard.util.LocaleHelper.applyLanguage(context, initialLang)
-        _state.update { it.copy(appLanguage = initialLang) }
+        try {
+            // Load initial app language
+            val prefs = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
+            val savedLangCode = prefs.getString("app_language", AppLanguage.RU.code) ?: AppLanguage.RU.code
+            val initialLang = AppLanguage.fromCode(savedLangCode)
+            ru.doGood.Lynk.feature.dashboard.util.LocaleHelper.applyLanguage(context, initialLang)
+            _state.update { it.copy(appLanguage = initialLang) }
 
-        loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
-        loadDeviceInfo()
-        loadAdbInfo()
-        loadInstalledApps()
-        loadFloatingConfig()
-        checkForUpdates()
-        loadCloudConnections()
+            loadDirectory(Environment.getExternalStorageDirectory()?.absolutePath ?: "/")
+            loadDeviceInfo()
+            loadAdbInfo()
+            loadInstalledApps()
+            loadFloatingConfig()
+            checkForUpdates()
+            loadCloudConnections()
+
+            try {
+                checkFloatingPermissions(context)
+                val config = getLatestFloatingConfig()
+                if (Settings.canDrawOverlays(context) &&
+                    (config.isQuickLaunchEnabled || config.isFullscreenOverlayEnabled ||
+                     config.isHomeNavigatorEnabled || config.isBackNavigatorEnabled ||
+                     config.isRefreshNavigatorEnabled || config.isFreeformWindowEnabled)
+                ) {
+                    val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
+                    val intent = Intent(context, serviceClass)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(intent)
+                    } else {
+                        context.startService(intent)
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     private fun loadCloudConnections() {
@@ -1577,19 +1601,31 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun toggleOverlayService(context: Context) {
-        val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
-        val intent = Intent(context, serviceClass)
-        if (_state.value.floatingButtonsState.isServiceRunning) {
-            context.stopService(intent)
-        } else {
-            if (Settings.canDrawOverlays(context)) {
-                loadFloatingConfig()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
+        try {
+            val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
+            val intent = Intent(context, serviceClass)
+            if (_state.value.floatingButtonsState.isServiceRunning) {
+                try {
+                    context.stopService(intent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                if (Settings.canDrawOverlays(context)) {
+                    loadFloatingConfig()
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
         checkFloatingPermissions(context)
     }

@@ -155,6 +155,11 @@ fun FloatingButtonsScreen(
             )
         }
 
+        // Статичная системная врезка в статус-бар Flyme Auto (работает независимо от плавающих кнопок)
+        item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
+            StatusBarDockCard()
+        }
+
         // All floating button configuration cards wrapped in AnimatedVisibility
         item(span = { GridItemSpan(if (isLandscape) 2 else 1) }) {
             AnimatedVisibility(visible = isServiceRunning && hasOverlayPermission) {

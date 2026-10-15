@@ -17,11 +17,15 @@ class BootReceiver : BroadcastReceiver() {
             val refreshEnabled = prefs.getBoolean("refresh_navigator_enabled", false)
 
             if (qlEnabled || fsEnabled || homeEnabled || backEnabled || refreshEnabled) {
-                val serviceIntent = Intent(context, ForegroundOverlayService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(serviceIntent)
-                } else {
-                    context.startService(serviceIntent)
+                try {
+                    val serviceIntent = Intent(context, ForegroundOverlayService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        context.startForegroundService(serviceIntent)
+                    } else {
+                        context.startService(serviceIntent)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }

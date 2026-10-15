@@ -321,4 +321,11 @@
     <string name="btn_install">Install</string>
     <string name="initializing_install_user">Initializing for User %d...</string>
     <string name="pine_initialized">Pine initialized (User %s)</string>
+
+    <string name="dock_bar_title">Flyme Auto Status Bar Dock</string>
+    <string name="dock_bar_subtitle">Static system bar (Fullscreen, Screen 1002 swap, Home)</string>
+    <string name="dock_pos_right">Top Right</string>
+    <string name="dock_pos_center">Top Center</string>
+    <string name="dock_pos_left">Top Left</string>
+    <string name="dock_offset_label">Offset from status bar icons</string>
 </resources>

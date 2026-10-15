@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import ru.doGood.Lynk.R
 import com.example.lynk.core.domain.installer.WaterfallInstallStrategy
 import ru.doGood.Lynk.installer.Subver55PrivilegedBridge
+import ru.doGood.Lynk.feature.dashboard.FlymeStatusBarDockManager
 import javax.inject.Singleton
 
 @Module
@@ -56,5 +57,14 @@ object AppModule {
     @Singleton
     fun provideWaterfallInstallStrategy(bridge: Subver55PrivilegedBridge): WaterfallInstallStrategy {
         return WaterfallInstallStrategy(bridge)
+    }
+
+    @Provides
+    @Singleton
+    fun provideFlymeStatusBarDockManager(
+        @ApplicationContext context: Context,
+        prefs: SharedPreferences
+    ): FlymeStatusBarDockManager {
+        return FlymeStatusBarDockManager
     }
 }

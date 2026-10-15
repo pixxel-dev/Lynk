@@ -321,4 +321,11 @@
     <string name="btn_install">Установить</string>
     <string name="initializing_install_user">Инициализация для User %d...</string>
     <string name="pine_initialized">Pine инициализирован (User %s)</string>
+
+    <string name="dock_bar_title">Статичная врезка в статус-бар Flyme Auto</string>
+    <string name="dock_bar_subtitle">Закрепленная панель (Полный экран, Экран 1002, Домой)</string>
+    <string name="dock_pos_right">Сверху справа</string>
+    <string name="dock_pos_center">По центру</string>
+    <string name="dock_pos_left">Сверху слева</string>
+    <string name="dock_offset_label">Отступ от часов и значков</string>
 </resources>
