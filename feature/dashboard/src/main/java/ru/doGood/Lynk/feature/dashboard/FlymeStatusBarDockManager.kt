@@ -155,7 +155,7 @@ object FlymeStatusBarDockManager {
 
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                dp(targetContext, 34),
+                dp(targetContext, 44),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 else
@@ -205,10 +205,10 @@ object FlymeStatusBarDockManager {
             val container = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(context, 6), dp(context, 2), dp(context, 6), dp(context, 2))
+                setPadding(dp(context, 8), dp(context, 3), dp(context, 8), dp(context, 3))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(context, 17).toFloat()
+                    cornerRadius = dp(context, 22).toFloat()
                     setColor(Color.parseColor("#CC181A20"))
                     setStroke(dp(context, 1), Color.parseColor("#4DFFFFFF"))
                 }
@@ -237,16 +237,13 @@ object FlymeStatusBarDockManager {
 
             val btnHome = createActionButton(context, "⌂") {
                 try {
-                    executor.execute {
-                        try {
-                            val userId = resolveDriverUserId()
-                            execPrivileged("input keyevent 3 || am start --user $userId -a android.intent.action.MAIN -c android.intent.category.HOME")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error in home button action thread", e)
-                        }
+                    val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+                        addCategory(android.content.Intent.CATEGORY_HOME)
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                     }
+                    context.startActivity(intent)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error submitting home button task", e)
+                    Log.e(TAG, "Home fail", e)
                 }
             }
 
@@ -272,10 +269,10 @@ object FlymeStatusBarDockManager {
             TextView(context).apply {
                 text = label
                 setTextColor(Color.WHITE)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.6f)
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
-                setPadding(dp(context, 10), dp(context, 2), dp(context, 10), dp(context, 2))
+                setPadding(dp(context, 13), dp(context, 3), dp(context, 13), dp(context, 3))
                 setOnClickListener {
                     try {
                         onClick(this)
@@ -293,9 +290,9 @@ object FlymeStatusBarDockManager {
     private fun createDivider(context: Context): View {
         return try {
             View(context).apply {
-                layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 14)).apply {
-                    marginStart = dp(context, 2)
-                    marginEnd = dp(context, 2)
+                layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 18)).apply {
+                    marginStart = dp(context, 3)
+                    marginEnd = dp(context, 3)
                 }
                 setBackgroundColor(Color.parseColor("#33FFFFFF"))
             }
@@ -306,6 +303,7 @@ object FlymeStatusBarDockManager {
     }
 
     private fun toggleFullscreenMode(buttonView: TextView) {
+        Log.d(TAG, "toggleFullscreenMode called")
         try {
             executor.execute {
                 try {
@@ -342,6 +340,7 @@ object FlymeStatusBarDockManager {
     }
 
     private fun swapActiveAppBetweenDisplays() {
+        Log.d(TAG, "swapActiveAppBetweenDisplays called")
         try {
             executor.execute {
                 try {
