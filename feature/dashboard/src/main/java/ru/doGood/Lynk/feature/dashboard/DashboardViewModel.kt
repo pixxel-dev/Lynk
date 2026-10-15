@@ -1536,7 +1536,11 @@ class DashboardViewModel @Inject constructor(
     fun checkFloatingPermissions(context: Context) {
         val hasOverlay = Settings.canDrawOverlays(context)
         val hasUsageStats = checkUsageStatsPermission(context)
-        val isServiceRunning = isServiceRunning(context, "ru.doGood.Lynk.service.ForegroundOverlayService")
+        val isServiceRunning = if (hasOverlay) {
+            isServiceRunning(context, "ru.doGood.Lynk.service.ForegroundOverlayService")
+        } else {
+            false
+        }
 
         _state.update {
             it.copy(
@@ -1578,11 +1582,13 @@ class DashboardViewModel @Inject constructor(
         if (_state.value.floatingButtonsState.isServiceRunning) {
             context.stopService(intent)
         } else {
-            loadFloatingConfig()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+            if (Settings.canDrawOverlays(context)) {
+                loadFloatingConfig()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
             }
         }
         checkFloatingPermissions(context)

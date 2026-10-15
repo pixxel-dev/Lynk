@@ -1,6 +1,9 @@
 package ru.doGood.Lynk
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -34,6 +37,16 @@ object MainDashboardRoute
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        try {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+                startActivity(intent)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         enableEdgeToEdge()
         setContent {
             val mainViewModel: DashboardViewModel = hiltViewModel()
