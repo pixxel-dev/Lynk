@@ -1,6 +1,11 @@
 package ru.doGood.Lynk.feature.dashboard
 
+import android.app.ActivityOptions
+import android.app.AppOpsManager
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.PixelFormat
@@ -43,6 +48,7 @@ object FlymeStatusBarDockManager {
 
     private const val DISPLAY_CENTER_MAIN = 1001
     private const val DISPLAY_PASSENGER_PSD = 1002
+    private const val DISPLAY_SECONDARY_1003 = 1003
 
     private var dockView: View? = null
     private var windowManager: WindowManager? = null
@@ -304,7 +310,7 @@ object FlymeStatusBarDockManager {
             }
 
             val btnFullscreen = createActionButton(context, "⛶ Экран") { btn ->
-                toggleFullscreenMode(btn)
+                toggleFullscreenMode(context, btn)
             }
             btnFullscreen.setOnLongClickListener {
                 try {
@@ -319,7 +325,7 @@ object FlymeStatusBarDockManager {
             val divider1 = createDivider(context)
 
             val btnSwapScreen = createActionButton(context, "⇄ 1002") {
-                swapActiveAppBetweenDisplays()
+                swapActiveAppBetweenDisplays(context)
             }
 
             val divider2 = createDivider(context)
@@ -397,11 +403,170 @@ object FlymeStatusBarDockManager {
         }
     }
 
-    private fun toggleFullscreenMode(buttonView: TextView) {
+    private fun hasUsageStatsPermission(context: Context): Boolean {
+        return try {
+            val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager ?: return false
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    context.packageName
+                )
+            }
+            mode == AppOpsManager.MODE_ALLOWED
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking usage stats permission", e)
+            false
+        }
+    }
+
+    @android.annotation.SuppressLint("MissingPermission", "WrongConstant")
+    private fun getActiveForegroundPackage(context: Context): String? {
+        if (!hasUsageStatsPermission(context)) return null
+        return try {
+            val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
+            val endTime = System.currentTimeMillis()
+            val beginTime = endTime - 5000
+
+            val usageEvents = usm.queryEvents(beginTime, endTime)
+            val event = UsageEvents.Event()
+            var lastResumedPkg: String? = null
+            while (usageEvents.hasNextEvent()) {
+                usageEvents.getNextEvent(event)
+                if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    val pkg = event.packageName
+                    if (!isIgnoredPackage(pkg)) {
+                        lastResumedPkg = pkg
+                    }
+                }
+            }
+            if (!lastResumedPkg.isNullOrBlank()) {
+                return lastResumedPkg
+            }
+
+            val stats = usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, beginTime, endTime)
+            if (!stats.isNullOrEmpty()) {
+                val sorted = stats.sortedByDescending { it.lastTimeUsed }
+                for (stat in sorted) {
+                    val pkg = stat.packageName
+                    if (!isIgnoredPackage(pkg)) {
+                        return pkg
+                    }
+                }
+            }
+            null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting active foreground package via UsageStatsManager", e)
+            null
+        }
+    }
+
+    private fun isIgnoredPackage(pkg: String?): Boolean {
+        if (pkg.isNullOrBlank()) return true
+        return pkg.startsWith("com.flyme.auto.launcher") ||
+                pkg.startsWith("com.flyme.auto.wallpapercontrol") ||
+                pkg == "com.android.launcher3" ||
+                pkg == "com.android.systemui" ||
+                pkg == "ru.doGood.Lynk"
+    }
+
+    private fun getFallbackTargetPackage(context: Context): String {
+        try {
+            val prefs = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
+            val fullscreenApps = prefs.getStringSet("fullscreen_apps", null)
+            if (!fullscreenApps.isNullOrEmpty()) {
+                val pkg = fullscreenApps.firstOrNull { it.isNotBlank() }
+                if (pkg != null) return pkg
+            }
+            val quickLaunchApps = prefs.getStringSet("quick_launch_apps", null)
+            if (!quickLaunchApps.isNullOrEmpty()) {
+                val pkg = quickLaunchApps.firstOrNull { it.isNotBlank() }
+                if (pkg != null) return pkg
+            }
+            val lynkPrefs = context.getSharedPreferences("lynk_prefs", Context.MODE_PRIVATE)
+            val lynkFullscreen = lynkPrefs.getStringSet("fullscreen_apps", null)
+            if (!lynkFullscreen.isNullOrEmpty()) {
+                val pkg = lynkFullscreen.firstOrNull { it.isNotBlank() }
+                if (pkg != null) return pkg
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading fallback target app", e)
+        }
+        return context.packageName
+    }
+
+    private fun launchOnDisplay(context: Context, targetPackage: String, displayId: Int = DISPLAY_SECONDARY_1003) {
+        Log.d(TAG, "launchOnDisplay called for package: $targetPackage on display $displayId")
+        try {
+            val pm = context.packageManager
+            val launchIntent = pm.getLaunchIntentForPackage(targetPackage)
+            if (launchIntent == null) {
+                Log.w(TAG, "Launch intent for package $targetPackage is null")
+                return
+            }
+
+            val primaryIntent = Intent(launchIntent).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            val options = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+
+            try {
+                context.startActivity(primaryIntent, options.toBundle())
+                Log.d(TAG, "Successfully launched $targetPackage on Display $displayId")
+            } catch (e: Exception) {
+                Log.d(TAG, "Primary launch on Display $displayId failed for $targetPackage: ${e.message}, trying MULTIPLE_TASK fallback")
+                try {
+                    val fallbackIntent = Intent(launchIntent).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                    }
+                    val fallbackOptions = ActivityOptions.makeBasic().setLaunchDisplayId(displayId)
+                    context.startActivity(fallbackIntent, fallbackOptions.toBundle())
+                    Log.d(TAG, "Successfully launched $targetPackage on Display $displayId with MULTIPLE_TASK fallback")
+                } catch (e2: Exception) {
+                    Log.e(TAG, "Error launching $targetPackage on Display $displayId with MULTIPLE_TASK fallback", e2)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error in launchOnDisplay for package $targetPackage", e)
+        }
+    }
+
+    private fun toggleFullscreenMode(context: Context, buttonView: TextView) {
         Log.d(TAG, "toggleFullscreenMode called")
+        val appContext = context.applicationContext
+
+        if (!hasUsageStatsPermission(appContext)) {
+            mainHandler.post {
+                Toast.makeText(
+                    appContext,
+                    "Выдайте 'Доступ к статистике использования' на вкладке Права",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
         try {
             executor.execute {
                 try {
+                    var targetPackage: String? = null
+                    if (hasUsageStatsPermission(appContext)) {
+                        targetPackage = getActiveForegroundPackage(appContext)
+                    }
+
+                    if (targetPackage.isNullOrBlank()) {
+                        targetPackage = getFallbackTargetPackage(appContext)
+                        Log.d(TAG, "Using fallback target package for Screen button: $targetPackage")
+                    }
+
+                    launchOnDisplay(appContext, targetPackage, DISPLAY_SECONDARY_1003)
+
                     isImmersed = !isImmersed
                     if (isImmersed) {
                         execPrivileged(
@@ -434,8 +599,20 @@ object FlymeStatusBarDockManager {
         }
     }
 
-    private fun swapActiveAppBetweenDisplays() {
+    private fun swapActiveAppBetweenDisplays(context: Context) {
         Log.d(TAG, "swapActiveAppBetweenDisplays called")
+        val appContext = context.applicationContext
+
+        if (!hasUsageStatsPermission(appContext)) {
+            mainHandler.post {
+                Toast.makeText(
+                    appContext,
+                    "Выдайте 'Доступ к статистике использования' на вкладке Права",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+
         try {
             executor.execute {
                 try {
@@ -448,24 +625,32 @@ object FlymeStatusBarDockManager {
 
                     while (matcher.find()) {
                         val pkg = matcher.group(2) ?: continue
-                        if (!pkg.startsWith("com.flyme.auto.launcher") &&
-                            !pkg.startsWith("com.flyme.auto.wallpapercontrol") &&
-                            pkg != "ru.doGood.Lynk" &&
-                            pkg != "com.android.systemui"
-                        ) {
+                        if (!isIgnoredPackage(pkg)) {
                             targetPackage = pkg
                             targetActivity = matcher.group(3)
                             break
                         }
                     }
 
-                    if (targetPackage != null && targetActivity != null) {
+                    if (targetPackage == null && hasUsageStatsPermission(appContext)) {
+                        targetPackage = getActiveForegroundPackage(appContext)
+                    }
+
+                    if (targetPackage.isNullOrBlank()) {
+                        targetPackage = getFallbackTargetPackage(appContext)
+                    }
+
+                    if (!targetPackage.isNullOrBlank()) {
                         val onPassenger = dumpsys.contains("displayId=1002") && dumpsys.contains(targetPackage)
                         val nextDisplay = if (onPassenger) DISPLAY_CENTER_MAIN else DISPLAY_PASSENGER_PSD
-                        val component = "$targetPackage/$targetActivity"
-                        execPrivileged(
-                            "am start --user $userId --display $nextDisplay --activity-reorder-to-front -n $component"
-                        )
+                        if (targetActivity != null) {
+                            val component = "$targetPackage/$targetActivity"
+                            execPrivileged(
+                                "am start --user $userId --display $nextDisplay --activity-reorder-to-front -n $component"
+                            )
+                        } else {
+                            launchOnDisplay(appContext, targetPackage, nextDisplay)
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error in swapActiveAppBetweenDisplays thread", e)
