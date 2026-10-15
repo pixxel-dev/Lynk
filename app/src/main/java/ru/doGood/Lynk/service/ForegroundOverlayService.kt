@@ -2,6 +2,7 @@ package ru.doGood.Lynk.service
 
 import android.app.ActivityOptions
 import android.provider.Settings
+import android.util.Log
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
@@ -129,6 +130,11 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
 
     override fun onCreate() {
         super.onCreate()
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w("LynkOverlay", "Overlay permission not granted. Stopping service cleanly.")
+            stopSelf()
+            return
+        }
         currentForegroundPackage = packageName
         createNotificationChannel()
 
@@ -151,24 +157,33 @@ class ForegroundOverlayService : Service(), SharedPreferences.OnSharedPreference
     }
 
     private fun startForegroundServiceInternal() {
-        createNotificationChannel()
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Lynk Floating Service")
-            .setContentText("Служба плавающих кнопок активна")
-            .setSmallIcon(R.drawable.ic_menu)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setOngoing(true)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .build()
+        try {
+            createNotificationChannel()
+            val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setContentTitle("Lynk Floating Service")
+                .setContentText("Служба плавающих кнопок активна")
+                .setSmallIcon(R.drawable.ic_menu)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e("LynkOverlay", "Failed to start foreground notification", e)
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!Settings.canDrawOverlays(this)) {
+            Log.w("LynkOverlay", "Overlay permission not granted. Stopping service cleanly.")
+            stopSelf()
+            return START_NOT_STICKY
+        }
         startForegroundServiceInternal()
         updateOverlayButtons()
         return START_STICKY

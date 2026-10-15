@@ -25,8 +25,9 @@ class MyPackageReplacedReceiver : BroadcastReceiver() {
 
         when (action) {
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
-                Log.i(TAG, "Lynk успешно обновлён, перезапускаем ForegroundOverlayService")
+                Log.i(TAG, "Lynk успешно обновлён, проверяем разрешения перед перезапуском ForegroundOverlayService")
                 runCatching {
+                    if (!android.provider.Settings.canDrawOverlays(context)) return@runCatching
                     val serviceIntent = Intent(context, ForegroundOverlayService::class.java)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         context.startForegroundService(serviceIntent)

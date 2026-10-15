@@ -173,20 +173,6 @@ class DashboardViewModel @Inject constructor(
 
             try {
                 checkFloatingPermissions(context)
-                val config = getLatestFloatingConfig()
-                if (Settings.canDrawOverlays(context) &&
-                    (config.isQuickLaunchEnabled || config.isFullscreenOverlayEnabled ||
-                     config.isHomeNavigatorEnabled || config.isBackNavigatorEnabled ||
-                     config.isRefreshNavigatorEnabled || config.isFreeformWindowEnabled)
-                ) {
-                    val serviceClass = Class.forName("ru.doGood.Lynk.service.ForegroundOverlayService")
-                    val intent = Intent(context, serviceClass)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        context.startForegroundService(intent)
-                    } else {
-                        context.startService(intent)
-                    }
-                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
