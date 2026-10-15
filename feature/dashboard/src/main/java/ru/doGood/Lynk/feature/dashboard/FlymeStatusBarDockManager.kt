@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.util.TypedValue
 import android.view.Display
 import android.view.Gravity
@@ -30,6 +31,7 @@ import java.util.regex.Pattern
  */
 object FlymeStatusBarDockManager {
 
+    private const val TAG = "FlymeStatusBarDock"
     private const val PREFS_NAME = "flyme_statusbar_dock_prefs"
     private const val KEY_ENABLED = "dock_enabled"
     private const val KEY_POSITION = "dock_position" // 0 = Справа, 1 = По центру, 2 = Слева
@@ -48,161 +50,217 @@ object FlymeStatusBarDockManager {
     private val focusTaskPattern = Pattern.compile("u(\\d+)\\s+([a-zA-Z0-9_.]+)/([a-zA-Z0-9_.$]+)")
 
     fun isEnabled(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_ENABLED, false)
-    }
-
-    fun getPosition(context: Context): Int {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getInt(KEY_POSITION, 0)
-    }
-
-    fun getOffsetX(context: Context): Int {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getInt(KEY_OFFSET_X, 220)
-    }
-
-    fun setPosition(context: Context, position: Int, offsetXDp: Int = getOffsetX(context)) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putInt(KEY_POSITION, position)
-            .putInt(KEY_OFFSET_X, offsetXDp)
-            .apply()
-        if (isShowing()) {
-            showDock(context)
+        return try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_ENABLED, false)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking isEnabled", e)
+            false
         }
     }
 
-    fun isShowing(): Boolean = dockView != null
+    fun getPosition(context: Context): Int {
+        return try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getInt(KEY_POSITION, 0)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting position", e)
+            0
+        }
+    }
+
+    fun getOffsetX(context: Context): Int {
+        return try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getInt(KEY_OFFSET_X, 220)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting offsetX", e)
+            220
+        }
+    }
+
+    fun setPosition(context: Context, position: Int, offsetXDp: Int = getOffsetX(context)) {
+        try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putInt(KEY_POSITION, position)
+                .putInt(KEY_OFFSET_X, offsetXDp)
+                .apply()
+            if (isShowing()) {
+                showDock(context)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting position", e)
+        }
+    }
+
+    fun isShowing(): Boolean {
+        return try {
+            dockView != null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking isShowing", e)
+            false
+        }
+    }
 
     fun toggleDock(context: Context, enable: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-            .putBoolean(KEY_ENABLED, enable)
-            .apply()
-        if (enable) {
-            showDock(context)
-        } else {
-            hideDock()
+        try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putBoolean(KEY_ENABLED, enable)
+                .apply()
+            if (enable) {
+                showDock(context)
+            } else {
+                hideDock()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error toggling dock", e)
         }
     }
 
     fun showDock(context: Context) {
-        val appContext = context.applicationContext
-        if (!Settings.canDrawOverlays(appContext)) {
-            Toast.makeText(
-                appContext,
-                "Выдайте разрешение «Поверх других окон» (SYSTEM_ALERT_WINDOW)",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        hideDock()
-
-        val targetContext = resolveCenterDisplayContext(appContext)
-        val wm = targetContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        windowManager = wm
-
-        val pos = getPosition(appContext)
-        val offsetX = dp(targetContext, getOffsetX(appContext))
-
-        val gravity = when (pos) {
-            1 -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            2 -> Gravity.TOP or Gravity.START
-            else -> Gravity.TOP or Gravity.END
-        }
-
-        val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            dp(targetContext, 34),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-            flags,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            this.gravity = gravity
-            this.x = if (pos == 1) 0 else offsetX
-            this.y = dp(targetContext, 4)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        try {
+            val appContext = context.applicationContext
+            if (!Settings.canDrawOverlays(appContext)) {
+                Toast.makeText(
+                    appContext,
+                    "Выдайте разрешение «Поверх других окон» (SYSTEM_ALERT_WINDOW)",
+                    Toast.LENGTH_LONG
+                ).show()
+                return
             }
-        }
 
-        val barView = buildDockBarView(targetContext)
-        runCatching {
-            wm.addView(barView, params)
-            dockView = barView
-            layoutParams = params
+            hideDock()
+
+            val targetContext = resolveCenterDisplayContext(appContext)
+            val wm = targetContext.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            if (wm == null) {
+                Log.e(TAG, "WindowManager service unavailable")
+                return
+            }
+            windowManager = wm
+
+            val pos = getPosition(appContext)
+            val offsetX = dp(targetContext, getOffsetX(appContext))
+
+            val gravity = when (pos) {
+                1 -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                2 -> Gravity.TOP or Gravity.START
+                else -> Gravity.TOP or Gravity.END
+            }
+
+            val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                dp(targetContext, 34),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+                else
+                    @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
+                flags,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                this.gravity = gravity
+                this.x = if (pos == 1) 0 else offsetX
+                this.y = dp(targetContext, 4)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
+            }
+
+            val barView = buildDockBarView(targetContext)
+            runCatching {
+                wm.addView(barView, params)
+                dockView = barView
+                layoutParams = params
+            }.onFailure { e ->
+                Log.e(TAG, "Failed to add dock view to WindowManager", e)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in showDock", e)
         }
     }
 
     fun hideDock() {
-        val view = dockView ?: return
-        runCatching {
-            windowManager?.removeViewImmediate(view)
+        try {
+            val view = dockView ?: return
+            runCatching {
+                windowManager?.removeViewImmediate(view)
+            }.onFailure { e ->
+                Log.e(TAG, "Failed to remove dock view from WindowManager", e)
+            }
+            dockView = null
+            layoutParams = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in hideDock", e)
         }
-        dockView = null
-        layoutParams = null
     }
 
     private fun buildDockBarView(context: Context): View {
-        val container = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(context, 6), dp(context, 2), dp(context, 6), dp(context, 2))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(context, 17).toFloat()
-                // Полупрозрачный графитовый цвет под штатный статус-бар Flyme Auto
-                setColor(Color.parseColor("#CC181A20"))
-                setStroke(dp(context, 1), Color.parseColor("#4DFFFFFF"))
+        return try {
+            val container = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(context, 6), dp(context, 2), dp(context, 6), dp(context, 2))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(context, 17).toFloat()
+                    setColor(Color.parseColor("#CC181A20"))
+                    setStroke(dp(context, 1), Color.parseColor("#4DFFFFFF"))
+                }
             }
-        }
 
-        // Кнопка 1: Полный экран (Immersive Mode)
-        val btnFullscreen = createActionButton(context, "⛶ Экран") { btn ->
-            toggleFullscreenMode(btn)
-        }
-        // Долгое нажатие меняет позицию врезки в статус-баре (Справа -> Центр -> Слева)
-        btnFullscreen.setOnLongClickListener {
-            val nextPos = (getPosition(context) + 1) % 3
-            setPosition(context, nextPos)
-            true
-        }
-
-        // Разделитель
-        val divider1 = createDivider(context)
-
-        // Кнопка 2: Переброс на экран пассажира (1001 <-> 1002)
-        val btnSwapScreen = createActionButton(context, "⇄ 1002") {
-            swapActiveAppBetweenDisplays()
-        }
-
-        // Разделитель
-        val divider2 = createDivider(context)
-
-        // Кнопка 3: Домой
-        val btnHome = createActionButton(context, "⌂") {
-            executor.execute {
-                val userId = resolveDriverUserId()
-                execPrivileged("input keyevent 3 || am start --user $userId -a android.intent.action.MAIN -c android.intent.category.HOME")
+            val btnFullscreen = createActionButton(context, "⛶ Экран") { btn ->
+                toggleFullscreenMode(btn)
             }
+            btnFullscreen.setOnLongClickListener {
+                try {
+                    val nextPos = (getPosition(context) + 1) % 3
+                    setPosition(context, nextPos)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error handling long click on fullscreen button", e)
+                }
+                true
+            }
+
+            val divider1 = createDivider(context)
+
+            val btnSwapScreen = createActionButton(context, "⇄ 1002") {
+                swapActiveAppBetweenDisplays()
+            }
+
+            val divider2 = createDivider(context)
+
+            val btnHome = createActionButton(context, "⌂") {
+                try {
+                    executor.execute {
+                        try {
+                            val userId = resolveDriverUserId()
+                            execPrivileged("input keyevent 3 || am start --user $userId -a android.intent.action.MAIN -c android.intent.category.HOME")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error in home button action thread", e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error submitting home button task", e)
+                }
+            }
+
+            container.addView(btnFullscreen)
+            container.addView(divider1)
+            container.addView(btnSwapScreen)
+            container.addView(divider2)
+            container.addView(btnHome)
+
+            container
+        } catch (e: Exception) {
+            Log.e(TAG, "Error building dock bar view", e)
+            View(context)
         }
-
-        container.addView(btnFullscreen)
-        container.addView(divider1)
-        container.addView(btnSwapScreen)
-        container.addView(divider2)
-        container.addView(btnHome)
-
-        return container
     }
 
     private fun createActionButton(
@@ -210,103 +268,130 @@ object FlymeStatusBarDockManager {
         label: String,
         onClick: (TextView) -> Unit
     ): TextView {
-        return TextView(context).apply {
-            text = label
-            setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(dp(context, 10), dp(context, 2), dp(context, 10), dp(context, 2))
-            setOnClickListener { onClick(this) }
+        return try {
+            TextView(context).apply {
+                text = label
+                setTextColor(Color.WHITE)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setPadding(dp(context, 10), dp(context, 2), dp(context, 10), dp(context, 2))
+                setOnClickListener {
+                    try {
+                        onClick(this)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error in action button onClick", e)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating action button", e)
+            TextView(context)
         }
     }
 
     private fun createDivider(context: Context): View {
-        return View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 14)).apply {
-                marginStart = dp(context, 2)
-                marginEnd = dp(context, 2)
+        return try {
+            View(context).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(context, 1), dp(context, 14)).apply {
+                    marginStart = dp(context, 2)
+                    marginEnd = dp(context, 2)
+                }
+                setBackgroundColor(Color.parseColor("#33FFFFFF"))
             }
-            setBackgroundColor(Color.parseColor("#33FFFFFF"))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating divider view", e)
+            View(context)
         }
     }
 
-    /**
-     * Переключает принудительный полноэкранный режим для всех или активного приложения в Flyme Auto.
-     */
     private fun toggleFullscreenMode(buttonView: TextView) {
-        executor.execute {
-            isImmersed = !isImmersed
-            if (isImmersed) {
-                // Включаем скрытие системных панелей для текущего окна и глобальную политику Immersive
-                execPrivileged(
-                    "settings put global policy_control immersive.full=*;" +
-                            "cmd window set-ignore-orientation-request true"
-                )
-            } else {
-                // Возвращаем штатный вид баров
-                execPrivileged(
-                    "settings put global policy_control null*;" +
-                            "wm overscan reset"
-                )
-            }
+        try {
+            executor.execute {
+                try {
+                    isImmersed = !isImmersed
+                    if (isImmersed) {
+                        execPrivileged(
+                            "settings put global policy_control immersive.full=*;" +
+                                    "cmd window set-ignore-orientation-request true"
+                        )
+                    } else {
+                        execPrivileged(
+                            "settings put global policy_control null*;" +
+                                    "wm overscan reset"
+                        )
+                    }
 
-            mainHandler.post {
-                buttonView.text = if (isImmersed) "❐ Обычный" else "⛶ Экран"
-                buttonView.setTextColor(
-                    if (isImmersed) Color.parseColor("#4FC3F7") else Color.WHITE
-                )
-            }
-        }
-    }
-
-    /**
-     * Перебрасывает текущее открытое приложение между центральным экраном (1001)
-     * и экраном переднего пассажира PSD (1002).
-     */
-    private fun swapActiveAppBetweenDisplays() {
-        executor.execute {
-            val userId = resolveDriverUserId()
-            val dumpsys = execPrivileged("dumpsys window displays")
-
-            val matcher = focusTaskPattern.matcher(dumpsys)
-            var targetPackage: String? = null
-            var targetActivity: String? = null
-
-            while (matcher.find()) {
-                val pkg = matcher.group(2) ?: continue
-                if (!pkg.startsWith("com.flyme.auto.launcher") &&
-                    !pkg.startsWith("com.flyme.auto.wallpapercontrol") &&
-                    !pkg.equals("ru.doGood.Lynk") &&
-                    !pkg.equals("com.android.systemui")
-                ) {
-                    targetPackage = pkg
-                    targetActivity = matcher.group(3)
-                    break
+                    mainHandler.post {
+                        try {
+                            buttonView.text = if (isImmersed) "❐ Обычный" else "⛶ Экран"
+                            buttonView.setTextColor(
+                                if (isImmersed) Color.parseColor("#4FC3F7") else Color.WHITE
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error updating button UI after fullscreen toggle", e)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in toggleFullscreenMode thread", e)
                 }
             }
-
-            if (targetPackage != null && targetActivity != null) {
-                val onPassenger = dumpsys.contains("displayId=1002") && dumpsys.contains(targetPackage)
-                val nextDisplay = if (onPassenger) DISPLAY_CENTER_MAIN else DISPLAY_PASSENGER_PSD
-                val component = "$targetPackage/$targetActivity"
-                execPrivileged(
-                    "am start --user $userId --display $nextDisplay --activity-reorder-to-front -n $component"
-                )
-            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error submitting toggleFullscreenMode task", e)
         }
     }
 
-    /**
-     * Привязывает врезку к центральному экрану водителя (Display 1001 или DEFAULT_DISPLAY).
-     */
+    private fun swapActiveAppBetweenDisplays() {
+        try {
+            executor.execute {
+                try {
+                    val userId = resolveDriverUserId()
+                    val dumpsys = execPrivileged("dumpsys window displays")
+
+                    val matcher = focusTaskPattern.matcher(dumpsys)
+                    var targetPackage: String? = null
+                    var targetActivity: String? = null
+
+                    while (matcher.find()) {
+                        val pkg = matcher.group(2) ?: continue
+                        if (!pkg.startsWith("com.flyme.auto.launcher") &&
+                            !pkg.startsWith("com.flyme.auto.wallpapercontrol") &&
+                            pkg != "ru.doGood.Lynk" &&
+                            pkg != "com.android.systemui"
+                        ) {
+                            targetPackage = pkg
+                            targetActivity = matcher.group(3)
+                            break
+                        }
+                    }
+
+                    if (targetPackage != null && targetActivity != null) {
+                        val onPassenger = dumpsys.contains("displayId=1002") && dumpsys.contains(targetPackage)
+                        val nextDisplay = if (onPassenger) DISPLAY_CENTER_MAIN else DISPLAY_PASSENGER_PSD
+                        val component = "$targetPackage/$targetActivity"
+                        execPrivileged(
+                            "am start --user $userId --display $nextDisplay --activity-reorder-to-front -n $component"
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in swapActiveAppBetweenDisplays thread", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error submitting swapActiveApp task", e)
+        }
+    }
+
     private fun resolveCenterDisplayContext(context: Context): Context {
-        return runCatching {
-            val dm = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-            val centerDisplay = dm.displays.firstOrNull { it.displayId == DISPLAY_CENTER_MAIN }
-                ?: dm.getDisplay(Display.DEFAULT_DISPLAY)
+        return try {
+            val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
+            val centerDisplay = dm?.displays?.firstOrNull { it.displayId == DISPLAY_CENTER_MAIN }
+                ?: dm?.getDisplay(Display.DEFAULT_DISPLAY)
             if (centerDisplay != null) context.createDisplayContext(centerDisplay) else context
-        }.getOrDefault(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error resolving center display context", e)
+            context
+        }
     }
 
     private fun execPrivileged(command: String): String {
@@ -337,18 +422,28 @@ object FlymeStatusBarDockManager {
                 }
             }
             process.waitFor()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "Error executing privileged command: $command", e)
         } finally {
-            process?.destroy()
+            try {
+                process?.destroy()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error destroying process", e)
+            }
         }
         return output.toString()
     }
 
     private fun dp(context: Context, value: Int): Int {
-        return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            value.toFloat(),
-            context.resources.displayMetrics
-        ).toInt()
+        return try {
+            TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                value.toFloat(),
+                context.resources.displayMetrics
+            ).toInt()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error calculating dp value", e)
+            value * 2
+        }
     }
 }

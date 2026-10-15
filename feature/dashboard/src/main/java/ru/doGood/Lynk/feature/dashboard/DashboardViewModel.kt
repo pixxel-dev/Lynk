@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.SharedPreferences
@@ -127,7 +128,8 @@ class DashboardViewModel @Inject constructor(
     val updateManager: AppUpdateManager,
     val adbManager: AdbWirelessManager,
     val sharedPrefs: SharedPreferences,
-    val waterfallInstallStrategy: WaterfallInstallStrategy
+    val waterfallInstallStrategy: WaterfallInstallStrategy,
+    val flymeStatusBarDockManager: FlymeStatusBarDockManager
 ) : ViewModel() {
 
     private fun <T: Application> getApplication(): T {
@@ -160,6 +162,14 @@ class DashboardViewModel @Inject constructor(
             loadFloatingConfig()
             checkForUpdates()
             loadCloudConnections()
+
+            try {
+                if (flymeStatusBarDockManager.isEnabled(context)) {
+                    flymeStatusBarDockManager.showDock(context)
+                }
+            } catch (e: Exception) {
+                Log.e("DashboardViewModel", "Error starting FlymeStatusBarDockManager on init", e)
+            }
 
             try {
                 checkFloatingPermissions(context)

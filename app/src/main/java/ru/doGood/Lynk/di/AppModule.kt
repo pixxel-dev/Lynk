@@ -12,6 +12,7 @@ import dagger.hilt.components.SingletonComponent
 import ru.doGood.Lynk.R
 import com.example.lynk.core.domain.installer.WaterfallInstallStrategy
 import ru.doGood.Lynk.installer.Subver55PrivilegedBridge
+import android.util.Log
 import ru.doGood.Lynk.feature.dashboard.FlymeStatusBarDockManager
 import javax.inject.Singleton
 
@@ -65,6 +66,11 @@ object AppModule {
         @ApplicationContext context: Context,
         prefs: SharedPreferences
     ): FlymeStatusBarDockManager {
-        return FlymeStatusBarDockManager
+        return try {
+            FlymeStatusBarDockManager
+        } catch (e: Exception) {
+            Log.e("Hilt", "Failed to create FlymeStatusBarDockManager", e)
+            FlymeStatusBarDockManager
+        }
     }
 }
