@@ -31,3 +31,9 @@
 # --- Shizuku API (рефлексивный вызов Shizuku.newProcess) ---
 -keep class rikka.shizuku.** { *; }
 -dontwarn rikka.shizuku.**
+
+# --- Application and Hilt ---
+-keep class ru.doGood.Lynk.LynkApplication { *; }
+-keep class * extends android.app.Application { *; }
+-keep class dagger.hilt.** { *; }
+-keep @dagger.hilt.android.HiltAndroidApp class * { *; }
