@@ -53,10 +53,14 @@ class Subver55PrivilegedBridge @Inject constructor(
     }
 
     init {
-        ensurePineAndHiddenApiInitialized()
-        runCatching {
-            Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
-            Shizuku.addBinderDeadListener(binderDeadListener)
+        try {
+            ensurePineAndHiddenApiInitialized()
+            runCatching {
+                Shizuku.addBinderReceivedListenerSticky(binderReceivedListener)
+                Shizuku.addBinderDeadListener(binderDeadListener)
+            }
+        } catch (e: Throwable) {
+            Log.e(TAG, "Subver55PrivilegedBridge init crash", e)
         }
     }
 
@@ -64,7 +68,7 @@ class Subver55PrivilegedBridge @Inject constructor(
         if (pineInitialized) return
         synchronized(this) {
             if (pineInitialized) return
-            runCatching {
+            try {
                 HiddenApiBypass.addHiddenApiExemptions("L")
 
                 PineConfig.debug = false
@@ -89,7 +93,7 @@ class Subver55PrivilegedBridge @Inject constructor(
 
                 pineInitialized = true
                 Log.i(TAG, "Pine & HiddenApiBypass successfully initialized")
-            }.onFailure { e ->
+            } catch (e: Throwable) {
                 Log.w(TAG, "Pine init warning: ${e.message}")
             }
         }

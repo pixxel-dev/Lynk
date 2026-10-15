@@ -8,6 +8,10 @@ import ru.doGood.Lynk.feature.dashboard.installer.PineHookManager
 class LynkApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        PineHookManager.init(this)
+        try {
+            PineHookManager.init(this)
+        } catch (e: Throwable) {
+            android.util.Log.e("LynkApp", "Pine Hook Crash", e)
+        }
     }
 }
