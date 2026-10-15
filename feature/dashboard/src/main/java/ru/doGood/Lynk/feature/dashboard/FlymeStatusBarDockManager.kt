@@ -35,7 +35,11 @@ object FlymeStatusBarDockManager {
     private const val PREFS_NAME = "flyme_statusbar_dock_prefs"
     private const val KEY_ENABLED = "dock_enabled"
     private const val KEY_POSITION = "dock_position" // 0 = Справа, 1 = По центру, 2 = Слева
+    private const val KEY_SCREEN_POSITION = "dock_screen_position" // POSITION_TOP or POSITION_BOTTOM
     private const val KEY_OFFSET_X = "dock_offset_x"
+
+    const val POSITION_TOP = "TOP"
+    const val POSITION_BOTTOM = "BOTTOM"
 
     private const val DISPLAY_CENTER_MAIN = 1001
     private const val DISPLAY_PASSENGER_PSD = 1002
@@ -69,6 +73,16 @@ object FlymeStatusBarDockManager {
         }
     }
 
+    fun getScreenPosition(context: Context): String {
+        return try {
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_SCREEN_POSITION, POSITION_TOP) ?: POSITION_TOP
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting screen position", e)
+            POSITION_TOP
+        }
+    }
+
     fun getOffsetX(context: Context): Int {
         return try {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -79,6 +93,20 @@ object FlymeStatusBarDockManager {
         }
     }
 
+    fun setPosition(context: Context, screenPosition: String) {
+        try {
+            val validPosition = if (screenPosition == POSITION_BOTTOM) POSITION_BOTTOM else POSITION_TOP
+            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(KEY_SCREEN_POSITION, validPosition)
+                .apply()
+            if (isShowing()) {
+                updateDockPosition(context)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error setting screen position", e)
+        }
+    }
+
     fun setPosition(context: Context, position: Int, offsetXDp: Int = getOffsetX(context)) {
         try {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
@@ -86,7 +114,7 @@ object FlymeStatusBarDockManager {
                 .putInt(KEY_OFFSET_X, offsetXDp)
                 .apply()
             if (isShowing()) {
-                showDock(context)
+                updateDockPosition(context)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error setting position", e)
@@ -117,6 +145,54 @@ object FlymeStatusBarDockManager {
         }
     }
 
+    fun updateDockPosition(context: Context) {
+        try {
+            val view = dockView ?: run {
+                showDock(context)
+                return
+            }
+            val params = layoutParams ?: run {
+                showDock(context)
+                return
+            }
+            val wm = windowManager ?: run {
+                showDock(context)
+                return
+            }
+
+            val appContext = context.applicationContext
+            val targetContext = resolveCenterDisplayContext(appContext)
+            val pos = getPosition(appContext)
+            val screenPos = getScreenPosition(appContext)
+            val offsetX = dp(targetContext, getOffsetX(appContext))
+
+            val verticalGravity = if (screenPos == POSITION_BOTTOM) Gravity.BOTTOM else Gravity.TOP
+            val horizontalGravity = when (pos) {
+                1 -> Gravity.CENTER_HORIZONTAL
+                2 -> Gravity.START
+                else -> Gravity.END
+            }
+
+            params.gravity = if (pos == 1) {
+                verticalGravity or Gravity.CENTER_HORIZONTAL
+            } else {
+                verticalGravity or horizontalGravity
+            }
+            params.x = if (pos == 1) 0 else offsetX
+            params.y = dpToPx(targetContext, 40)
+
+            runCatching {
+                wm.updateViewLayout(view, params)
+            }.onFailure { e ->
+                Log.e(TAG, "Failed to update view layout, recreating dock", e)
+                showDock(context)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error in updateDockPosition", e)
+            showDock(context)
+        }
+    }
+
     fun showDock(context: Context) {
         try {
             val appContext = context.applicationContext
@@ -140,12 +216,20 @@ object FlymeStatusBarDockManager {
             windowManager = wm
 
             val pos = getPosition(appContext)
+            val screenPos = getScreenPosition(appContext)
             val offsetX = dp(targetContext, getOffsetX(appContext))
 
-            val gravity = when (pos) {
-                1 -> Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                2 -> Gravity.TOP or Gravity.START
-                else -> Gravity.TOP or Gravity.END
+            val verticalGravity = if (screenPos == POSITION_BOTTOM) Gravity.BOTTOM else Gravity.TOP
+            val horizontalGravity = when (pos) {
+                1 -> Gravity.CENTER_HORIZONTAL
+                2 -> Gravity.START
+                else -> Gravity.END
+            }
+
+            val gravity = if (pos == 1) {
+                verticalGravity or Gravity.CENTER_HORIZONTAL
+            } else {
+                verticalGravity or horizontalGravity
             }
 
             val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -166,7 +250,7 @@ object FlymeStatusBarDockManager {
             ).apply {
                 this.gravity = gravity
                 this.x = if (pos == 1) 0 else offsetX
-                this.y = dp(targetContext, 40)
+                this.y = dpToPx(targetContext, 40)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     layoutInDisplayCutoutMode =
                         WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -456,4 +540,6 @@ object FlymeStatusBarDockManager {
             value * 2
         }
     }
+
+    private fun dpToPx(context: Context, value: Int): Int = dp(context, value)
 }

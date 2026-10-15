@@ -34,12 +34,14 @@ import ru.doGood.Lynk.feature.dashboard.R
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StatusBarDockCard(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    flymeManager: FlymeStatusBarDockManager = FlymeStatusBarDockManager
 ) {
     val context = LocalContext.current
-    var enabled by remember { mutableStateOf(FlymeStatusBarDockManager.isEnabled(context)) }
-    var position by remember { mutableIntStateOf(FlymeStatusBarDockManager.getPosition(context)) }
-    var offsetX by remember { mutableFloatStateOf(FlymeStatusBarDockManager.getOffsetX(context).toFloat()) }
+    var enabled by remember { mutableStateOf(flymeManager.isEnabled(context)) }
+    var position by remember { mutableIntStateOf(flymeManager.getPosition(context)) }
+    var screenPosition by remember { mutableStateOf(flymeManager.getScreenPosition(context)) }
+    var offsetX by remember { mutableFloatStateOf(flymeManager.getOffsetX(context).toFloat()) }
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(
@@ -66,8 +68,30 @@ fun StatusBarDockCard(
                     checked = enabled,
                     onCheckedChange = { isChecked ->
                         enabled = isChecked
-                        FlymeStatusBarDockManager.toggleDock(context, isChecked)
+                        flymeManager.toggleDock(context, isChecked)
                     }
+                )
+            }
+
+            // Выбор положения на экране (Вверху / Внизу)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = screenPosition == FlymeStatusBarDockManager.POSITION_TOP,
+                    onClick = {
+                        screenPosition = FlymeStatusBarDockManager.POSITION_TOP
+                        flymeManager.setPosition(context, FlymeStatusBarDockManager.POSITION_TOP)
+                    },
+                    label = { Text(stringResource(R.string.dock_screen_pos_top)) }
+                )
+                FilterChip(
+                    selected = screenPosition == FlymeStatusBarDockManager.POSITION_BOTTOM,
+                    onClick = {
+                        screenPosition = FlymeStatusBarDockManager.POSITION_BOTTOM
+                        flymeManager.setPosition(context, FlymeStatusBarDockManager.POSITION_BOTTOM)
+                    },
+                    label = { Text(stringResource(R.string.dock_screen_pos_bottom)) }
                 )
             }
 
@@ -79,7 +103,7 @@ fun StatusBarDockCard(
                     selected = position == 0,
                     onClick = {
                         position = 0
-                        FlymeStatusBarDockManager.setPosition(context, 0, offsetX.toInt())
+                        flymeManager.setPosition(context, 0, offsetX.toInt())
                     },
                     label = { Text(stringResource(R.string.dock_pos_right)) }
                 )
@@ -87,7 +111,7 @@ fun StatusBarDockCard(
                     selected = position == 1,
                     onClick = {
                         position = 1
-                        FlymeStatusBarDockManager.setPosition(context, 1, offsetX.toInt())
+                        flymeManager.setPosition(context, 1, offsetX.toInt())
                     },
                     label = { Text(stringResource(R.string.dock_pos_center)) }
                 )
@@ -95,7 +119,7 @@ fun StatusBarDockCard(
                     selected = position == 2,
                     onClick = {
                         position = 2
-                        FlymeStatusBarDockManager.setPosition(context, 2, offsetX.toInt())
+                        flymeManager.setPosition(context, 2, offsetX.toInt())
                     },
                     label = { Text(stringResource(R.string.dock_pos_left)) }
                 )
@@ -112,7 +136,7 @@ fun StatusBarDockCard(
                         value = offsetX,
                         onValueChange = { newVal ->
                             offsetX = newVal
-                            FlymeStatusBarDockManager.setPosition(context, position, newVal.toInt())
+                            flymeManager.setPosition(context, position, newVal.toInt())
                         },
                         valueRange = 20f..600f
                     )
