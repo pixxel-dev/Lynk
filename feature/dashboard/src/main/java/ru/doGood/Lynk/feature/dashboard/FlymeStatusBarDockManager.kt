@@ -273,6 +273,8 @@ object FlymeStatusBarDockManager {
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 setPadding(dp(context, 13), dp(context, 3), dp(context, 13), dp(context, 3))
+                isClickable = true
+                isFocusable = true
                 setOnClickListener {
                     try {
                         onClick(this)
